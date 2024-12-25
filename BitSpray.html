@@ -1,0 +1,1293 @@
+<html><head><base href="https://example.com"><title>Enhanced Spray Paint Art Studio</title><style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      background: #2c3e50;
+      padding: 20px;
+      font-family: Arial, sans-serif;
+    }
+
+    .controls {
+      background: #34495e;
+      padding: 15px;
+      border-radius: 10px;
+      margin-bottom: 20px;
+      display: flex;
+      gap: 15px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+      flex-wrap: wrap;
+    }
+
+    canvas {
+      border: 3px solid #34495e;
+      border-radius: 10px;
+      background: white;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    }
+
+    .color-picker {
+      width: 50px;
+      height: 50px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    .slider-container {
+      display: flex;
+      flex-direction: column;
+      color: white;
+    }
+
+    input[type="range"] {
+      width: 150px;
+    }
+
+    button {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 5px;
+      background: #3498db;
+      color: white;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+
+    button:hover {
+      background: #2980b9;
+    }
+
+    #saveBtn {
+      background: #27ae60;
+    }
+
+    #saveBtn:hover {
+      background: #219a52;
+    }
+
+    .noise-select {
+      padding: 8px;
+      border-radius: 5px;
+      background: white;
+      border: none;
+      cursor: pointer;
+    }
+
+    .flow-rate-container {
+      transition: opacity 0.3s, pointer-events 0.3s;
+    }
+
+    .flow-rate-container.enabled {
+      opacity: 1 !important;
+      pointer-events: auto !important;
+    }
+
+    #flowRateValue {
+      color: white;
+      margin-left: 5px;
+    }
+
+    #jitterValue {
+      color: white;
+      margin-left: 5px;
+    }
+
+    .nozzle-editor {
+      background: #34495e;
+      padding: 15px;
+      border-radius: 10px;
+      margin-bottom: 20px;
+      display: flex;
+      gap: 20px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+
+    #nozzlePreview {
+      background: #2c3e50;
+      border-radius: 5px;
+      border: 2px solid #95a5a6;
+    }
+
+    .nozzle-controls {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .nozzle-controls .slider-container {
+      min-width: 200px;
+    }
+
+    .nozzle-controls span {
+      display: inline-block;
+      min-width: 40px;
+      text-align: right;
+    }
+
+    .custom-bit-grid {
+      background: #34495e;
+      padding: 5px;
+      border-radius: 5px;
+      margin-top: 5px;
+    }
+
+    #customBitGrid {
+      border-collapse: collapse;
+    }
+
+    #customBitGrid td {
+      width: 15px;
+      height: 15px;
+      border: 1px solid #95a5a6;
+      background: white;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+
+    #customBitGrid td.active {
+      background: black;
+    }
+
+    .bit-controls {
+      margin-top: 10px;
+      display: flex;
+      gap: 10px;
+    }
+
+    .bit-controls button {
+      flex: 1;
+      padding: 5px;
+      font-size: 12px;
+    }
+
+    .size-controls {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .size-controls input[type="number"] {
+      width: 80px;
+      padding: 5px;
+      border: none;
+      border-radius: 5px;
+    }
+
+    .size-controls label {
+      color: white;
+    }
+
+    .custom-bit-size-controls {
+      margin-bottom: 10px;
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .custom-bit-size-controls input[type="number"] {
+      width: 60px;
+      padding: 4px;
+      border: none;
+      border-radius: 4px;
+    }
+
+    .custom-bit-size-controls label {
+      color: white;
+    }
+
+    .custom-bit-size-controls button {
+      padding: 4px 8px;
+      font-size: 12px;
+    }
+
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+</style></head><body>
+  <div class="controls" style="margin-bottom: 10px;">
+    <div class="size-controls">
+      <label for="canvasHeight">Height:</label>
+      <input type="number" id="canvasHeight" value="500" min="1" required>
+      <label for="canvasWidth">Width:</label>
+      <input type="number" id="canvasWidth" value="800" min="1" required>
+      <button id="newCanvasBtn" disabled>New</button>
+    </div>
+  </div>
+  <div class="controls">
+    <input type="color" id="colorPicker" class="color-picker" value="#000000">
+    <div class="slider-container">
+      <label for="densitySlider">Density</label>
+      <input type="range" id="densitySlider" min="5" max="50" value="10">
+    </div>
+    <div class="slider-container">
+      <label for="radiusSlider">Radius</label>
+      <input type="range" id="radiusSlider" min="1" max="50" value="10">
+    </div>
+    <div class="slider-container">
+      <label for="noiseType">Spray Pattern</label>
+      <select id="noiseType" class="noise-select">
+        <option value="circular">Circular</option>
+        <option value="gaussian">Gaussian</option>
+        <option value="uniform">Uniform</option>
+        <option value="diamond">Diamond</option>
+        <option value="perlin">Perlin</option>
+        <option value="worley">Worley</option>
+        <option value="voronoi">Voronoi</option>
+        <option value="cellular">Cellular</option>
+        <option value="block">Block</option>
+        <option value="block2">Block2</option>
+      </select>
+    </div>
+    <div class="slider-container">
+      <label for="nozzleShape">Nozzle Shape</label>
+      <select id="nozzleShape" class="noise-select">
+        <option value="none">No Clipping</option>
+        <option value="square">Square</option>
+        <option value="circle">Circle</option>
+        <option value="x">X Shape</option>
+        <option value="triangle">Triangle</option>
+        <option value="octagon">Octagon</option>
+        <option value="pentagon">Pentagon</option>
+        <option value="hexagon">Hexagon</option>
+      </select>
+    </div>
+    <div class="slider-container">
+      <label for="colorMode">Color Mode</label>
+      <select id="colorMode" class="noise-select">
+        <option value="solid">Solid Color</option>
+        <option value="whiteNoise">White Noise</option>
+        <option value="rainbow">Rainbow</option>
+        <option value="perlinColor">Perlin Color</option>
+        <option value="cellular">Cellular Color</option>
+        <option value="gradient">Gradient</option>
+        <option value="tvStatic">TV Static</option>
+        <option value="randomHues">Random Hues</option>
+        <option value="customBit">Custom Bit</option>
+      </select>
+    </div>
+    <div class="slider-container colorVariation" style="display: none;">
+      <label for="colorVariation">Color Variation</label>
+      <input type="range" id="colorVariation" min="0" max="100" value="50">
+    </div>
+    <div class="slider-container">
+      <label for="jitterSlider">Jitter</label>
+      <input type="range" id="jitterSlider" min="0" max="100" value="0">
+      <span id="jitterValue">0</span>
+    </div>
+    <div class="slider-container">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <label for="continuousSpray">Continuous Spray</label>
+        <input type="checkbox" id="continuousSpray">
+      </div>
+      <div class="flow-rate-container" style="opacity: 0.5; pointer-events: none;">
+        <label for="flowRateSlider">Flow Rate (sprays/sec)</label>
+        <input type="range" id="flowRateSlider" min="1" max="30" value="10">
+        <span id="flowRateValue">10</span>
+      </div>
+    </div>
+    <div class="slider-container">
+      <label for="customBitGrid">Custom Bit Grid</label>
+      <div class="custom-bit-size-controls">
+        <label for="gridHeight">Height:</label>
+        <input type="number" id="gridHeight" value="5" min="1" max="20">
+        <label for="gridWidth">Width:</label>
+        <input type="number" id="gridWidth" value="5" min="1" max="20">
+        <button id="resizeGridBtn">Resize Grid</button>
+      </div>
+      <div class="custom-bit-grid">
+        <table id="customBitGrid">
+        </table>
+        <div class="bit-controls">
+          <button id="setBitArrayBtn">Set</button>
+          <button id="bitToCanvasBtn">Bit to Canvas</button>
+        </div>
+      </div>
+    </div>
+    <button id="clearBtn">Clear Canvas</button>
+    <button id="saveBtn">Save as PNG</button>
+  </div>
+  <div class="nozzle-editor">
+    <canvas id="nozzlePreview" width="150" height="150"></canvas>
+    <div class="nozzle-controls">
+      <div class="slider-container">
+        <label for="rotationSlider">Rotation (°)</label>
+        <input type="range" id="rotationSlider" min="0" max="360" value="0">
+        <span id="rotationValue">0°</span>
+      </div>
+      <div class="slider-container">
+        <label for="skewXSlider">Skew X</label>
+        <input type="range" id="skewXSlider" min="-1" max="1" step="0.1" value="0">
+        <span id="skewXValue">0</span>
+      </div>
+      <div class="slider-container">
+        <label for="skewYSlider">Skew Y</label>
+        <input type="range" id="skewYSlider" min="-1" max="1" step="0.1" value="0">
+        <span id="skewYValue">0</span>
+      </div>
+      <div class="slider-container">
+        <label for="scaleXSlider">Width</label>
+        <input type="range" id="scaleXSlider" min="0.5" max="2" step="0.1" value="1">
+        <span id="scaleXValue">1.0</span>
+      </div>
+      <div class="slider-container">
+        <label for="scaleYSlider">Height</label>
+        <input type="range" id="scaleYSlider" min="0.5" max="2" step="0.1" value="1">
+        <span id="scaleYValue">1.0</span>
+      </div>
+    </div>
+  </div>
+  <canvas id="myCanvas" width="800" height="500"></canvas>
+
+  <script>
+    let customBitCanvas;
+    let customBitCtx;
+
+    function resizeCustomBitGrid() {
+      const newHeight = parseInt(document.getElementById('gridHeight').value);
+      const newWidth = parseInt(document.getElementById('gridWidth').value);
+      
+      if (newHeight > 0 && newWidth > 0) {
+        // Create new grid with new dimensions
+        const newGrid = Array(newHeight).fill().map(() => Array(newWidth).fill(false));
+        
+        // Copy existing values where possible
+        const minHeight = Math.min(customBitGrid.length, newHeight);
+        const minWidth = Math.min(customBitGrid[0].length, newWidth);
+        
+        for (let y = 0; y < minHeight; y++) {
+          for (let x = 0; x < minWidth; x++) {
+            newGrid[y][x] = customBitGrid[y][x];
+          }
+        }
+        
+        customBitGrid = newGrid;
+        initCustomBitGrid();
+        updateCustomBitPattern();
+      }
+    }
+
+    class PerlinNoise {
+      constructor() {
+        this.permutation = new Array(256).fill(0).map((_, i) => i);
+        for (let i = 255; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [this.permutation[i], this.permutation[j]] = [this.permutation[j], this.permutation[i]];
+        }
+        this.p = [...this.permutation, ...this.permutation];
+      }
+
+      fade(t) { return t * t * t * (t * (t * 6 - 15) + 10); }
+      lerp(t, a, b) { return a + t * (b - a); }
+      
+      grad(hash, x, y, z) {
+        const h = hash & 15;
+        const u = h < 8 ? x : y;
+        const v = h < 4 ? y : h === 12 || h === 14 ? x : z;
+        return ((h & 1) === 0 ? u : -u) + ((h & 2) === 0 ? v : -v);
+      }
+
+      noise(x, y, z = 0) {
+        const X = Math.floor(x) & 255;
+        const Y = Math.floor(y) & 255;
+        const Z = Math.floor(z) & 255;
+
+        x -= Math.floor(x);
+        y -= Math.floor(y);
+        z -= Math.floor(z);
+
+        const u = this.fade(x);
+        const v = this.fade(y);
+        const w = this.fade(z);
+
+        const A = this.p[X] + Y;
+        const AA = this.p[A] + Z;
+        const AB = this.p[A + 1] + Z;
+        const B = this.p[X + 1] + Y;
+        const BA = this.p[B] + Z;
+        const BB = this.p[B + 1] + Z;
+
+        return this.lerp(w,
+          this.lerp(v,
+            this.lerp(u,
+              this.grad(this.p[AA], x, y, z),
+              this.grad(this.p[BA], x - 1, y, z)
+            ),
+            this.lerp(u,
+              this.grad(this.p[AB], x, y - 1, z),
+              this.grad(this.p[BB], x - 1, y - 1, z)
+            )
+          ),
+          this.lerp(v,
+            this.lerp(u,
+              this.grad(this.p[AA + 1], x, y, z - 1),
+              this.grad(this.p[BA + 1], x - 1, y, z - 1)
+            ),
+            this.lerp(u,
+              this.grad(this.p[AB + 1], x, y - 1, z - 1),
+              this.grad(this.p[BB + 1], x - 1, y - 1, z - 1)
+            )
+          )
+        );
+      }
+    }
+
+    class WorleyNoise {
+      constructor() {
+        this.points = Array(10).fill().map(() => ({
+          x: Math.random() * 100,
+          y: Math.random() * 100
+        }));
+      }
+
+      noise(x, y) {
+        const distances = this.points.map(point => 
+          Math.sqrt(Math.pow(x - point.x, 2) + Math.pow(y - point.y, 2))
+        );
+        return Math.min(...distances) / 50;
+      }
+    }
+
+    class VoronoiNoise {
+      constructor() {
+        this.points = Array(15).fill().map(() => ({
+          x: Math.random() * 100,
+          y: Math.random() * 100
+        }));
+      }
+
+      noise(x, y) {
+        const distances = this.points.map(point => 
+          Math.sqrt(Math.pow(x - point.x, 2) + Math.pow(y - point.y, 2))
+        );
+        const [d1, d2] = distances.sort((a, b) => a - b);
+        return Math.abs(d2 - d1) / 25;
+      }
+    }
+
+    class CellularAutomata {
+      constructor() {
+        this.grid = Array(50).fill().map(() => 
+          Array(50).fill().map(() => Math.random() > 0.5 ? 1 : 0)
+        );
+      }
+
+      update() {
+        const newGrid = Array(50).fill().map(() => Array(50).fill(0));
+        for(let i = 0; i < 50; i++) {
+          for(let j = 0; j < 50; j++) {
+            let neighbors = this.countNeighbors(i, j);
+            if(this.grid[i][j] === 1) {
+              newGrid[i][j] = (neighbors === 2 || neighbors === 3) ? 1 : 0;
+            } else {
+              newGrid[i][j] = neighbors === 3 ? 1 : 0;
+            }
+          }
+        }
+        this.grid = newGrid;
+      }
+
+      countNeighbors(x, y) {
+        let count = 0;
+        for(let i = -1; i <= 1; i++) {
+          for(let j = -1; j <= 1; j++) {
+            if(i === 0 && j === 0) continue;
+            let nx = (x + i + 50) % 50;
+            let ny = (y + j + 50) % 50;
+            count += this.grid[nx][ny];
+          }
+        }
+        return count;
+      }
+
+      noise(x, y) {
+        const gridX = Math.floor((x % 500) / 10);
+        const gridY = Math.floor((y % 500) / 10);
+        return this.grid[gridX][gridY];
+      }
+    }
+
+    let customBitGrid = Array(5).fill().map(() => Array(5).fill(false));
+
+    const canvas = document.getElementById('myCanvas');
+    const ctx = canvas.getContext('2d');
+    const colorPicker = document.getElementById('colorPicker');
+    const densitySlider = document.getElementById('densitySlider');
+    const radiusSlider = document.getElementById('radiusSlider');
+    const noiseType = document.getElementById('noiseType');
+    const nozzleShape = document.getElementById('nozzleShape');
+    const clearBtn = document.getElementById('clearBtn');
+    const saveBtn = document.getElementById('saveBtn');
+    const continuousSprayToggle = document.getElementById('continuousSpray');
+    const flowRateSlider = document.getElementById('flowRateSlider');
+    const flowRateContainer = document.querySelector('.flow-rate-container');
+    const flowRateValue = document.getElementById('flowRateValue');
+    
+    const nozzlePreview = document.getElementById('nozzlePreview');
+    const nozzleCtx = nozzlePreview.getContext('2d');
+    const rotationSlider = document.getElementById('rotationSlider');
+    const skewXSlider = document.getElementById('skewXSlider');
+    const skewYSlider = document.getElementById('skewYSlider');
+    const scaleXSlider = document.getElementById('scaleXSlider');
+    const scaleYSlider = document.getElementById('scaleYSlider');
+    const colorMode = document.getElementById('colorMode');
+    const colorVariation = document.getElementById('colorVariation');
+    const jitterSlider = document.getElementById('jitterSlider');
+
+    let isDrawing = false;
+    let lastX = 0;
+    let lastY = 0;
+    let sprayInterval = null;
+    let isSprayActive = false;
+    const perlin = new PerlinNoise();
+    const worley = new WorleyNoise();
+    const voronoi = new VoronoiNoise();
+    const cellular = new CellularAutomata();
+    let time = 0;
+    let nozzleRotation = 0;
+    let nozzleSkewX = 0;
+    let nozzleSkewY = 0;
+    let nozzleScaleX = 1;
+    let nozzleScaleY = 1;
+    let jitterAmount = 0;
+
+    function initCustomBitGrid() {
+      // Initialize customBitCanvas and context if not already done
+      if (!customBitCanvas) {
+        customBitCanvas = document.createElement('canvas');
+        customBitCanvas.width = 100;  // Set a reasonable size
+        customBitCanvas.height = 100;
+        customBitCtx = customBitCanvas.getContext('2d');
+      }
+
+      const table = document.getElementById('customBitGrid');
+      table.innerHTML = '';
+      
+      const height = customBitGrid.length;
+      const width = customBitGrid[0].length;
+      
+      for (let y = 0; y < height; y++) {
+        const row = table.insertRow();
+        for (let x = 0; x < width; x++) {
+          const cell = row.insertCell();
+          if (customBitGrid[y][x]) {
+            cell.classList.add('active');
+          }
+          cell.addEventListener('click', () => {
+            customBitGrid[y][x] = !customBitGrid[y][x];
+            cell.classList.toggle('active');
+            updateCustomBitPattern();
+          });
+        }
+      }
+
+      // Update size inputs to match current grid size
+      document.getElementById('gridHeight').value = height;
+      document.getElementById('gridWidth').value = width;
+      
+      // Update the pattern after initialization
+      updateCustomBitPattern();
+    }
+
+    function updateCustomBitPattern() {
+      if (!customBitCanvas || !customBitCtx) return;
+      
+      customBitCtx.clearRect(0, 0, customBitCanvas.width, customBitCanvas.height);
+      
+      const cellWidth = customBitCanvas.width / customBitGrid[0].length;
+      const cellHeight = customBitCanvas.height / customBitGrid.length;
+      
+      for (let y = 0; y < customBitGrid.length; y++) {
+        for (let x = 0; x < customBitGrid[0].length; x++) {
+          if (customBitGrid[y][x]) {
+            customBitCtx.fillStyle = 'black';
+            customBitCtx.fillRect(
+              x * cellWidth,
+              y * cellHeight,
+              cellWidth,
+              cellHeight
+            );
+          }
+        }
+      }
+    }
+
+    let canvasBitArray;
+
+    function initCanvasBitArray() {
+      if (!canvas) return;
+      const height = canvas.height;
+      const width = canvas.width;
+      canvasBitArray = Array(height).fill().map(() => Array(width).fill(false));
+    }
+
+    function setCanvasBitArray() {
+      if (!customBitGrid || !canvas || !canvasBitArray) return;
+      
+      const gridHeight = customBitGrid.length;
+      const gridWidth = customBitGrid[0].length;
+      
+      for(let y = 0; y < canvas.height; y++) {
+        for(let x = 0; x < canvas.width; x++) {
+          const gridX = x % gridWidth;
+          const gridY = y % gridHeight;
+          canvasBitArray[y][x] = customBitGrid[gridY][gridX];
+        }
+      }
+    }
+
+    function drawBitArrayToCanvas() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      
+      for(let y = 0; y < canvas.height; y++) {
+        for(let x = 0; x < canvas.width; x++) {
+          if(canvasBitArray[y][x]) {
+            ctx.fillStyle = 'black';
+            ctx.fillRect(x, y, 1, 1);
+          }
+        }
+      }
+    }
+
+    setInterval(() => cellular.update(), 100);
+
+    function gaussianRandom() {
+      let u = 0, v = 0;
+      while(u === 0) u = Math.random();
+      while(v === 0) v = Math.random();
+      return Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
+    }
+
+    function isInsideShape(x, y, centerX, centerY, radius, shape) {
+      const dx = x - centerX;
+      const dy = y - centerY;
+      
+      const rot = -nozzleRotation * Math.PI / 180;
+      const rotX = dx * Math.cos(rot) - dy * Math.sin(rot);
+      const rotY = dx * Math.sin(rot) + dy * Math.cos(rot);
+      
+      const skewedX = (rotX - rotY * nozzleSkewX) / nozzleScaleX;
+      const skewedY = (rotY - rotX * nozzleSkewY) / nozzleScaleY;
+      
+      switch(shape) {
+        case 'none':
+          return true;
+        
+        case 'square':
+          return Math.abs(skewedX) <= radius && Math.abs(skewedY) <= radius;
+        
+        case 'circle':
+          return Math.pow(skewedX, 2) + Math.pow(skewedY, 2) <= radius * radius;
+        
+        case 'x':
+          const dx1 = Math.abs(skewedX);
+          const dy1 = Math.abs(skewedY);
+          return (Math.abs(dx1 - dy1) < radius/2) && (dx1 < radius) && (dy1 < radius);
+        
+        case 'triangle':
+          const side = radius * 2;
+          const height = side * Math.sqrt(3)/2;
+          const px = skewedX;
+          const py = skewedY;
+          const y1 = height/3;
+          return Math.abs(px) <= (1 - Math.abs(py + y1)/height) * side/2 && py >= -height/3 && py <= 2*height/3;
+        
+        case 'octagon':
+          const oct = radius / (1 + Math.sqrt(2));
+          const dx2 = Math.abs(skewedX);
+          const dy2 = Math.abs(skewedY);
+          return dx2 <= radius && dy2 <= radius && (dx2 + dy2) <= (radius + oct) * Math.sqrt(2);
+        
+        case 'pentagon':
+          const angle = Math.atan2(skewedY, skewedX);
+          const dist = Math.sqrt(Math.pow(skewedX, 2) + Math.pow(skewedY, 2));
+          const angleStep = 2 * Math.PI / 5;
+          let r = radius * Math.cos(Math.PI / 5) / Math.cos(angle % angleStep - Math.PI / 5);
+          return dist <= Math.abs(r);
+        
+        case 'hexagon':
+          const hexX = Math.abs(skewedX);
+          const hexY = Math.abs(skewedY);
+          const hexR = radius * 0.866;
+          return hexY <= hexR && hexX <= (radius - hexY / Math.sqrt(3));
+        
+        default:
+          return true;
+      }
+    }
+
+    function getSprayPosition(x, y, radius) {
+      const type = noiseType.value;
+      let dotX, dotY;
+
+      switch(type) {
+        case 'circular':
+          const angle = Math.random() * 2 * Math.PI;
+          const distance = Math.random() * radius;
+          dotX = x + distance * Math.cos(angle);
+          dotY = y + distance * Math.sin(angle);
+          break;
+        
+        case 'gaussian':
+          dotX = x + (gaussianRandom() * radius * 0.3);
+          dotY = y + (gaussianRandom() * radius * 0.3);
+          break;
+        
+        case 'uniform':
+          dotX = x + (Math.random() * 2 - 1) * radius;
+          dotY = y + (Math.random() * 2 - 1) * radius;
+          break;
+        
+        case 'diamond':
+          const t = Math.random() * 2 * Math.PI;
+          const r = Math.random() * radius;
+          dotX = x + r * (Math.cos(t) + Math.sin(t));
+          dotY = y + r * (Math.sin(t) - Math.cos(t));
+          break;
+
+        case 'perlin':
+          time += 0.01;
+          const noiseX = perlin.noise(x * 0.01, y * 0.01, time) * radius;
+          const noiseY = perlin.noise(x * 0.01 + 100, y * 0.01 + 100, time) * radius;
+          dotX = x + noiseX;
+          dotY = y + noiseY;
+          break;
+
+        case 'worley':
+          const worleyVal = worley.noise(x * 0.1, y * 0.1);
+          dotX = x + worleyVal * radius * Math.cos(time);
+          dotY = y + worleyVal * radius * Math.sin(time);
+          time += 0.1;
+          break;
+
+        case 'voronoi':
+          const voronoiVal = voronoi.noise(x * 0.1, y * 0.1);
+          dotX = x + voronoiVal * radius * Math.cos(time * 2);
+          dotY = y + voronoiVal * radius * Math.sin(time * 2);
+          time += 0.05;
+          break;
+
+        case 'cellular':
+          const cellVal = cellular.noise(x, y);
+          dotX = x + (cellVal ? radius : -radius) * Math.random();
+          dotY = y + (cellVal ? radius : -radius) * Math.random();
+          break;
+
+        case 'block':
+          dotX = x + (Math.random() * 2 - 1) * radius;  // Same as uniform
+          dotY = y + (Math.random() * 2 - 1) * radius;  // Same as uniform
+          break;
+
+        case 'block2':
+          // Similar to uniform but without randomization in distribution
+          const gridX = Math.floor(Math.random() * (radius * 2)) - radius;
+          const gridY = Math.floor(Math.random() * (radius * 2)) - radius;
+          dotX = x + gridX;
+          dotY = y + gridY;
+          break;
+
+        default:
+          dotX = x;
+          dotY = y;
+      }
+
+      return { x: dotX, y: dotY };
+    }
+
+    function getNoiseColor(x, y, baseColor) {
+      const mode = colorMode.value;
+      const variation = colorVariation.value / 100;
+      
+      function hexToRgb(hex) {
+        const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+        return result ? {
+          r: parseInt(result[1], 16),
+          g: parseInt(result[2], 16),
+          b: parseInt(result[3], 16)
+        } : null;
+      }
+
+      function rgbToHex(r, g, b) {
+        return '#' + [r, g, b].map(x => {
+          const hex = Math.round(x).toString(16);
+          return hex.length === 1 ? '0' + hex : hex;
+        }).join('');
+      }
+
+      const baseRgb = hexToRgb(baseColor);
+      if (!baseRgb) return baseColor;
+
+      switch(mode) {
+        case 'solid':
+          return baseColor;
+
+        case 'whiteNoise':
+          const noise = Math.random() * 2 - 1;
+          const r = Math.min(255, Math.max(0, baseRgb.r + noise * 255 * variation));
+          const g = Math.min(255, Math.max(0, baseRgb.g + noise * 255 * variation));
+          const b = Math.min(255, Math.max(0, baseRgb.b + noise * 255 * variation));
+          return rgbToHex(r, g, b);
+
+        case 'rainbow':
+          const hue = (Math.atan2(y - lastY, x - lastX) * 180 / Math.PI + 180) / 360;
+          const sat = 0.8;
+          const val = 0.9;
+          
+          function hsvToRgb(h, s, v) {
+            let r, g, b;
+            const i = Math.floor(h * 6);
+            const f = h * 6 - i;
+            const p = v * (1 - s);
+            const q = v * (1 - f * s);
+            const t = v * (1 - (1 - f) * s);
+            
+            switch (i % 6) {
+              case 0: r = v; g = t; b = p; break;
+              case 1: r = q; g = v; b = p; break;
+              case 2: r = p; g = v; b = t; break;
+              case 3: r = p; g = q; b = v; break;
+              case 4: r = t; g = p; b = v; break;
+              case 5: r = v; g = p; b = q; break;
+            }
+            
+            return rgbToHex(r * 255, g * 255, b * 255);
+          }
+          
+          return hsvToRgb(hue, sat, val);
+
+        case 'perlinColor':
+          const pNoise = perlin.noise(x * 0.01, y * 0.01, time) * variation;
+          const pr = Math.min(255, Math.max(0, baseRgb.r + pNoise * 255));
+          const pg = Math.min(255, Math.max(0, baseRgb.g + pNoise * 255));
+          const pb = Math.min(255, Math.max(0, baseRgb.b + pNoise * 255));
+          return rgbToHex(pr, pg, pb);
+
+        case 'cellular':
+          const cell = cellular.noise(x, y);
+          const cr = Math.min(255, Math.max(0, baseRgb.r * (cell ? 1 + variation : 1 - variation)));
+          const cg = Math.min(255, Math.max(0, baseRgb.g * (cell ? 1 + variation : 1 - variation)));
+          const cb = Math.min(255, Math.max(0, baseRgb.b * (cell ? 1 + variation : 1 - variation)));
+          return rgbToHex(cr, cg, cb);
+
+        case 'gradient':
+          const distance = Math.sqrt(Math.pow(x - lastX, 2) + Math.pow(y - lastY, 2));
+          const gradientNoise = (Math.sin(distance * 0.1) + 1) / 2 * variation;
+          const gr = Math.min(255, Math.max(0, baseRgb.r + gradientNoise * 255));
+          const gg = Math.min(255, Math.max(0, baseRgb.g + gradientNoise * 255));
+          const gb = Math.min(255, Math.max(0, baseRgb.b + gradientNoise * 255));
+          return rgbToHex(gr, gg, gb);
+
+        case 'tvStatic':
+          const staticR = Math.floor(Math.random() * 255);
+          const staticG = Math.floor(Math.random() * 255);
+          const staticB = Math.floor(Math.random() * 255);
+          
+          const brightness = Math.random();
+          if (brightness > 0.9) {
+            return '#FFFFFF';
+          } else if (brightness < 0.1) {
+            return '#000000';
+          } else {
+            return rgbToHex(staticR, staticG, staticB);
+          }
+
+        case 'randomHues':
+          const randomVal = Math.random(); 
+          const fullSat = 1;  
+          const fullVal = 1;      
+          
+          const hueVal = randomVal * 6; 
+          const iVal = Math.floor(hueVal);
+          const fVal = hueVal - iVal;
+          const pVal = fullVal * (1 - fullSat);
+          const qVal = fullVal * (1 - fVal * fullSat);
+          const tVal = fullVal * (1 - (1 - fVal) * fullSat);
+          
+          let rVal, gVal, bVal;
+          switch (iVal % 6) {
+            case 0: rVal = fullVal; gVal = tVal; bVal = pVal; break;
+            case 1: rVal = qVal; gVal = fullVal; bVal = pVal; break;
+            case 2: rVal = pVal; gVal = fullVal; bVal = tVal; break;
+            case 3: rVal = pVal; gVal = qVal; bVal = fullVal; break;
+            case 4: rVal = tVal; gVal = pVal; bVal = fullVal; break;
+            case 5: rVal = fullVal; gVal = pVal; bVal = qVal; break;
+          }
+          
+          return rgbToHex(rVal * 255, gVal * 255, bVal * 255);
+
+        case 'customBit':
+          if (!canvasBitArray || !Array.isArray(canvasBitArray)) return baseColor;
+          const arrayY = Math.floor(y);
+          const arrayX = Math.floor(x);
+          // Add boundary checking
+          if (arrayY >= 0 && arrayY < canvas.height && arrayX >= 0 && arrayX < canvas.width) {
+            return canvasBitArray[arrayY][arrayX] ? baseColor : null;
+          }
+          return null;
+
+        default:
+          return baseColor;
+      }
+    }
+
+    function applyJitter(x, y) {
+      if (jitterAmount === 0) return { x, y };
+      
+      const jitterRadius = jitterAmount * 2;
+      const angle = Math.random() * Math.PI * 2;
+      const distance = Math.random() * jitterRadius;
+      
+      return {
+        x: x + Math.cos(angle) * distance,
+        y: y + Math.sin(angle) * distance
+      };
+    }
+
+    function drawSpray(x, y) {
+      const density = parseInt(densitySlider.value);
+      const radius = parseInt(radiusSlider.value);
+      const color = colorPicker.value;
+      const shape = nozzleShape.value;
+
+      // Apply jitter to the center point
+      const jitteredPoint = applyJitter(x, y);
+      x = jitteredPoint.x;
+      y = jitteredPoint.y;
+      
+      for (let i = 0; i < density; i++) {
+        const pos = getSprayPosition(x, y, radius);
+        
+        if (isInsideShape(pos.x, pos.y, x, y, radius, shape)) {
+          const sprayColor = getNoiseColor(pos.x, pos.y, color);
+          if (sprayColor !== null) {
+            if (noiseType.value === 'block' || noiseType.value === 'block2') {
+              ctx.fillStyle = sprayColor;
+              ctx.fillRect(Math.round(pos.x), Math.round(pos.y), 1, 1);  // Draw single pixel at full opacity
+            } else {
+              const gradient = ctx.createRadialGradient(pos.x, pos.y, 0, pos.x, pos.y, 1);
+              gradient.addColorStop(0, sprayColor);
+              gradient.addColorStop(1, 'rgba(0,0,0,0)');
+              
+              ctx.fillStyle = gradient;
+              ctx.beginPath();
+              ctx.arc(pos.x, pos.y, 1, 0, Math.PI * 2);
+              ctx.fill();
+            }
+          }
+        }
+      }
+    }
+
+    function interpolatePoints(x1, y1, x2, y2) {
+      const dx = x2 - x1;
+      const dy = y2 - y1;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+      const steps = distance / 5;
+      
+      for (let i = 0; i <= steps; i++) {
+        const t = i / steps;
+        const x = x1 + dx * t;
+        const y = y1 + dy * t;
+        drawSpray(x, y);
+      }
+    }
+
+    function toggleContinuousSpray() {
+      const isContinuous = continuousSprayToggle.checked;
+      flowRateContainer.classList.toggle('enabled', isContinuous);
+      
+      if (sprayInterval) {
+        clearInterval(sprayInterval);
+        sprayInterval = null;
+      }
+    }
+
+    canvas.addEventListener('mousedown', (e) => {
+      isDrawing = true;
+      isSprayActive = true;
+      const rect = canvas.getBoundingClientRect();
+      lastX = e.clientX - rect.left;
+      lastY = e.clientY - rect.top;
+      
+      if (continuousSprayToggle.checked) {
+        const flowRate = flowRateSlider.value;
+        const interval = 1000 / flowRate;
+        
+        drawSpray(lastX, lastY);
+        
+        sprayInterval = setInterval(() => {
+          if (isSprayActive) {
+            drawSpray(lastX, lastY);
+          }
+        }, interval);
+      } else {
+        drawSpray(lastX, lastY);
+      }
+    });
+
+    canvas.addEventListener('mousemove', (e) => {
+      if (isDrawing) {
+        const rect = canvas.getBoundingClientRect();
+        const currentX = e.clientX - rect.left;
+        const currentY = e.clientY - rect.top;
+        interpolatePoints(lastX, lastY, currentX, currentY);
+        lastX = currentX;
+        lastY = currentY;
+      }
+    });
+
+    canvas.addEventListener('mouseup', () => {
+      isDrawing = false;
+      isSprayActive = false;
+      if (sprayInterval) {
+        clearInterval(sprayInterval);
+        sprayInterval = null;
+      }
+    });
+
+    canvas.addEventListener('mouseleave', () => {
+      isDrawing = false;
+      isSprayActive = false;
+      if (sprayInterval) {
+        clearInterval(sprayInterval);
+        sprayInterval = null;
+      }
+    });
+
+    continuousSprayToggle.addEventListener('change', toggleContinuousSpray);
+
+    flowRateSlider.addEventListener('input', () => {
+      flowRateValue.textContent = flowRateSlider.value;
+      if (sprayInterval && isSprayActive) {
+        clearInterval(sprayInterval);
+        const flowRate = flowRateSlider.value;
+        const interval = 1000 / flowRate;
+        sprayInterval = setInterval(() => {
+          if (isSprayActive) {
+            drawSpray(lastX, lastY);
+          }
+        }, interval);
+      }
+    });
+
+    jitterSlider.addEventListener('input', (e) => {
+      jitterAmount = parseInt(e.target.value);
+      document.getElementById('jitterValue').textContent = jitterAmount;
+    });
+
+    canvas.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      const touch = e.touches[0];
+      const rect = canvas.getBoundingClientRect();
+      isDrawing = true;
+      isSprayActive = true;
+      lastX = touch.clientX - rect.left;
+      lastY = touch.clientY - rect.top;
+      
+      if (continuousSprayToggle.checked) {
+        const flowRate = flowRateSlider.value;
+        const interval = 1000 / flowRate;
+        
+        drawSpray(lastX, lastY);
+        
+        sprayInterval = setInterval(() => {
+          if (isSprayActive) {
+            drawSpray(lastX, lastY);
+          }
+        }, interval);
+      } else {
+        drawSpray(lastX, lastY);
+      }
+    });
+
+    canvas.addEventListener('touchmove', (e) => {
+      e.preventDefault();
+      if (isDrawing) {
+        const touch = e.touches[0];
+        const rect = canvas.getBoundingClientRect();
+        const currentX = touch.clientX - rect.left;
+        const currentY = touch.clientY - rect.top;
+        interpolatePoints(lastX, lastY, currentX, currentY);
+        lastX = currentX;
+        lastY = currentY;
+      }
+    });
+
+    canvas.addEventListener('touchend', () => {
+      isDrawing = false;
+      isSprayActive = false;
+      if (sprayInterval) {
+        clearInterval(sprayInterval);
+        sprayInterval = null;
+      }
+    });
+
+    clearBtn.addEventListener('click', () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    });
+
+    saveBtn.addEventListener('click', () => {
+      const link = document.createElement('a');
+      link.download = 'spray-paint-art.png';
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    });
+
+    function drawNozzlePreview() {
+      nozzleCtx.clearRect(0, 0, nozzlePreview.width, nozzlePreview.height);
+      
+      const centerX = nozzlePreview.width / 2;
+      const centerY = nozzlePreview.height / 2;
+      const size = 40;
+
+      nozzleCtx.save();
+      nozzleCtx.translate(centerX, centerY);
+      nozzleCtx.rotate(nozzleRotation * Math.PI / 180);
+      nozzleCtx.scale(nozzleScaleX, nozzleScaleY);
+      nozzleCtx.transform(1, nozzleSkewY, nozzleSkewX, 1, 0, 0);
+
+      nozzleCtx.beginPath();
+      nozzleCtx.strokeStyle = '#3498db';
+      nozzleCtx.fillStyle = 'rgba(52, 152, 219, 0.3)';
+      nozzleCtx.lineWidth = 2;
+
+      switch(nozzleShape.value) {
+        case 'square':
+          nozzleCtx.rect(-size, -size, size * 2, size * 2);
+          break;
+        case 'circle':
+          nozzleCtx.arc(0, 0, size, 0, Math.PI * 2);
+          break;
+        case 'x':
+          nozzleCtx.moveTo(-size, -size);
+          nozzleCtx.lineTo(size, size);
+          nozzleCtx.moveTo(size, -size);
+          nozzleCtx.lineTo(-size, size);
+          break;
+        case 'triangle':
+          nozzleCtx.moveTo(0, -size);
+          nozzleCtx.lineTo(size, size);
+          nozzleCtx.lineTo(-size, size);
+          nozzleCtx.closePath();
+          break;
+        case 'octagon':
+          for(let i = 0; i < 8; i++) {
+            const angle = i * Math.PI / 4;
+            const x = Math.cos(angle) * size;
+            const y = Math.sin(angle) * size;
+            if(i === 0) nozzleCtx.moveTo(x, y);
+            else nozzleCtx.lineTo(x, y);
+          }
+          nozzleCtx.closePath();
+          break;
+        case 'pentagon':
+          for(let i = 0; i < 5; i++) {
+            const angle = (i * 2 * Math.PI / 5) - Math.PI / 2;
+            const x = Math.cos(angle) * size;
+            const y = Math.sin(angle) * size;
+            if(i === 0) nozzleCtx.moveTo(x, y);
+            else nozzleCtx.lineTo(x, y);
+          }
+          nozzleCtx.closePath();
+          break;
+        case 'hexagon':
+          for(let i = 0; i < 6; i++) {
+            const angle = i * Math.PI / 3;
+            const x = Math.cos(angle) * size;
+            const y = Math.sin(angle) * size;
+            if(i === 0) nozzleCtx.moveTo(x, y);
+            else nozzleCtx.lineTo(x, y);
+          }
+          nozzleCtx.closePath();
+          break;
+      }
+      
+      nozzleCtx.fill();
+      nozzleCtx.stroke();
+      nozzleCtx.restore();
+    }
+
+    rotationSlider.addEventListener('input', (e) => {
+      nozzleRotation = parseFloat(e.target.value);
+      document.getElementById('rotationValue').textContent = `${nozzleRotation}°`;
+      drawNozzlePreview();
+    });
+
+    skewXSlider.addEventListener('input', (e) => {
+      nozzleSkewX = parseFloat(e.target.value);
+      document.getElementById('skewXValue').textContent = nozzleSkewX.toFixed(1);
+      drawNozzlePreview();
+    });
+
+    skewYSlider.addEventListener('input', (e) => {
+      nozzleSkewY = parseFloat(e.target.value);
+      document.getElementById('skewYValue').textContent = nozzleSkewY.toFixed(1);
+      drawNozzlePreview();
+    });
+
+    scaleXSlider.addEventListener('input', (e) => {
+      nozzleScaleX = parseFloat(e.target.value);
+      document.getElementById('scaleXValue').textContent = nozzleScaleX.toFixed(1);
+      drawNozzlePreview();
+    });
+
+    scaleYSlider.addEventListener('input', (e) => {
+      nozzleScaleY = parseFloat(e.target.value);
+      document.getElementById('scaleYValue').textContent = nozzleScaleY.toFixed(1);
+      drawNozzlePreview();
+    });
+
+    nozzleShape.addEventListener('change', drawNozzlePreview);
+
+    colorMode.addEventListener('change', () => {
+      const showVariation = ['whiteNoise', 'perlinColor', 'cellular', 'gradient', 'tvStatic'].includes(colorMode.value);
+      document.querySelector('.colorVariation').style.display = showVariation ? 'block' : 'none';
+    });
+
+    initCustomBitGrid();
+    initCanvasBitArray();
+
+    document.getElementById('resizeGridBtn').addEventListener('click', resizeCustomBitGrid);
+    document.getElementById('setBitArrayBtn').addEventListener('click', setCanvasBitArray);
+    document.getElementById('bitToCanvasBtn').addEventListener('click', drawBitArrayToCanvas);
+
+    const canvasHeight = document.getElementById('canvasHeight');
+    const canvasWidth = document.getElementById('canvasWidth');
+    const newCanvasBtn = document.getElementById('newCanvasBtn');
+
+    canvasHeight.value = canvas.height;
+    canvasWidth.value = canvas.width;
+
+    function checkValues() {
+      const height = parseInt(canvasHeight.value);
+      const width = parseInt(canvasWidth.value);
+      newCanvasBtn.disabled = !(height > 0 && width > 0);
+    }
+
+    canvasHeight.addEventListener('input', checkValues);
+    canvasWidth.addEventListener('input', checkValues);
+
+    newCanvasBtn.addEventListener('click', () => {
+      const height = parseInt(canvasHeight.value);
+      const width = parseInt(canvasWidth.value);
+      
+      canvas.height = height;
+      canvas.width = width;
+      ctx.clearRect(0, 0, width, height);
+      
+      // Initialize a new canvasBitArray with the new dimensions
+      initCanvasBitArray();
+      // Update the bit array if needed
+      setCanvasBitArray();
+    });
+
+    drawNozzlePreview();
+  </script>
+</body></html>
