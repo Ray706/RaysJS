@@ -1,0 +1,222 @@
+<html><head><base href="https://asciiart.websim.io/">
+<title>ASCII Art Paint Program</title>
+<style>
+  body {
+    font-family: monospace;
+    background-color: #1e1e1e;
+    color: #f0f0f0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px;
+  }
+  #ascii-canvas {
+    width: 600px;
+    height: 400px;
+    border: 1px solid #444;
+    background-color: #000;
+    color: #f0f0f0;
+    font-family: monospace;
+    white-space: pre;
+    overflow: hidden;
+    cursor: crosshair;
+    margin-bottom: 10px;
+    user-select: none;
+    position: relative;
+  }
+  #controls {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  select, input, button {
+    background-color: #333;
+    color: #f0f0f0;
+    border: 1px solid #555;
+    padding: 5px;
+  }
+  #character-preview {
+    font-size: 24px;
+    margin-right: 10px;
+  }
+  #copy-button {
+    margin-top: 10px;
+  }
+  .active {
+    background-color: #4CAF50;
+  }
+  .grid-cell {
+    position: absolute;
+    box-sizing: border-box;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    pointer-events: none;
+  }
+  .grid-cell::before {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 2px;
+    height: 2px;
+    background-color: rgba(255, 255, 255, 0.2);
+    border-radius: 50%;
+  }
+</style>
+</head>
+<body>
+<h1>ASCII Art Paint Program</h1>
+<div id="controls">
+  <span id="character-preview">@</span>
+  <input type="text" id="character" maxlength="1" value="@">
+  <select id="font-size">
+    <option value="10">10px</option>
+    <option value="12">12px</option>
+    <option value="14" selected>14px</option>
+    <option value="16">16px</option>
+    <option value="18">18px</option>
+    <option value="20">20px</option>
+  </select>
+  <button id="draw-mode">Draw</button>
+  <button id="erase-mode">Erase</button>
+  <button id="dynamic-mode">Dynamic</button>
+  <button id="clear">Clear Canvas</button>
+</div>
+<div id="ascii-canvas" contenteditable="true"></div>
+<button id="copy-button">Copy ASCII Art</button>
+
+<script>
+const asciiCanvas = document.getElementById('ascii-canvas');
+const characterInput = document.getElementById('character');
+const fontSizeSelect = document.getElementById('font-size');
+const clearButton = document.getElementById('clear');
+const characterPreview = document.getElementById('character-preview');
+const copyButton = document.getElementById('copy-button');
+const drawModeButton = document.getElementById('draw-mode');
+const eraseModeButton = document.getElementById('erase-mode');
+const dynamicModeButton = document.getElementById('dynamic-mode');
+
+let currentChar = '@';
+let fontSize = 14;
+let canvasWidth = 80;
+let canvasHeight = 25;
+let asciiArt = [];
+let mode = 'draw';
+
+const dynamicChars = '!@#$%^&*()_+-=[]{}|;:,.<>?/~`';
+
+function initializeCanvas() {
+  asciiArt = Array(canvasHeight).fill().map(() => Array(canvasWidth).fill(' '));
+  updateCanvas();
+  createGridOverlay();
+}
+
+function updateCanvas() {
+  asciiCanvas.textContent = asciiArt.map(row => row.join('')).join('\n');
+}
+
+function updateFontSize() {
+  fontSize = parseInt(fontSizeSelect.value);
+  asciiCanvas.style.fontSize = `${fontSize}px`;
+  createGridOverlay();
+}
+
+function createGridOverlay() {
+  asciiCanvas.querySelectorAll('.grid-cell').forEach(cell => cell.remove());
+  const cellWidth = asciiCanvas.clientWidth / canvasWidth;
+  const cellHeight = asciiCanvas.clientHeight / canvasHeight;
+  for (let y = 0; y < canvasHeight; y++) {
+    for (let x = 0; x < canvasWidth; x++) {
+      const cell = document.createElement('div');
+      cell.classList.add('grid-cell');
+      cell.style.left = `${x * cellWidth}px`;
+      cell.style.top = `${y * cellHeight}px`;
+      cell.style.width = `${cellWidth}px`;
+      cell.style.height = `${cellHeight}px`;
+      asciiCanvas.appendChild(cell);
+    }
+  }
+}
+
+function setMode(newMode) {
+  mode = newMode;
+  drawModeButton.classList.toggle('active', mode === 'draw');
+  eraseModeButton.classList.toggle('active', mode === 'erase');
+  dynamicModeButton.classList.toggle('active', mode === 'dynamic');
+}
+
+function draw(e) {
+  const rect = asciiCanvas.getBoundingClientRect();
+  const x = Math.floor((e.clientX - rect.left) / (rect.width / canvasWidth));
+  const y = Math.floor((e.clientY - rect.top) / (rect.height / canvasHeight));
+  
+  if (x >= 0 && x < canvasWidth && y >= 0 && y < canvasHeight) {
+    switch (mode) {
+      case 'draw':
+        asciiArt[y][x] = currentChar;
+        break;
+      case 'erase':
+        asciiArt[y][x] = ' ';
+        break;
+      case 'dynamic':
+        asciiArt[y][x] = dynamicChars[Math.floor(Math.random() * dynamicChars.length)];
+        break;
+    }
+    updateCanvas();
+  }
+}
+
+asciiCanvas.addEventListener('mousedown', (e) => {
+  e.preventDefault();
+  draw(e);
+  asciiCanvas.addEventListener('mousemove', draw);
+});
+
+document.addEventListener('mouseup', () => {
+  asciiCanvas.removeEventListener('mousemove', draw);
+});
+
+characterInput.addEventListener('input', (e) => {
+  currentChar = e.target.value || '@';
+  characterPreview.textContent = currentChar;
+});
+
+fontSizeSelect.addEventListener('change', updateFontSize);
+
+clearButton.addEventListener('click', () => {
+  initializeCanvas();
+});
+
+copyButton.addEventListener('click', () => {
+  const textToCopy = asciiArt.map(row => row.join('')).join('\n');
+  navigator.clipboard.writeText(textToCopy).then(() => {
+    alert('ASCII art copied to clipboard!');
+  }).catch(err => {
+    console.error('Failed to copy: ', err);
+  });
+});
+
+asciiCanvas.addEventListener('paste', (e) => {
+  e.preventDefault();
+  const pastedText = e.clipboardData.getData('text/plain');
+  const pastedLines = pastedText.split('\n');
+  for (let y = 0; y < Math.min(canvasHeight, pastedLines.length); y++) {
+    const line = pastedLines[y];
+    for (let x = 0; x < Math.min(canvasWidth, line.length); x++) {
+      asciiArt[y][x] = line[x];
+    }
+  }
+  updateCanvas();
+});
+
+drawModeButton.addEventListener('click', () => setMode('draw'));
+eraseModeButton.addEventListener('click', () => setMode('erase'));
+dynamicModeButton.addEventListener('click', () => setMode('dynamic'));
+
+initializeCanvas();
+updateFontSize();
+setMode('draw');
+</script>
+</body></html>
