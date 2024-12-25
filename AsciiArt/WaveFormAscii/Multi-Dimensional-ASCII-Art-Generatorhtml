@@ -1,0 +1,1527 @@
+<html><head><base href="." />
+<title>Multi-Dimensional ASCII Art Generator</title>
+<style>
+  body {
+    font-family: monospace;
+    background: #1a1a1a;
+    color: #0f0;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  #canvas {
+    background: #000;
+    padding: 20px;
+    border-radius: 5px;
+    margin: 20px;
+    white-space: pre;
+    font-family: monospace;
+  }
+  
+  .controls {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin-bottom: 20px;
+  }
+  
+  button, select {
+    background: #333;
+    color: #0f0;
+    border: 1px solid #0f0;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: monospace;
+  }
+  
+  button:hover {
+    background: #444;
+  }
+  
+  input {
+    background: #333;
+    color: #0f0;
+    border: 1px solid #0f0;
+    padding: 8px;
+    border-radius: 4px;
+    width: 60px;
+  }
+  
+  label {
+    margin-right: 10px;
+  }
+
+  .notes-container {
+    width: 80%;
+    max-width: 600px;
+    margin: 20px auto;
+  }
+
+  #notesList {
+    width: 100%;
+    height: 150px;
+    background: #333;
+    color: #0f0;
+    border: 1px solid #0f0;
+    padding: 10px;
+    font-family: monospace;
+    resize: vertical;
+    overflow-y: scroll;
+  }
+
+  .playback-controls {
+    margin-top: 10px;
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+  }
+
+  .sequence-directions {
+    margin-top: 10px;
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .sequence-directions select {
+    background: #333;
+    color: #0f0;
+    border: 1px solid #0f0;
+    padding: 8px;
+    border-radius: 4px;
+    font-family: monospace;
+  }
+
+  .tone-log-container {
+    width: 80%;
+    max-width: 600px;
+    margin: 20px auto;
+  }
+
+  #toneLog {
+    width: 100%;
+    height: 150px;
+    background: #333;
+    color: #0f0;
+    border: 1px solid #0f0;
+    padding: 10px;
+    font-family: monospace;
+    resize: vertical;
+    overflow-y: scroll;
+  }
+
+  .clear-log {
+    margin-top: 10px;
+    text-align: right;
+  }
+
+  .tone-log-container .download-controls {
+    margin-top: 10px;
+    display: flex;
+    gap: 10px;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  #lockedOctaveValue {
+    margin-left: 10px;
+    background: #333;
+    color: #0f0;
+    border: 1px solid #0f0;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-family: monospace;
+  }
+
+  #lockedOctaveValue:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .abc-notation-container {
+    width: 80%;
+    max-width: 600px;
+    margin: 20px auto;
+  }
+
+  #abcNotation {
+    width: 100%;
+    height: 150px;
+    background: #333;
+    color: #0f0;
+    border: 1px solid #0f0;
+    padding: 10px;
+    font-family: monospace;
+    resize: vertical;
+    overflow-y: scroll;
+  }
+
+  #abc-paper {
+    background: #333;
+    padding: 20px;
+    border: 1px solid #0f0;
+    border-radius: 4px;
+    margin-top: 10px;
+  }
+
+  /* Override abcjs styles to match theme */
+  #abc-paper path,
+  #abc-paper text {
+    stroke: #0f0 !important;
+    fill: #0f0 !important;
+  }
+
+  .credits {
+    margin-top: 40px;
+    padding: 20px;
+    border-top: 1px solid #0f0;
+    text-align: center;
+    font-size: 0.9em;
+    color: #0f0;
+  }
+
+  .credits a {
+    color: #0f0;
+    text-decoration: underline;
+  }
+
+  .credits p {
+    margin: 10px 0;
+  }
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/abcjs/6.2.2/abcjs-basic-min.js"></script>
+<script src="https://unpkg.com/midi-writer-js/browser/midiwriter.js"></script>
+</head>
+<body>
+<h1>Multi-Dimensional ASCII Art Generator</h1>
+
+<div class="controls">
+  <div>
+    <label>Width:</label>
+    <input type="number" id="width" value="20" min="1" max="100">
+  </div>
+  <div>
+    <label>Height:</label>
+    <input type="number" id="height" value="20" min="1" max="100">
+  </div>
+  <div>
+    <label>Characters:</label>
+    <select id="charSet">
+      <option value="basic">Basic (█░)</option>
+      <option value="extended">Extended (█▓▒░)</option>
+      <option value="blocks">Blocks (▀▄█▌▐)</option>
+      <option value="matrix">Matrix (@#$%&)</option>
+      <option value="dots">Dots (●○•·)</option>
+      <option value="stars">Stars (★☆✦✧)</option>
+      <option value="arrows">Arrows (←↑→↓)</option>
+      <option value="faces">Faces (☺☻◕‿◕)</option>
+    </select>
+  </div>
+  <div>
+    <label>Pattern:</label>
+    <select id="patternType">
+      <option value="random">Random</option>
+      <option value="waves">Waves</option>
+      <option value="circles">Circles</option>
+      <option value="diamonds">Diamonds</option>
+      <option value="noise">Noise</option>
+      <option value="spiral">Spiral</option>
+      <option value="checkerboard">Checkerboard</option>
+      <option value="zigzag">Zigzag</option>
+      <option value="vortex">Vortex</option>
+      <option value="ripples">Ripples</option>
+      <option value="maze">Maze</option>
+      <option value="hexagons">Hexagons</option>
+      <option value="hypnotic">Hypnotic</option>
+      <option value="weave">Weave</option>
+      <option value="vertical">Vertical Lines</option>
+      <option value="horizontal">Horizontal Lines</option>
+      <option value="grid">Grid</option>
+      <option value="diagonals">Diagonal Lines</option>
+      <option value="crossDiagonals">Cross Diagonals</option>
+      <option value="fractal">Fractal</option>
+      <option value="lsystem">L-System</option>
+      <option value="cellularAutomata">Cellular Automata</option>
+      <option value="gameOfLife">Game of Life</option>
+      <option value="perlinNoise">Perlin Noise</option>
+      <option value="wangTiles">Wang Tiles</option>
+    </select>
+  </div>
+  <div>
+    <label>Tone Pattern:</label>
+    <select id="tonePatternType">
+      <option value="random">Random</option>
+      <option value="waves">Waves</option>
+      <option value="circles">Circles</option>
+      <option value="diamonds">Diamonds</option>
+      <option value="noise">Noise</option>
+      <option value="spiral">Spiral</option>
+      <option value="checkerboard">Checkerboard</option>
+      <option value="zigzag">Zigzag</option>
+      <option value="vortex">Vortex</option>
+      <option value="ripples">Ripples</option>
+      <option value="maze">Maze</option>
+      <option value="hexagons">Hexagons</option>
+      <option value="hypnotic">Hypnotic</option>
+      <option value="weave">Weave</option>
+      <option value="vertical">Vertical Lines</option>
+      <option value="horizontal">Horizontal Lines</option>
+      <option value="grid">Grid</option>
+      <option value="diagonals">Diagonal Lines</option>
+      <option value="crossDiagonals">Cross Diagonals</option>
+      <option value="fractal">Fractal</option>
+      <option value="lsystem">L-System</option>
+      <option value="cellularAutomata">Cellular Automata</option>
+      <option value="gameOfLife">Game of Life</option>
+      <option value="perlinNoise">Perlin Noise</option>
+      <option value="wangTiles">Wang Tiles</option>
+    </select>
+  </div>
+  <div>
+    <label>Octave Pattern:</label>
+    <select id="octavePatternType">
+      <option value="random">Random</option>
+      <option value="waves">Waves</option>
+      <option value="circles">Circles</option>
+      <option value="diamonds">Diamonds</option>
+      <option value="noise">Noise</option>
+      <option value="spiral">Spiral</option>
+      <option value="checkerboard">Checkerboard</option>
+      <option value="zigzag">Zigzag</option>
+      <option value="vortex">Vortex</option>
+      <option value="ripples">Ripples</option>
+      <option value="maze">Maze</option>
+      <option value="hexagons">Hexagons</option>
+      <option value="hypnotic">Hypnotic</option>
+      <option value="weave">Weave</option>
+      <option value="vertical">Vertical Lines</option>
+      <option value="horizontal">Horizontal Lines</option>
+      <option value="grid">Grid</option>
+      <option value="diagonals">Diagonal Lines</option>
+      <option value="crossDiagonals">Cross Diagonals</option>
+      <option value="fractal">Fractal</option>
+      <option value="lsystem">L-System</option>
+      <option value="cellularAutomata">Cellular Automata</option>
+      <option value="gameOfLife">Game of Life</option>
+      <option value="perlinNoise">Perlin Noise</option>
+      <option value="wangTiles">Wang Tiles</option>
+    </select>
+  </div>
+  <div>
+    <label>Duration Pattern:</label>
+    <select id="durationPatternType">
+      <option value="random">Random</option>
+      <option value="waves">Waves</option>
+      <option value="circles">Circles</option>
+      <option value="diamonds">Diamonds</option>
+      <option value="noise">Noise</option>
+      <option value="spiral">Spiral</option>
+      <option value="checkerboard">Checkerboard</option>
+      <option value="zigzag">Zigzag</option>
+      <option value="vortex">Vortex</option>
+      <option value="ripples">Ripples</option>
+      <option value="maze">Maze</option>
+      <option value="hexagons">Hexagons</option>
+      <option value="hypnotic">Hypnotic</option>
+      <option value="weave">Weave</option>
+      <option value="vertical">Vertical Lines</option>
+      <option value="horizontal">Horizontal Lines</option>
+      <option value="grid">Grid</option>
+      <option value="diagonals">Diagonal Lines</option>
+      <option value="crossDiagonals">Cross Diagonals</option>
+      <option value="fractal">Fractal</option>
+      <option value="lsystem">L-System</option>
+      <option value="cellularAutomata">Cellular Automata</option>
+      <option value="gameOfLife">Game of Life</option>
+      <option value="perlinNoise">Perlin Noise</option>
+      <option value="wangTiles">Wang Tiles</option>
+    </select>
+  </div>
+  <div>
+    <label>Volume Pattern:</label>
+    <select id="volumePatternType">
+      <option value="random">Random</option>
+      <option value="waves">Waves</option>
+      <option value="circles">Circles</option>
+      <option value="diamonds">Diamonds</option>
+      <option value="noise">Noise</option>
+      <option value="spiral">Spiral</option>
+      <option value="checkerboard">Checkerboard</option>
+      <option value="zigzag">Zigzag</option>
+      <option value="vortex">Vortex</option>
+      <option value="ripples">Ripples</option>
+      <option value="maze">Maze</option>
+      <option value="hexagons">Hexagons</option>
+      <option value="hypnotic">Hypnotic</option>
+      <option value="weave">Weave</option>
+      <option value="vertical">Vertical Lines</option>
+      <option value="horizontal">Horizontal Lines</option>
+      <option value="grid">Grid</option>
+      <option value="diagonals">Diagonal Lines</option>
+      <option value="crossDiagonals">Cross Diagonals</option>
+      <option value="fractal">Fractal</option>
+      <option value="lsystem">L-System</option>
+      <option value="cellularAutomata">Cellular Automata</option>
+      <option value="gameOfLife">Game of Life</option>
+      <option value="perlinNoise">Perlin Noise</option>
+      <option value="wangTiles">Wang Tiles</option>
+    </select>
+  </div>
+  <div>
+    <label>Density:</label>
+    <input type="range" id="density" min="1" max="10" value="5">
+  </div>
+  <div>
+    <label>Animation Speed:</label>
+    <input type="range" id="speed" min="1" max="20" value="10">
+  </div>
+  <div>
+    <label>Color:</label>
+    <select id="colorScheme">
+      <option value="matrix">Matrix Green</option>
+      <option value="cyan">Cyber Cyan</option>
+      <option value="magenta">Neon Magenta</option>
+      <option value="rainbow">Rainbow</option>
+      <option value="sunset">Sunset</option>
+      <option value="ocean">Ocean</option>
+      <option value="forest">Forest</option>
+      <option value="pastel">Pastel</option>
+      <option value="desert">Desert</option>
+      <option value="lava">Lava</option>
+      <option value="earth">Earth Tones</option>
+      <option value="bumblebee">Bumblebee</option>
+      <option value="candy">Candy Colors</option>
+      <option value="redPurple">Red & Purple</option>
+      <option value="pinks">Pink Shades</option>
+    </select>
+  </div>
+  <div>
+    <label>Musical Scale:</label>
+    <select id="musicalScale">
+      <option value="major">Major Scale</option>
+      <option value="minor">Minor Scale</option>
+      <option value="wholeTone">Whole Tone</option>
+      <option value="chromatic">12-Tone</option>
+      <option value="pentatonic">Pentatonic</option>
+      <option value="blues">Blues</option>
+      <option value="diminished">Diminished</option>
+      <option value="harmonicMinor">Harmonic Minor</option>
+      <option value="dorian">Dorian</option>
+      <option value="mixolydian">Mixolydian</option>
+      <option value="phrygian">Phrygian</option>
+      <option value="locrian">Locrian</option>
+      <option value="japanese">Japanese (Hirajoshi)</option>
+      <option value="arabic">Arabic (Hijaz)</option>
+      <option value="insen">Japanese (Insen)</option>
+      <option value="iwato">Japanese (Iwato)</option>
+      <option value="bayati">Arabic (Bayati)</option>
+      <option value="nahawand">Arabic (Nahawand)</option>
+    </select>
+  </div>
+  <div>
+    <label>Waveform:</label>
+    <select id="waveformType">
+      <option value="sine">Sine</option>
+      <option value="triangle">Triangle</option>
+      <option value="sawtooth">Sawtooth</option>
+      <option value="square">Square</option>
+      <option value="custom1">Pulse Wave</option>
+      <option value="custom2">Double Sine</option>
+      <option value="custom3">FM Wave</option>
+      <option value="custom4">AM Wave</option>
+    </select>
+  </div>
+  <div>
+    <label>Base Duration (ms):</label>
+    <input type="number" id="baseDuration" value="250" min="50" max="2000" step="50">
+  </div>
+  <div>
+    <label>Base Volume:</label>
+    <input type="number" id="baseVolume" value="0.2" min="0.01" max="0.5" step="0.01">
+  </div>
+  <div>
+    <label>
+      <input type="checkbox" id="lockOctaves"> Lock Octaves
+    </label>
+    <select id="lockedOctaveValue" disabled>
+      <option value="0">Octave 0</option>
+      <option value="1">Octave 1</option>
+      <option value="2">Octave 2</option>
+      <option value="3">Octave 3</option>
+      <option value="4">Octave 4</option>
+      <option value="5">Octave 5</option>
+      <option value="6">Octave 6</option>
+    </select>
+  </div>
+  <div>
+    <label>
+      <input type="checkbox" id="lockDurations"> Lock Durations
+    </label>
+  </div>
+  <div>
+    <label>
+      <input type="checkbox" id="lockVolumes"> Lock Volumes
+    </label>
+  </div>
+  <button onclick="generate()">Generate</button>
+  <button onclick="saveAsSVG()">Save as SVG</button>
+  <button onclick="saveAsJS()">Save as JS</button>
+  <button onclick="toggleAnimation()" id="animateBtn">Animate</button>
+  <button onclick="toggleSound()" id="soundBtn">Toggle Sound</button>
+  <div>
+    <label>
+      <input type="checkbox" id="customDurationSymbols"> Use Custom Duration Symbols
+    </label>
+    <input type="text" 
+           id="durationSymbolsInput" 
+           value="0,¼,½,1,2,3,4" 
+           style="width: 200px; margin-left: 10px;"
+           disabled>
+  </div>
+</div>
+
+<div class="notes-container">
+  <textarea id="notesList" readonly></textarea>
+  <div class="playback-controls">
+    <button onclick="playSequentially()" id="playSequenceBtn">Play Sequence</button>
+    <button onclick="stopSequence()" id="stopSequenceBtn">Stop</button>
+  </div>
+  <div class="sequence-directions">
+    <label>Sequence Direction:</label>
+    <select id="sequenceDirection">
+      <option value="forward">Forward (Start → End)</option>
+      <option value="reverse">Reverse (End → Start)</option>
+      <option value="middleToEnd">Middle → End → Start</option>
+      <option value="middleToStart">Middle → Start → End</option>
+    </select>
+    <div style="margin-left: 20px;">
+      <label>
+        <input type="checkbox" id="infiniteLoop"> Infinite Loop
+      </label>
+    </div>
+  </div>
+</div>
+
+<div id="canvas"></div>
+
+<div class="tone-log-container">
+  <h3>Tone History</h3>
+  <textarea id="toneLog" readonly></textarea>
+  <div class="download-controls">
+    <button onclick="clearToneLog()">Clear Log</button>
+    <button onclick="downloadToneHistoryJS()">Download Tone History JS</button>
+    <button onclick="toneHistoryToMIDI()">Download as MIDI</button>
+  </div>
+</div>
+
+<div class="abc-notation-container">
+  <h3>ABC Music Notation</h3>
+  <textarea id="abcNotation" readonly></textarea>
+  <div class="download-controls">
+    <button onclick="clearABCNotation()">Clear ABC Notation</button>
+    <button onclick="downloadABCNotation()">Download ABC Notation</button>
+    <button onclick="downloadABCasMIDI()">Download ABC as MIDI</button>
+  </div>
+</div>
+
+<div id="abc-paper"></div>
+
+<div class="credits">
+  <p>Multi-Dimensional ASCII Art Generator</p>
+  <p>Original concept inspired by Raymond Curtis Dukes (<a href="https://flickr.com/RaymondDukes" target="_blank">flickr.com/RaymondDukes</a>)</p>
+  <p>© 2024 - All Rights Reserved</p>
+  <p>
+    Libraries used:
+    <br>
+    ABC.js (© 2009-2024 Paul Rosen and Gregory Dyke - MIT License)
+    <br>
+    MIDI Writer JS (© 2015 Garrett Grimm - MIT License)
+  </p>
+  <p>
+    This software is provided under the MIT License:
+    <br>
+    Permission is hereby granted, free of charge, to any person obtaining a copy
+    of this software and associated documentation files (the "Software"), to deal
+    in the Software without restriction, including without limitation the rights
+    to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+    copies of the Software, and to permit persons to whom the Software is
+    furnished to do so, subject to the following conditions:
+    <br><br>
+    The above copyright notice and this permission notice shall be included in all
+    copies or substantial portions of the Software.
+    <br><br>
+    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+    AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+    OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+    SOFTWARE.
+  </p>
+</div>
+
+<script>
+let currentArtOctaves = []; // Store octave numbers
+let currentArtDurations = []; // Store duration values
+let currentArtVolumes = []; // Store volume art
+
+const charSets = {
+  basic: ['█', '░'],
+  extended: ['█', '▓', '▒', '░'],
+  blocks: ['▀', '▄', '█', '▌', '▐'],
+  matrix: ['@', '#', '$', '%', '&'],
+  dots: ['●', '○', '•', '·'],
+  stars: ['★', '☆', '✦', '✧'],
+  arrows: ['←', '↑', '→', '↓'],
+  faces: ['☺', '☻', '◕', '‿', '◕']
+};
+
+const volumeSymbols = ['░', '▒', '▓', '█', '▉']; // Represents 75%, 87.5%, 100%, 112.5%, 125%
+
+const colorSchemes = {
+  matrix: ['#0f0', '#0f8', '#0c4'],
+  cyan: ['#0ff', '#0cc', '#099'],
+  magenta: ['#f0f', '#c0c', '#909'],
+  rainbow: ['#f00', '#ff0', '#0f0', '#0ff', '#00f', '#f0f'],
+  sunset: ['#ff6b6b', '#ffd93d', '#ff8e3c', '#ff4949'],
+  ocean: ['#48cae4', '#00b4d8', '#0096c7', '#023e8a'],
+  forest: ['#40916c', '#52b788', '#74c69d', '#95d5b2'],
+  pastel: ['#ffd6ff', '#e7c6ff', '#c8b6ff', '#b8c0ff'],
+  desert: ['#e3b505', '#e48900', '#db7f26', '#c17817', '#8b4513'],
+  lava: ['#ff4800', '#ff2d00', '#ff0000', '#cc0000', '#800000'],
+  earth: ['#5c4033', '#8b4513', '#a0522d', '#6b4423', '#8b7355'],
+  bumblebee: ['#ffd700', '#ffc800', '#000000', '#ffd700', '#000000'],
+  candy: ['#ff69b4', '#87ceeb', '#ffd700', '#98fb98', '#dda0dd', '#ff1493'],
+  redPurple: ['#ff0000', '#ff3366', '#993399', '#660066', '#cc0066', '#990033'],
+  pinks: ['#ffb6c1', '#ff69b4', '#ff1493', '#db7093', '#ffc0cb', '#ffaeb9']
+};
+
+const musicalScales = {
+  major: [261.63, 293.66, 329.63, 349.23, 392.00, 440.00, 493.88, 523.25],
+  minor: [261.63, 293.66, 311.13, 349.23, 392.00, 415.30, 466.16, 523.25],
+  wholeTone: [261.63, 293.66, 329.63, 369.99, 415.30, 466.16, 523.25],
+  chromatic: [261.63, 277.18, 293.66, 311.13, 329.63, 349.23, 369.99, 392.00, 415.30, 440.00, 466.16, 493.88],
+  pentatonic: [261.63, 293.66, 329.63, 392.00, 440.00],
+  blues: [261.63, 311.13, 349.23, 369.99, 392.00, 466.16],
+  diminished: [261.63, 293.66, 311.13, 349.23, 369.99, 392.00, 415.30, 466.16],
+  harmonicMinor: [261.63, 293.66, 311.13, 349.23, 392.00, 415.30, 493.88, 523.25],
+  dorian: [261.63, 293.66, 311.13, 349.23, 392.00, 440.00, 466.16, 523.25],
+  mixolydian: [261.63, 293.66, 329.63, 349.23, 392.00, 440.00, 466.16, 523.25],
+  phrygian: [261.63, 277.18, 311.13, 349.23, 392.00, 415.30, 466.16, 523.25],
+  locrian: [261.63, 277.18, 311.13, 349.23, 369.99, 415.30, 466.16, 523.25],
+  japanese: [261.63, 293.66, 311.13, 392.00, 440.00, 523.25],
+  arabic: [261.63, 277.18, 311.13, 349.23, 392.00, 415.30, 466.16, 523.25],
+  insen: [261.63, 277.18, 329.63, 392.00, 440.00, 523.25],
+  iwato: [261.63, 277.18, 329.63, 349.23, 440.00, 523.25],
+  bayati: [261.63, 293.66, 311.13, 349.23, 392.00, 440.00, 466.16, 523.25],
+  nahawand: [261.63, 293.66, 311.13, 349.23, 392.00, 415.30, 466.16, 523.25]
+};
+
+let currentArt = [];
+let seed = Math.random();
+let seed2 = Math.random();
+let animationId = null;
+let isAnimating = false;
+let lastTimestamp = 0;
+let audioContext = null;
+let oscillators = [];
+let isPlayingSound = false;
+
+let isPlayingSequence = false;
+let currentNoteIndex = 0;
+let noteSequence = [];
+
+document.getElementById('lockOctaves').addEventListener('change', function(e) {
+  const octaveSelect = document.getElementById('lockedOctaveValue');
+  octaveSelect.disabled = !e.target.checked;
+  if (e.target.checked) {
+    generate(); // Regenerate with locked octave
+  }
+});
+
+document.getElementById('lockDurations').addEventListener('change', function(e) {
+  generate(); // Regenerate with locked durations
+});
+
+document.getElementById('lockVolumes').addEventListener('change', function(e) {
+  generate(); // Regenerate with locked volumes
+});
+
+document.getElementById('customDurationSymbols').addEventListener('change', function(e) {
+  const input = document.getElementById('durationSymbolsInput');
+  input.disabled = !e.target.checked;
+  generate(); // Regenerate with new settings
+});
+
+function logTone(note, frequency) {
+  const toneLog = document.getElementById('toneLog');
+  const timestamp = new Date().toLocaleTimeString();
+  const waveform = document.getElementById('waveformType').value;
+  const duration = document.getElementById('baseDuration').value;
+  const baseVolume = parseFloat(document.getElementById('baseVolume').value);
+  
+  const formattedVolume = Math.round(baseVolume * 100);
+  
+  const logEntry = `[${timestamp}] Played: ${note} | Freq: ${frequency.toFixed(2)} Hz | Wave: ${waveform} | Duration: ${duration}ms | Volume: ${formattedVolume}%\n`;
+  toneLog.value = toneLog.value + logEntry; // Changed concatenation order to prepend new entries
+  toneLog.scrollTop = 0; // Scroll to top to show newest entries
+  
+  updateABCNotation(); // Update ABC notation when new tone is logged
+}
+
+function noteToABCPitch(frequency) {
+  if (frequency === 0) return "z"; // Rest for zero frequency
+  
+  const A4 = 440;
+  const semitones = 12 * Math.log2(frequency / A4);
+  const octave = Math.floor(semitones / 12) + 4;
+  
+  const notes = ['C', '^C', 'D', '^D', 'E', 'F', '^F', 'G', '^G', 'A', '^A', 'B'];
+  const noteIndex = Math.round(semitones) % 12;
+  let note = notes[noteIndex];
+  
+  // Adjust octave notation
+  if (octave > 4) {
+    note = note.toLowerCase();
+    for (let i = 0; i < octave - 5; i++) {
+      note += "'";
+    }
+  } else {
+    for (let i = 0; i < 4 - octave; i++) {
+      note += ",";
+    }
+  }
+  
+  return note;
+}
+
+function durationToABCLength(duration) {
+  if (duration === 0) return ""; // No duration for rests
+  if (duration === 1) return "";
+  if (duration < 1) return "/" + Math.round(1/duration);
+  return duration.toString();
+}
+
+function updateABCNotation() {
+  const abcNotation = document.getElementById('abcNotation');
+  const toneLog = document.getElementById('toneLog').value;
+  const lines = toneLog.split('\n').filter(line => line.trim());
+  
+  let abc = `X:1
+T:ASCII Art Generated Music
+M:4/4
+L:1/4
+Q:1/4=${60000/parseInt(document.getElementById('baseDuration').value)}
+K:C
+`;
+  
+  const measures = [];
+  let currentMeasure = [];
+  let currentLength = 0;
+  
+  lines.forEach(line => {
+    const match = line.match(/\[.*?\] Played: (.*?) \| Freq: (.*?) Hz \| Wave: (.*?) \| Duration: (.*?)ms \| Volume: (.*?)%/);
+    if (match) {
+      const freq = parseFloat(match[2]);
+      const duration = parseInt(match[4]) / parseInt(document.getElementById('baseDuration').value);
+      
+      const abcNote = noteToABCPitch(freq) + durationToABCLength(duration);
+      currentMeasure.push(abcNote);
+      currentLength += duration;
+      
+      if (currentLength >= 4) { // 4 beats per measure
+        measures.push(currentMeasure.join(' '));
+        currentMeasure = [];
+        currentLength = 0;
+      }
+    }
+  });
+  
+  // Add remaining notes
+  if (currentMeasure.length > 0) {
+    measures.push(currentMeasure.join(' '));
+  }
+  
+  abc += measures.join(' | ') + ' |]';
+  abcNotation.value = abc;
+  
+  // Render the ABC notation
+  try {
+    ABCJS.renderAbc("abc-paper", abc, {
+      responsive: "resize",
+      staffwidth: 800,
+      scale: 1,
+      paddingtop: 15,
+      paddingbottom: 15,
+      paddingright: 15,
+      paddingleft: 15
+    });
+  } catch (e) {
+    console.log("Error rendering ABC notation:", e);
+  }
+}
+
+function clearABCNotation() {
+  const abcNotation = document.getElementById('abcNotation');
+  const defaultABC = `X:1
+T:ASCII Art Generated Music
+M:4/4
+L:1/4
+Q:1/4=${60000/parseInt(document.getElementById('baseDuration').value)}
+K:C
+`;
+  abcNotation.value = defaultABC;
+  
+  // Clear the visual representation
+  document.getElementById('abc-paper').innerHTML = '';
+  ABCJS.renderAbc("abc-paper", defaultABC, {
+    responsive: "resize",
+    staffwidth: 800,
+    scale: 1,
+    paddingtop: 15,
+    paddingbottom: 15,
+    paddingright: 15,
+    paddingleft: 15
+  });
+}
+
+function downloadABCNotation() {
+  const abc = document.getElementById('abcNotation').value;
+  const blob = new Blob([abc], { type: 'text/plain' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'ascii-art-music.abc';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function downloadABCasMIDI() {
+  const abc = document.getElementById('abcNotation').value;
+  
+  // Use abcjs to create MIDI
+  const visualObj = ABCJS.renderAbc("*", abc)[0];
+  const midiBuffer = new ABCJS.synth.CreateSynth();
+  
+  midiBuffer.init({
+    visualObj: visualObj,
+    options: {
+      program: 0,  // Piano
+      midiOutputType: 'binary'
+    }
+  }).then(() => {
+    // Create a download from the MIDI buffer
+    const midi = new ABCJS.synth.getMidiFile(visualObj, {
+      midiOutputType: 'binary',
+      program: 0
+    });
+    
+    // Create and download the MIDI file
+    const blob = new Blob([midi], {type: 'audio/midi'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'ascii-art-music.midi';
+    a.click();
+    URL.revokeObjectURL(url);
+  }).catch(err => {
+    console.error("Error generating MIDI:", err);
+  });
+}
+
+function toneHistoryToMIDI() {
+  const toneLog = document.getElementById('toneLog').value;
+  const toneEntries = toneLog.split('\n')
+    .filter(line => line.trim())
+    .map(line => {
+      const match = line.match(/\[.*?\] Played: (.*?) \| Freq: (.*?) Hz \| Wave: (.*?) \| Duration: (.*?)ms \| Volume: (.*?)%/);
+      if (match) {
+        return {
+          frequency: parseFloat(match[2]),
+          duration: parseInt(match[4]),
+          volume: parseInt(match[5]) / 100
+        };
+      }
+      return null;
+    })
+    .filter(entry => entry !== null);
+
+  // Convert frequencies to MIDI note numbers
+  const track = new MidiWriter.Track();
+
+  // Add tempo event
+  track.addEvent(new MidiWriter.ProgramChangeEvent({instrument: 0})); // Piano
+
+  toneEntries.forEach(tone => {
+    // Convert frequency to MIDI note number
+    const midiNote = Math.round(69 + 12 * Math.log2(tone.frequency / 440));
+    const noteDuration = Math.max('T' + Math.floor(tone.duration / 4), 'T16'); // Minimum duration of 1/16 note
+    
+    // Add note event
+    const note = new MidiWriter.NoteEvent({
+      pitch: [Math.max(0, Math.min(127, midiNote))],
+      duration: noteDuration,
+      velocity: Math.floor(tone.volume * 127)
+    });
+    
+    track.addEvent(note);
+  });
+
+  // Generate MIDI file
+  const writer = new MidiWriter.Writer([track]);
+  
+  // Create download
+  const blob = new Blob([writer.buildFile()], {type: 'audio/midi'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'tone-history.midi';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function seededRandom() {
+  seed = (seed * 16807) % 2147483647;
+  return (seed - 1) / 2147483646;
+}
+
+function seededRandom2() {
+  seed2 = (seed2 * 16807) % 2147483647;
+  return (seed2 - 1) / 2147483646;
+}
+
+const patterns = {
+  waves: (x, y, t = 0) => Math.sin(x * 0.3 + t) + Math.cos(y * 0.3 + t),
+  circles: (x, y, t = 0) => Math.sin(Math.sqrt(x * x + y * y) * 0.3 + t),
+  diamonds: (x, y, t = 0) => Math.sin(Math.abs(x) + Math.abs(y) + t),
+  noise: (x, y) => seededRandom(),
+  spiral: (x, y, t = 0) => Math.sin(Math.atan2(y, x) + Math.sqrt(x * x + y * y) * 0.2 + t),
+  checkerboard: (x, y) => (Math.floor(x) + Math.floor(y)) % 2,
+  zigzag: (x, y, t = 0) => Math.sin(x + y + t) * Math.cos(x - y + t),
+  vortex: (x, y, t = 0) => Math.sin(Math.atan2(y, x) * 2 + t) * Math.cos(Math.sqrt(x * x + y * y) * 0.3),
+  ripples: (x, y, t = 0) => Math.sin(Math.sqrt(x * x + y * y) - t) * Math.cos(Math.sqrt(x * x + y * y) + t),
+  maze: (x, y, t = 0) => Math.sin(x * Math.cos(t) + y * Math.sin(t)) * Math.cos(y * Math.cos(t) - x * Math.sin(t)),
+  hexagons: (x, y, t = 0) => Math.sin(x * 0.866 + y * 0.5 + t) + Math.sin(y + t) + Math.sin(x * 0.866 - y * 0.5 + t),
+  hypnotic: (x, y, t = 0) => Math.sin(Math.sqrt(x * x + y * y) + Math.atan2(y, x) * 3 + t),
+  weave: (x, y, t = 0) => Math.sin(x * 0.5 + t) * Math.cos(y * 0.5 + t) + Math.cos(x * 0.5 - t) * Math.sin(y * 0.5 - t),
+  vertical: (x, y, t = 0) => Math.sin(x * 0.5 + t),
+  horizontal: (x, y, t = 0) => Math.sin(y * 0.5 + t),
+  grid: (x, y, t = 0) => Math.sin(x * 0.5 + t) * Math.sin(y * 0.5 + t),
+  diagonals: (x, y, t = 0) => Math.sin((x + y) * 0.5 + t),
+  crossDiagonals: (x, y, t = 0) => Math.sin((x + y) * 0.5 + t) * Math.sin((x - y) * 0.5 + t),
+  fractal: (x, y, t = 0) => {
+    let zx = 0, zy = 0;
+    const cx = x * 0.1, cy = y * 0.1;
+    let iteration = 0;
+    const maxIter = 20;
+    
+    while (zx * zx + zy * zy < 4 && iteration < maxIter) {
+      const xtemp = zx * zx - zy * zy + cx;
+      zy = 2 * zx * zy + cy;
+      zx = xtemp;
+      iteration++;
+    }
+    
+    return Math.sin(iteration * 0.5 + t);
+  },
+  
+  lsystem: (x, y, t = 0) => {
+    const angle = Math.atan2(y, x);
+    const dist = Math.sqrt(x * x + y * y);
+    const level = Math.floor(dist * 0.2);
+    return Math.sin(angle * level + t) * Math.cos(dist * 0.3);
+  },
+  
+  cellularAutomata: (x, y, t = 0) => {
+    const cellSize = 0.5;
+    const gridX = Math.floor(x * cellSize);
+    const gridY = Math.floor(y * cellSize);
+    const sum = (gridX + gridY + Math.floor(t * 2)) % 3;
+    return Math.sin(sum * Math.PI * 2/3);
+  },
+  
+  gameOfLife: (x, y, t = 0) => {
+    const cellSize = 0.8;
+    const gridX = Math.floor(x * cellSize);
+    const gridY = Math.floor(y * cellSize);
+    const timeStep = Math.floor(t * 2);
+    const state = Math.abs(Math.sin(gridX * 0.3 + gridY * 0.7 + timeStep * 0.1));
+    return state > 0.5 ? 1 : -1;
+  },
+  
+  perlinNoise: (x, y, t = 0) => {
+    const fade = (t) => t * t * t * (t * (t * 6 - 15) + 10);
+    
+    const p1 = Math.sin(x * 0.1 + t) * Math.cos(y * 0.1);
+    const p2 = Math.sin(x * 0.2 - t) * Math.cos(y * 0.2);
+    const p3 = Math.sin(x * 0.05 + y * 0.05 + t);
+    
+    const noise = fade(p1) + fade(p2) + fade(p3);
+    return noise;
+  },
+
+  wangTiles: (x, y, t = 0) => {
+    const tileSize = 2;
+    const tileX = Math.floor(x / tileSize);
+    const tileY = Math.floor(y / tileSize);
+    const hash = (tileX * 7919 + tileY * 6421) % 4099;
+
+    const topEdge = Math.sin(hash * 0.1);
+    const rightEdge = Math.cos(hash * 0.2);
+    const bottomEdge = Math.sin(hash * 0.3);
+    const leftEdge = Math.cos(hash * 0.4);
+
+    const localX = (x % tileSize + tileSize) % tileSize;
+    const localY = (y % tileSize + tileSize) % tileSize;
+
+    const horizontalBlend = localX / tileSize;
+    const verticalBlend = localY / tileSize;
+
+    const topBottom = (1 - verticalBlend) * topEdge + verticalBlend * bottomEdge;
+    const leftRight = (1 - horizontalBlend) * leftEdge + horizontalBlend * rightEdge;
+
+    const pattern = (topBottom + leftRight) * 0.5 + Math.sin(t + hash * 0.1) * 0.2;
+
+    return pattern + Math.sin(t * 0.5 + tileX * 0.3 + tileY * 0.3) * 0.3;
+  }
+};
+
+function initAudio() {
+  if (!audioContext) {
+    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+  }
+}
+
+function getFrequencyForChar(char, selectedScale, octave) {
+  const scale = musicalScales[selectedScale];
+  const charSet = charSets[document.getElementById('charSet').value];
+  const index = charSet.indexOf(char);
+  if (index === -1) return scale[0];
+  
+  const baseFreq = scale[index % scale.length];
+  const octaveMultiplier = Math.pow(2, octave - 3); // Normalize to octave 3
+  return baseFreq * octaveMultiplier;
+}
+
+function clearToneLog() {
+  document.getElementById('toneLog').value = '';
+}
+
+function downloadToneHistoryJS() {
+  const toneLog = document.getElementById('toneLog').value;
+  const toneEntries = toneLog.split('\n')
+    .filter(line => line.trim())
+    .map(line => {
+      const match = line.match(/\[.*?\] Played: (.*?) \| Freq: (.*?) Hz \| Wave: (.*?) \| Duration: (.*?)ms \| Volume: (.*?)%/);
+      if (match) {
+        return {
+          note: match[1],
+          frequency: parseFloat(match[2]),
+          waveform: match[3],
+          duration: parseInt(match[4]),
+          volume: parseInt(match[5]) / 100
+        };
+      }
+      return null;
+    })
+    .filter(entry => entry !== null);
+
+  const js = `
+// Tone History Player
+const toneSequence = ${JSON.stringify(toneEntries, null, 2)};
+
+class TonePlayer {
+  constructor() {
+    this.audioContext = null;
+    this.isPlaying = false;
+  }
+
+  initAudio() {
+    if (!this.audioContext) {
+      this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    }
+  }
+
+  async playTone(tone) {
+    const oscillator = this.audioContext.createOscillator();
+    const gainNode = this.audioContext.createGain();
+
+    oscillator.type = tone.waveform;
+    oscillator.frequency.setValueAtTime(tone.frequency, this.audioContext.currentTime);
+
+    gainNode.gain.setValueAtTime(tone.volume, this.audioContext.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.001, this.audioContext.currentTime + tone.duration / 1000);
+
+    oscillator.connect(gainNode);
+    gainNode.connect(this.audioContext.destination);
+
+    oscillator.start();
+    oscillator.stop(this.audioContext.currentTime + tone.duration / 1000);
+
+    return new Promise(resolve => setTimeout(resolve, tone.duration));
+  }
+
+  async playSequence() {
+    if (this.isPlaying) return;
+    
+    this.initAudio();
+    this.isPlaying = true;
+
+    for (const tone of toneSequence) {
+      if (!this.isPlaying) break;
+      console.log(\`Playing: \${tone.note} (\${tone.frequency} Hz | \${tone.waveform} | \${tone.duration}ms | Vol: \${tone.volume})\`);
+      await this.playTone(tone);
+    }
+
+    this.isPlaying = false;
+  }
+
+  stop() {
+    this.isPlaying = false;
+  }
+}
+
+// Create player instance
+const player = new TonePlayer();
+
+// Add controls to page
+const controls = document.createElement('div');
+controls.innerHTML = \`
+  <div style="margin: 20px; text-align: center;">
+    <button onclick="player.playSequence()">Play Tone Sequence</button>
+    <button onclick="player.stop()">Stop</button>
+  </div>
+\`;
+document.body.appendChild(controls);
+`;
+
+  const blob = new Blob([js], { type: 'text/javascript' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'tone-history-player.js';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function generate(time = 0) {
+  const width = parseInt(document.getElementById('width').value);
+  const height = parseInt(document.getElementById('height').value);
+  const selectedSet = document.getElementById('charSet').value;
+  const tonePattern = document.getElementById('tonePatternType').value;
+  const octavePattern = document.getElementById('octavePatternType').value;
+  const durationPattern = document.getElementById('durationPatternType').value;
+  const volumePattern = document.getElementById('volumePatternType').value;
+  const density = document.getElementById('density').value / 5;
+  const colorScheme = document.getElementById('colorScheme').value;
+  const chars = charSets[selectedSet];
+
+  if (tonePattern === 'random' && !time) {
+    seed = Math.random();
+    seed2 = Math.random();
+  }
+
+  const patternTone = tonePattern === 'random' 
+    ? patterns[Object.keys(patterns)[Math.floor(seededRandom() * Object.keys(patterns).length)]]
+    : patterns[tonePattern];
+
+  const patternOctave = octavePattern === 'random' 
+    ? patterns[Object.keys(patterns)[Math.floor(seededRandom() * Object.keys(patterns).length)]]
+    : patterns[octavePattern];
+
+  const patternDuration = durationPattern === 'random'
+    ? patterns[Object.keys(patterns)[Math.floor(seededRandom() * Object.keys(patterns).length)]]
+    : patterns[durationPattern];
+
+  const patternVolume = volumePattern === 'random'
+    ? patterns[Object.keys(patterns)[Math.floor(seededRandom() * Object.keys(patterns).length)]]
+    : patterns[volumePattern];
+
+  currentArt = [];
+  currentArtOctaves = [];
+  currentArtVolumes = [];
+  let art = '';
+  let octaveArt = '';
+  
+  let durationArt = [];
+  const customDurationEnabled = document.getElementById('customDurationSymbols').checked;
+  let durationSymbols;
+
+  if (customDurationEnabled) {
+    durationSymbols = document.getElementById('durationSymbolsInput').value.split(',').map(s => s.trim());
+    if (!durationSymbols.length) {
+      durationSymbols = ['0', '¼', '½', '1', '2', '3', '4']; // Fallback if empty
+    }
+  } else {
+    durationSymbols = ['0', '¼', '½', '1', '2', '3', '4'];
+  }
+
+  // Generate duration values for each character position
+  for (let y = 0; y < height; y++) {
+    let durationRow = '';
+    for (let x = 0; x < width; x++) {
+      if (document.getElementById('lockDurations').checked) {
+        durationRow += '1'; // Use base duration when locked
+      } else {
+        const durationNoise = patternDuration(x * density - width/2, y * density - height/2, time * 0.1);
+        const index = Math.floor(Math.abs(durationNoise * durationSymbols.length)) % durationSymbols.length;
+        durationRow += durationSymbols[index];
+      }
+    }
+    durationArt.push(durationRow);
+  }
+
+  // Create volume art array
+  let volumeArt = [];
+  
+  // Generate volume values for each character position
+  for (let y = 0; y < height; y++) {
+    let volumeRow = '';
+    for (let x = 0; x < width; x++) {
+      if (document.getElementById('lockVolumes').checked) {
+        volumeRow += '▓'; // Use base volume symbol when locked
+      } else {
+        const volumeNoise = patternVolume(x * density - width/2, y * density - height/2, time * 0.1);
+        const index = Math.floor(Math.abs(volumeNoise * 5)) % 5;
+        volumeRow += volumeSymbols[index];
+      }
+    }
+    volumeArt.push(volumeRow);
+  }
+
+  for (let y = 0; y < height; y++) {
+    let row = '';
+    let octaveRow = '';
+    let rowColors = [];
+    for (let x = 0; x < width; x++) {
+      const patternValue = patternTone(x * density - width/2, y * density - height/2, time * 0.1);
+      const noise = patternValue + seededRandom() * 0.2;
+      const index = Math.floor(Math.abs(noise * chars.length)) % chars.length;
+      const colorIndex = Math.floor(Math.abs(noise * colorSchemes[colorScheme].length)) % colorSchemes[colorScheme].length;
+      
+      // Modify the octave generation code
+      let octaveValue;
+      if (document.getElementById('lockOctaves').checked) {
+        octaveValue = parseInt(document.getElementById('lockedOctaveValue').value);
+      } else {
+        const octaveNoise = patternOctave(x * density - width/2, y * density - height/2, time * 0.1);
+        octaveValue = 2 + Math.floor(Math.abs(octaveNoise * 3) % 3);
+      }
+      
+      row += chars[index];
+      octaveRow += octaveValue.toString();
+      rowColors.push(colorSchemes[colorScheme][colorIndex]);
+    }
+
+    currentArt.push({chars: row, colors: rowColors});
+    currentArtOctaves.push(octaveRow);
+    art += row + '\n';
+    octaveArt += octaveRow + '\n';
+  }
+
+  // Clean up the canvas before adding new content
+  const canvas = document.getElementById('canvas');
+  canvas.innerHTML = '';
+
+  // Create a container div for the ASCII art, octave art, and duration art
+  const container = document.createElement('div');
+  container.style.display = 'flex';
+  container.style.gap = '20px';
+  container.style.fontFamily = 'monospace';
+
+  // ASCII art column
+  const asciiArtDiv = document.createElement('div');
+  asciiArtDiv.innerHTML = currentArt.map(row => 
+    row.chars.split('').map((char, i) => 
+      `<span style="color: ${row.colors[i]}">${char}</span>`
+    ).join('')
+  ).join('\n');
+  container.appendChild(asciiArtDiv);
+
+  // Octave art column
+  const octaveArtDiv = document.createElement('div');
+  octaveArtDiv.style.color = '#666';
+  octaveArtDiv.innerText = currentArtOctaves.join('\n');
+  container.appendChild(octaveArtDiv);
+
+  // Duration art column
+  const durationArtDiv = document.createElement('div');
+  durationArtDiv.style.color = '#888';
+  durationArtDiv.innerText = durationArt.join('\n');
+  container.appendChild(durationArtDiv);
+
+  // Volume art column
+  const volumeArtDiv = document.createElement('div');
+  volumeArtDiv.style.color = '#666';
+  volumeArtDiv.innerText = volumeArt.join('\n');
+  container.appendChild(volumeArtDiv);
+
+  // Append the container to the canvas
+  canvas.appendChild(container);
+
+  // Store duration art and volume art for later use
+  currentArtDurations = durationArt;
+  currentArtVolumes = volumeArt;
+
+  updateNotesList();
+
+  if (isPlayingSound) {
+    playSound();
+  }
+}
+
+const getDurationMultiplier = (symbol) => {
+  if (document.getElementById('customDurationSymbols').checked) {
+    const value = parseFloat(symbol);
+    return isNaN(value) ? 1 : value;
+  }
+  return {
+    '0': 0,
+    '¼': 0.25,
+    '½': 0.5,
+    '1': 1,
+    '2': 2,
+    '3': 3,
+    '4': 4
+  }[symbol] || 1;
+};
+
+function toggleAnimation() {
+  const btn = document.getElementById('animateBtn');
+  if (isAnimating) {
+    if (animationId) {
+      cancelAnimationFrame(animationId);
+      animationId = null;
+    }
+    isAnimating = false;
+    btn.textContent = 'Animate';
+  } else {
+    isAnimating = true;
+    btn.textContent = 'Stop';
+    let time = 0;
+    lastTimestamp = performance.now();
+    
+    function animate(timestamp) {
+      if (!isAnimating) return;
+      
+      const speed = document.getElementById('speed').value;
+      const elapsed = timestamp - lastTimestamp;
+      const frameDelay = 1000 / speed;
+      
+      if (elapsed > frameDelay) {
+        generate(time);
+        time++;
+        lastTimestamp = timestamp;
+      }
+      
+      animationId = requestAnimationFrame(animate);
+    }
+    animate(performance.now());
+  }
+}
+
+function saveAsSVG() {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${currentArt[0].chars.length * 10}" height="${currentArt.length * 15}">
+    <style>text { font-family: monospace; font-size: 14px; }</style>
+    ${currentArt.map((row, i) => 
+      `<text x="0" y="${(i + 1) * 15}">${row.chars}</text>`
+    ).join('\n')}
+  </svg>`;
+  
+  const blob = new Blob([svg], {type: 'image/svg+xml'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'ascii-art.svg';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function saveAsJS() {
+  const js = `const asciiArt = \`${currentArt.map(row => row.chars).join('\n')}\`;\n\n` +
+    `function displayArt() {\n` +
+    `  console.log(asciiArt);\n` +
+    `}\n\n` +
+    `// To display the art, call:\n` +
+    `// displayArt();`;
+    
+  const blob = new Blob([js], {type: 'text/javascript'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'ascii-art.js';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// Updated updateNotesList function
+function updateNotesList() {
+  const notesList = document.getElementById('notesList');
+  noteSequence = [];
+  let notes = '';
+  
+  currentArt.forEach((row, i) => {
+    row.chars.split('').forEach((char, j) => {
+      if (char !== ' ') {
+        const selectedScale = document.getElementById('musicalScale').value;
+        const octave = parseInt(currentArtOctaves[i][j]);
+        const durationSymbol = currentArtDurations[i][j];
+        const volumeSymbol = currentArtVolumes[i][j];
+        
+        const durationMultiplier = getDurationMultiplier(durationSymbol);
+        const volumeMultiplier = {
+          '░': 0.75,
+          '▒': 0.875,
+          '▓': 1.0,
+          '█': 1.125,
+          '▉': 1.25
+        }[volumeSymbol] || 1;
+        
+        // Set frequency to 0 if duration is 0, otherwise calculate normally
+        const freq = durationSymbol === '0' ? 0 : getFrequencyForChar(char, selectedScale, octave);
+        
+        const note = {
+          char: char,
+          freq: freq,
+          color: row.colors[j],
+          octave: octave,
+          duration: durationMultiplier,
+          volume: volumeMultiplier
+        };
+        noteSequence.push(note);
+        
+        if (durationSymbol === '0') {
+        	console.log(`Generated row: "${freq.toFixed(2)}"`);
+        }
+        
+        notes += `Note ${noteSequence.length}: ${char} (Octave ${octave}, ${freq.toFixed(2)} Hz, Duration: ${durationSymbol  === '0' ? 1 : durationSymbol}, Volume: ${(volumeMultiplier * 100).toFixed(0)}%)\n`;
+      }
+    });
+  });
+  
+  notesList.value = notes;
+}
+
+function playSequentially() {
+  if (isPlayingSequence) return;
+  
+  initAudio();
+  isPlayingSequence = true;
+  
+  const direction = document.getElementById('sequenceDirection').value;
+  let playIndices = [];
+  
+  switch(direction) {
+    case 'forward':
+      playIndices = Array.from({length: noteSequence.length}, (_, i) => i);
+      break;
+    case 'reverse':
+      playIndices = Array.from({length: noteSequence.length}, (_, i) => noteSequence.length - 1 - i);
+      break;
+    case 'middleToEnd':
+      const midPoint = Math.floor(noteSequence.length / 2);
+      const toEnd = Array.from({length: noteSequence.length - midPoint}, (_, i) => i + midPoint);
+      const toStart = Array.from({length: midPoint}, (_, i) => i);
+      playIndices = toEnd.concat(toStart);
+      break;
+    case 'middleToStart':
+      const mid = Math.floor(noteSequence.length / 2);
+      const descendingHalf = Array.from({length: mid + 1}, (_, i) => mid - i).filter(i => i >= 0);
+      const ascendingHalf = Array.from({length: noteSequence.length - (mid + 1)}, 
+                                       (_, i) => noteSequence.length - 1 - i);
+      playIndices = descendingHalf.concat(ascendingHalf);
+      break;
+  }
+  
+  let currentIndex = 0;
+  
+  const playNote = () => {
+    if (!isPlayingSequence) {
+      return;
+    }
+
+    if (currentIndex >= playIndices.length) {
+      if (document.getElementById('infiniteLoop').checked) {
+        currentIndex = 0;
+      } else {
+        isPlayingSequence = false;
+        return;
+      }
+    }
+    
+    const noteIndex = playIndices[currentIndex];
+    const note = noteSequence[noteIndex];
+    const baseDuration = parseInt(document.getElementById('baseDuration').value);
+    const noteDuration = baseDuration * getDurationMultiplier(note.duration);
+
+    const osc = audioContext.createOscillator();
+    const gain = audioContext.createGain();
+    const waveform = document.getElementById('waveformType').value;
+    
+    osc.type = waveform;
+    osc.frequency.setValueAtTime(note.freq, audioContext.currentTime);
+    
+    const baseVolume = parseFloat(document.getElementById('baseVolume').value);
+    const volumeSymbol = currentArtVolumes[Math.floor(noteIndex / currentArt[0].chars.length)]
+                                        [noteIndex % currentArt[0].chars.length];
+    const volumeMultiplier = {
+      '░': 0.75,
+      '▒': 0.875,
+      '▓': 1.0,
+      '█': 1.125,
+      '▉': 1.25
+    }[volumeSymbol];
+
+    const finalVolume = baseVolume * volumeMultiplier;
+
+    gain.gain.setValueAtTime(finalVolume, audioContext.currentTime);
+    gain.gain.exponentialRampToValueAtTime(finalVolume * 0.001, audioContext.currentTime + noteDuration/1000);
+    
+    osc.connect(gain);
+    gain.connect(audioContext.destination);
+    
+    const notesList = document.getElementById('notesList');
+    const lines = notesList.value.split('\n');
+    const start = lines.slice(0, noteIndex).join('\n').length + (noteIndex > 0 ? 1 : 0);
+    const end = start + lines[noteIndex].length;
+    
+    notesList.setSelectionRange(start, end);
+    notesList.focus();
+    
+    logTone(note.char, note.freq);
+    
+    osc.start();
+    osc.stop(audioContext.currentTime + noteDuration / 1000);
+    
+    currentIndex++;
+    setTimeout(playNote, noteDuration);
+  };
+  
+  playNote();
+}
+
+function stopSequence() {
+  isPlayingSequence = false;
+  const notesList = document.getElementById('notesList');
+  notesList.setSelectionRange(0, 0);
+}
+
+// On page load, copy pattern options to new selects:
+window.addEventListener('load', function() {
+  const patternSelect = document.getElementById('patternType');
+  const patterns = Array.from(patternSelect.options).map(opt => opt.outerHTML).join('');
+  
+  document.getElementById('tonePatternType').innerHTML = patterns;
+  document.getElementById('octavePatternType').innerHTML = patterns;
+  document.getElementById('durationPatternType').innerHTML = patterns;
+  document.getElementById('volumePatternType').innerHTML = patterns;
+});
+
+generate();
+</script>
+</body></html>
