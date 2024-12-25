@@ -1,0 +1,1082 @@
+<html><head><base href="." />
+<style>
+  /* Updated CSS with Martian neutral color palette */
+  body {
+    background: #3b2f2f; /* Mars-like brown */
+    color: #e0d7c6; /* Neutral off-white */
+    font-family: monospace;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px;
+  }
+
+  .board-container {
+    position: relative;
+    display: inline-block;
+  }
+
+  .board {
+    display: grid;
+    grid-template-columns: repeat(8, 60px);
+    gap: 2px;
+    background: #4a3f35; /* Darker brown */
+    padding: 10px;
+    margin: 20px;
+  }
+
+  .cell {
+    width: 60px;
+    height: 60px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 24px;
+    cursor: pointer;
+    user-select: none;
+    border: 1px solid #8a7a6a;
+  }
+
+  /* Chessboard pattern with Mars colors */
+  .light-cell {
+    background-color: #e0c1a5; /* Light Mars color */
+  }
+
+  .dark-cell {
+    background-color: #a05a2c; /* Dark Mars color */
+  }
+
+  .cell:hover {
+    background: #7f6e5e; /* Slightly lighter on hover */
+  }
+
+  .cell.valid-move {
+    background: #a58f7e; /* Highlight valid moves */
+  }
+
+  .controls {
+    margin: 20px;
+    display: flex;
+    gap: 10px;
+  }
+
+  button {
+    background: #4a3f35;
+    color: #e0d7c6;
+    border: 1px solid #e0d7c6;
+    padding: 10px 20px;
+    cursor: pointer;
+  }
+
+  button:hover {
+    background: #5e5147;
+  }
+
+  .status {
+    margin: 20px;
+    font-size: 18px;
+  }
+
+  .turn-counter {
+    margin: 20px;
+    font-size: 18px;
+  }
+
+  .total-turns {
+    margin: 20px;
+    font-size: 18px;
+  }
+
+  /* Updated player colors with more vibrancy */
+  .player1 { color: #FF4500; } /* Vibrant Orange Red */
+  .player2 { color: #1E90FF; } /* Dodger Blue */
+  .player3 { color: #32CD32; } /* Lime Green */
+  .player4 { color: #FF8C00; } /* Dark Orange */
+
+  /* Time counters container */
+  .time-counters {
+    display: flex;
+    gap: 20px;
+    justify-content: center;
+    margin: 20px;
+    font-size: 18px;
+  }
+
+  .game-time {
+    /* Styles can be added if needed */
+  }
+
+  .turn-time {
+    /* Styles can be added if needed */
+  }
+
+  /* Modal styles */
+  .modal {
+    display: none;
+    position: fixed;
+    z-index: 1;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(59, 47, 47, 0.9);
+  }
+
+  .modal-content {
+    background-color: #4a3f35;
+    margin: 5% auto;
+    padding: 20px;
+    border: 1px solid #e0d7c6;
+    width: 80%;
+    max-width: 400px;
+    color: #e0d7c6;
+  }
+
+  .close {
+    color: #e0d7c6;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+  }
+
+  .close:hover {
+    color: #FF4500;
+  }
+
+  .modal-content label {
+    display: block;
+    margin-bottom: 10px;
+    font-size: 16px;
+  }
+
+  .modal-content input {
+    width: 100%;
+    padding: 8px;
+    background-color: #3b2f2f;
+    border: 1px solid #e0d7c6;
+    color: #e0d7c6;
+    margin-bottom: 20px;
+  }
+
+  .modal-content button {
+    width: 100%;
+  }
+
+  /* Quadrant outlines */
+  .cell.quadrant1 {
+    outline: 2px solid #1E90FF; /* Dodger Blue outline for Player 2's quadrant */
+  }
+
+  .cell.quadrant2 {
+    outline: 2px solid #32CD32; /* Lime Green outline for Player 3's quadrant */
+  }
+
+  .cell.quadrant3 {
+    outline: 2px solid #FF4500; /* Vibrant Orange Red for Player 1's quadrant */
+  }
+
+  .cell.quadrant4 {
+    outline: 2px solid #FF8C00; /* Dark Orange outline for Player 4's quadrant */
+  }
+
+  /* Highlight current player's quadrant */
+  .cell.current-quadrant {
+    outline-width: 4px;
+    box-shadow: 0 0 10px yellow;
+  }
+
+  /* Highlight current player's pieces */
+  .current-player-piece {
+    background-color: rgba(255, 255, 0, 0.3); /* Light yellow background */
+    font-weight: bold;
+  }
+
+  /* Styles for placing scores beside quadrants */
+  .board-container {
+    position: relative;
+    display: inline-block;
+  }
+
+  .score {
+    position: absolute;
+    font-size: 18px;
+    font-weight: bold;
+  }
+
+  .score-player1 {
+    color: #FF4500; /* Player 1 color */
+    left: -100px;
+    bottom: 20px;
+  }
+
+  .score-player2 {
+    color: #1E90FF; /* Player 2 color */
+    left: -100px;
+    top: 20px;
+  }
+
+  .score-player3 {
+    color: #32CD32; /* Player 3 color */
+    right: -100px;
+    top: 20px;
+  }
+
+  .score-player4 {
+    color: #FF8C00; /* Dark Orange color */
+    right: -100px;
+    bottom: 20px;
+  }
+
+</style>
+</head>
+<body>
+<div id="container">
+  <h1>Martian Chess</h1>
+  <div class="controls">
+    <button onclick="setGameMode('pvp')">Player vs Player</button>
+    <button onclick="setGameMode('pvc')">Player vs Computer</button>
+    <button onclick="setGameMode('cvc')">Computer vs Computer</button>
+    <button onclick="resetGame()">Reset Game</button>
+    <button onclick="openSettings()">Settings</button>
+  </div>
+  <div class="status" id="status">Select game mode to begin</div>
+  <div class="turn-counter" id="turnCounter">Turns since Quadrant Change: 0</div>
+  <div class="time-counters">
+    <div class="turn-time" id="turnTime">Current Turn Time: 0s</div>
+    <div class="game-time" id="gameTime">Game Time: 0m 0s</div>
+    <div class="total-turns" id="totalTurns">Total Turns: 0</div>
+  </div>
+  <div class="board-container">
+    <div class="board" id="board"></div>
+    <!-- Score elements beside quadrants -->
+    <div class="score score-player1" id="score-player1"></div>
+    <div class="score score-player2" id="score-player2"></div>
+    <div class="score score-player3" id="score-player3"></div>
+    <div class="score score-player4" id="score-player4"></div>
+  </div>
+</div>
+
+<!-- Settings Modal -->
+<div id="settingsModal" class="modal">
+  <div class="modal-content">
+    <span class="close" onclick="closeSettings()">&times;</span>
+    <h2>Game Settings</h2>
+    <label for="numPlayers">Number of Players (2 - 4):</label>
+    <input type="number" id="numPlayersInput" min="2" max="4" value="2">
+    <label for="turnDuration">Turn Duration (seconds, 0 for infinite):</label>
+    <input type="number" id="turnDurationInput" min="0" placeholder="Enter seconds">
+    <button onclick="saveSettings()">Save</button>
+  </div>
+</div>
+
+<script>
+"use strict";
+
+class MartianChess {
+  constructor() {
+    this.numPlayers = 2; // Default number of players
+    this.board = Array(8).fill(null).map(() => Array(8).fill(null));
+    this.currentPlayer = 1;
+    this.selectedCell = null;
+    this.gameMode = null;
+    this.scores = {};
+    this.lastMove = null;
+    this.turnsSinceQuadrantChange = 0; // Counter for the new rule
+    this.initScores();
+    this.initBoard();
+  }
+
+  initScores() {
+    for (let player = 1; player <= this.numPlayers; player++) {
+      this.scores[player] = 0;
+    }
+  }
+
+  initBoard() {
+    // Clear the board
+    this.board = Array(8).fill(null).map(() => Array(8).fill(null));
+
+    // Place initial pieces for each player
+    for (let player = 1; player <= this.numPlayers; player++) {
+      const positions = this.getInitialPositionsForPlayer(player);
+      positions.forEach((pos) => {
+        const [row, col, type] = pos;
+        this.board[row][col] = { type: type, player: player };
+      });
+    }
+  }
+
+  getInitialPositionsForPlayer(player) {
+    const positions = [];
+    if (this.numPlayers == 2 && player === 1) {
+      // Adjusted setup for player 1 in 2-player game
+      positions.push([7,1,'D']); // Changed from 'Q' to 'D'
+      positions.push([7,2,'Q']); // Changed from 'D' to 'Q'
+      positions.push([6,1,'P']); // Changed from 'D' to 'P'
+      positions.push([6,2,'D']); // Changed from 'P' to 'D'
+      positions.push([5,1,'P']);
+      positions.push([5,2,'P']);
+      positions.push([5,3,'D']); // Added
+      positions.push([6,3,'Q']); // Added
+      positions.push([7,3,'Q']); // Added
+    } else if (player === 1) {
+      // Original setup
+      positions.push([7,0,'Q']); positions.push([7,1,'Q']); positions.push([7,2,'D']);
+      positions.push([6,0,'Q']); positions.push([6,1,'D']); positions.push([6,2,'P']);
+      positions.push([5,0,'D']); positions.push([5,1,'P']); positions.push([5,2,'P']);
+    } else if (player === 2) {
+      // Quadrant 1: rows 0-3, cols 0-3
+      positions.push([0,0,'Q']); positions.push([0,1,'Q']); positions.push([0,2,'D']);
+      positions.push([1,0,'Q']); positions.push([1,1,'D']); positions.push([1,2,'P']);
+      positions.push([2,0,'D']); positions.push([2,1,'P']); positions.push([2,2,'P']);
+    } else if (player === 3) {
+      // Quadrant 2: rows 0-3, cols 4-7
+      positions.push([0,7,'Q']); positions.push([0,6,'Q']); positions.push([0,5,'D']);
+      positions.push([1,7,'Q']); positions.push([1,6,'D']); positions.push([1,5,'P']);
+      positions.push([2,7,'D']); positions.push([2,6,'P']); positions.push([2,5,'P']);
+    } else if (player === 4) {
+      // Quadrant 4: rows 4-7, cols 4-7
+      positions.push([7,7,'Q']); positions.push([7,6,'Q']); positions.push([7,5,'D']);
+      positions.push([6,7,'Q']); positions.push([6,6,'D']); positions.push([6,5,'P']);
+      positions.push([5,7,'D']); positions.push([5,6,'P']); positions.push([5,5,'P']);
+    }
+    return positions;
+  }
+
+  getQuadrantOwner(row, col) {
+    if (row >= 0 && row <= 3 && col >= 0 && col <=3) {
+      return 2;
+    } else if (row >= 0 && row <= 3 && col >= 4 && col <=7) {
+      return 3;
+    } else if (row >= 4 && row <=7 && col >= 0 && col <=3) {
+      return 1;
+    } else if (row >= 4 && row <=7 && col >= 4 && col <=7) {
+      return 4;
+    } else {
+      return null;
+    }
+  }
+
+  getValidMoves(row, col) {
+    const piece = this.board[row][col];
+    if (!piece) return [];
+    
+    const moves = [];
+    const directions = {
+      'P': [[1,0], [-1,0], [0,1], [0,-1]],
+      'D': [[1,1], [1,-1], [-1,1], [-1,-1], [1,0], [-1,0], [0,1], [0,-1]],
+      'Q': [[1,1], [1,-1], [-1,1], [-1,-1], [1,0], [-1,0], [0,1], [0,-1]]
+    };
+    
+    const maxDistance = piece.type === 'Q' ? 7 : piece.type === 'D' ? 2 : 1;
+    
+    for (const [dx, dy] of directions[piece.type]) {
+      for (let dist = 1; dist <= maxDistance; dist++) {
+        const newRow = row + dx * dist;
+        const newCol = col + dy * dist;
+        
+        if (newRow < 0 || newRow >= 8 || newCol < 0 || newCol >= 8) break;
+
+        // Check if move is into forbidden quadrants when numPlayers == 2
+        if (this.numPlayers == 2) {
+          const targetQuadrant = this.getQuadrantOwner(newRow, newCol);
+          if (targetQuadrant == 3 || targetQuadrant == 4) {
+            break; // Can't move into quadrants 3 or 4
+          }
+        }
+
+        const targetPiece = this.board[newRow][newCol];
+        if (!targetPiece) {
+          moves.push([newRow, newCol]);
+        } else {
+          if (targetPiece.player !== piece.player) {
+            moves.push([newRow, newCol]);
+          } else if (
+            // Allow pawn to move onto another friendly pawn to combine into a drone
+            piece.type === 'P' && targetPiece.type === 'P' ||
+            // Allow merging drone and pawn into queen
+            (piece.type === 'D' && targetPiece.type === 'P') ||
+            (piece.type === 'P' && targetPiece.type === 'D')
+          ) {
+            moves.push([newRow, newCol]);
+          }
+          break;
+        }
+      }
+    }
+    
+    return moves;
+  }
+
+  playerHasPieceInQuadrant(player, pieceType) {
+    for (let row = 0; row < 8; row++) {
+      for (let col = 0; col < 8; col++) {
+        const piece = this.board[row][col];
+        if (piece && piece.type === pieceType) {
+          const quadrantOwner = this.getQuadrantOwner(row, col);
+          if (quadrantOwner === player) {
+            return true;
+          }
+        }
+      }
+    }
+    return false;
+  }
+
+  makeMove(fromRow, fromCol, toRow, toCol) {
+    const piece = this.board[fromRow][fromCol];
+    const targetPiece = this.board[toRow][toCol];
+    const capturedPiece = targetPiece;
+
+    // Before moving, get the starting quadrant
+    const startQuadrant = this.getQuadrantOwner(fromRow, fromCol);
+
+    let moveType = 'move'; // Default move type is 'move'
+
+    // Check for pawn merging
+    if (
+      piece.type === 'P' &&
+      capturedPiece &&
+      capturedPiece.type === 'P' &&
+      capturedPiece.player === piece.player
+    ) {
+      // Before merging, check if player has any drones in their quadrant
+      if (!this.playerHasPieceInQuadrant(piece.player, 'D')) {
+        // Merge pawns into a drone
+        this.board[toRow][toCol] = { type: 'D', player: piece.player };
+        this.board[fromRow][fromCol] = null;
+        moveType = 'merge';
+      } else {
+        alert(`Cannot merge pawns into drone, you already have a drone in your quadrant.`);
+        return;
+      }
+    } else if (
+      // Check for drone and pawn merging into queen
+      ((piece.type === 'D' && capturedPiece && capturedPiece.type === 'P' && capturedPiece.player === piece.player) ||
+      (piece.type === 'P' && capturedPiece && capturedPiece.type === 'D' && capturedPiece.player === piece.player))
+    ) {
+      // Before merging, check if player has any queens in their quadrant
+      if (!this.playerHasPieceInQuadrant(piece.player, 'Q')) {
+        // Merge drone and pawn into queen
+        this.board[toRow][toCol] = { type: 'Q', player: piece.player };
+        this.board[fromRow][fromCol] = null;
+        moveType = 'merge';
+      } else {
+        alert(`Cannot merge drone and pawn into queen, you already have a queen in your quadrant.`);
+        return;
+      }
+    } else {
+      // Normal move or capture
+      // Move the piece
+      this.board[toRow][toCol] = piece;
+      this.board[fromRow][fromCol] = null;
+
+      // If there was a captured piece
+      if (capturedPiece && capturedPiece.player !== piece.player) {
+        // Update scores
+        const values = {'P': 1, 'D': 2, 'Q': 3};
+        const capturingPlayer = piece.player;
+        this.scores[capturingPlayer] += values[capturedPiece.type];
+        moveType = 'capture';
+      }
+    }
+
+    // Play the appropriate sound effect
+    this.playSound(moveType);
+
+    // After moving, get the ending quadrant
+    const endQuadrant = this.getQuadrantOwner(toRow, toCol);
+
+    // Check if the piece moved from one quadrant to another
+    if (startQuadrant !== endQuadrant) {
+      this.turnsSinceQuadrantChange = 0;
+    } else if (this.currentPlayer === 1) {
+      this.turnsSinceQuadrantChange += 1;
+    }
+
+    // Record the last move
+    this.lastMove = {
+      from: [fromRow, fromCol],
+      to: [toRow, toCol],
+      piece: this.board[toRow][toCol],
+      movingPlayer: this.currentPlayer
+    };
+
+    // Switch current player
+    this.currentPlayer = (this.currentPlayer % this.numPlayers) + 1;
+  }
+
+  evaluatePosition() {
+    let score = 0;
+    const values = {'P': 1, 'D': 2, 'Q': 3};
+    
+    for (let row = 0; row < 8; row++) {
+      for (let col = 0; col < 8; col++) {
+        const piece = this.board[row][col];
+        if (piece) {
+          const value = values[piece.type] * (piece.player === 1 ? 1 : -1);
+          score += value;
+        }
+      }
+    }
+    return score;
+  }
+
+  findBestMove(depth = 3) {
+    const moves = this.getAllPossibleMoves();
+    let bestScore = -Infinity;
+    let bestMove = null;
+    const player = this.currentPlayer;
+
+    for (const move of moves) {
+      const [fromRow, fromCol, toRow, toCol] = move;
+      const movingPiece = this.board[fromRow][fromCol];
+      const originalPiece = Object.assign({}, movingPiece);
+      const savedPiece = this.board[toRow][toCol];
+      const savedScores = Object.assign({}, this.scores);
+      const lastMoveBackup = this.lastMove;
+      const savedTurnsCounter = this.turnsSinceQuadrantChange;
+
+      this.makeMove(fromRow, fromCol, toRow, toCol);
+
+      const score = this.minimax(depth - 1, -Infinity, Infinity, false);
+
+      // Undo move
+      this.board[fromRow][fromCol] = originalPiece;
+      this.board[toRow][toCol] = savedPiece;
+      this.scores = Object.assign({}, savedScores);
+      this.currentPlayer = player;
+      this.lastMove = lastMoveBackup;
+      this.turnsSinceQuadrantChange = savedTurnsCounter;
+
+      if (score > bestScore) {
+        bestScore = score;
+        bestMove = move;
+      }
+    }
+    
+    return bestMove;
+  }
+
+  minimax(depth, alpha, beta, maximizingPlayer) {
+    if (depth === 0 || this.isGameOver()) return this.evaluatePosition();
+
+    const moves = this.getAllPossibleMoves();
+    
+    if (maximizingPlayer) {
+      let maxScore = -Infinity;
+      for (const [fromRow, fromCol, toRow, toCol] of moves) {
+        const movingPiece = this.board[fromRow][fromCol];
+        const originalPiece = Object.assign({}, movingPiece);
+        const savedPiece = this.board[toRow][toCol];
+        const savedScores = Object.assign({}, this.scores);
+        const lastMoveBackup = this.lastMove;
+        const savedTurnsCounter = this.turnsSinceQuadrantChange;
+
+        this.makeMove(fromRow, fromCol, toRow, toCol);
+
+        const score = this.minimax(depth - 1, alpha, beta, false);
+        // Undo move
+        this.board[fromRow][fromCol] = originalPiece;
+        this.board[toRow][toCol] = savedPiece;
+        this.scores = Object.assign({}, savedScores);
+        this.currentPlayer = this.currentPlayer === 1 ? this.numPlayers : this.currentPlayer - 1;
+        this.lastMove = lastMoveBackup;
+        this.turnsSinceQuadrantChange = savedTurnsCounter;
+
+        maxScore = Math.max(maxScore, score);
+        alpha = Math.max(alpha, score);
+        if (beta <= alpha) break;
+      }
+      return maxScore;
+    } else {
+      let minScore = Infinity;
+      for (const [fromRow, fromCol, toRow, toCol] of moves) {
+        const movingPiece = this.board[fromRow][fromCol];
+        const originalPiece = Object.assign({}, movingPiece);
+        const savedPiece = this.board[toRow][toCol];
+        const savedScores = Object.assign({}, this.scores);
+        const lastMoveBackup = this.lastMove;
+        const savedTurnsCounter = this.turnsSinceQuadrantChange;
+
+        this.makeMove(fromRow, fromCol, toRow, toCol);
+
+        const score = this.minimax(depth - 1, alpha, beta, true);
+        // Undo move
+        this.board[fromRow][fromCol] = originalPiece;
+        this.board[toRow][toCol] = savedPiece;
+        this.scores = Object.assign({}, savedScores);
+        this.currentPlayer = this.currentPlayer === 1 ? this.numPlayers : this.currentPlayer - 1;
+        this.lastMove = lastMoveBackup;
+        this.turnsSinceQuadrantChange = savedTurnsCounter;
+
+        minScore = Math.min(minScore, score);
+        beta = Math.min(beta, score);
+        if (beta <= alpha) break;
+      }
+      return minScore;
+    }
+  }
+
+  getAllPossibleMoves() {
+    const moves = [];
+    for (let row = 0; row < 8; row++) {
+      for (let col = 0; col < 8; col++) {
+        const piece = this.board[row][col];
+        if (piece && piece.player === this.currentPlayer) {
+          const validMoves = this.getValidMoves(row, col);
+          for (const [toRow, toCol] of validMoves) {
+            moves.push([row, col, toRow, toCol]);
+          }
+        }
+      }
+    }
+    return moves;
+  }
+
+  isGameOver() {
+    const moves = this.getAllPossibleMoves();
+    return moves.length === 0;
+  }
+
+  processOwnership() {
+    for (let row = 0; row < 8; row++) {
+      for (let col = 0; col < 8; col++) {
+        const piece = this.board[row][col];
+        if (piece) {
+          const quadrantOwner = this.getQuadrantOwner(row, col);
+          if (piece.player !== quadrantOwner) {
+            piece.player = quadrantOwner;
+          }
+        }
+      }
+    }
+  }
+
+  playSound(type) {
+    const context = new (window.AudioContext || window.webkitAudioContext)();
+    const oscillator = context.createOscillator();
+    const gainNode = context.createGain();
+
+    oscillator.connect(gainNode);
+    gainNode.connect(context.destination);
+
+    // Set up sound parameters based on type
+    switch(type) {
+      case 'merge':
+        oscillator.type = 'sawtooth';
+        oscillator.frequency.setValueAtTime(440, context.currentTime); // A4
+        gainNode.gain.setValueAtTime(0.5, context.currentTime);
+        break;
+      case 'move':
+        oscillator.type = 'sine';
+        oscillator.frequency.setValueAtTime(660, context.currentTime); // E5
+        gainNode.gain.setValueAtTime(0.3, context.currentTime);
+        break;
+      case 'capture':
+        oscillator.type = 'square';
+        oscillator.frequency.setValueAtTime(220, context.currentTime); // A3
+        gainNode.gain.setValueAtTime(0.7, context.currentTime);
+        break;
+      case 'draw':
+        oscillator.type = 'triangle';
+        oscillator.frequency.setValueAtTime(330, context.currentTime); // E4
+        gainNode.gain.setValueAtTime(0.5, context.currentTime);
+        break;
+      case 'win':
+        oscillator.type = 'sine';
+        oscillator.frequency.setValueAtTime(880, context.currentTime); // A5
+        gainNode.gain.setValueAtTime(0.5, context.currentTime);
+        break;
+    }
+
+    oscillator.start();
+    oscillator.stop(context.currentTime + 0.5); // Play for 0.5 seconds
+  }
+}
+
+let game = new MartianChess();
+let validMoves = [];
+let totalTurns = 0;
+let gameStartTime = null;
+let turnStartTime = null;
+let gameTimerInterval = null;
+let turnTimerInterval = null;
+let turnDuration = null; // In seconds, null means infinite time
+let turnTimeout;
+
+function createBoard() {
+  const boardElement = document.getElementById('board');
+  boardElement.innerHTML = '';
+  
+  for (let row = 0; row < 8; row++) {
+    for (let col = 0; col < 8; col++) {
+      const cell = document.createElement('div');
+      cell.className = 'cell';
+      cell.dataset.row = row;
+      cell.dataset.col = col;
+
+      // Add quadrant classes
+      const quadrantOwner = game.getQuadrantOwner(row, col);
+      cell.classList.add(`quadrant${quadrantOwner}`);
+      
+      // Highlight current player's quadrant
+      if (quadrantOwner === game.currentPlayer) {
+        cell.classList.add('current-quadrant');
+      }
+      
+      // Determine if cell should be light or dark
+      if ((row + col) % 2 === 0) {
+        cell.classList.add('light-cell');
+      } else {
+        cell.classList.add('dark-cell');
+      }
+      
+      const piece = game.board[row][col];
+      if (piece) {
+        cell.textContent = piece.type;
+        cell.classList.add(`player${piece.player}`);
+        if (piece.player === game.currentPlayer) {
+          cell.classList.add('current-player-piece');
+        }
+      }
+      
+      cell.addEventListener('click', () => handleCellClick(row, col));
+      
+      if (validMoves.some(([r, c]) => r === row && c === col)) {
+        cell.classList.add('valid-move');
+      }
+      
+      boardElement.appendChild(cell);
+    }
+  }
+}
+
+function handleCellClick(row, col) {
+  if (game.gameMode === 'cvc') return;
+  if (game.gameMode === 'pvc' && game.currentPlayer !== 1) return;
+  
+  const piece = game.board[row][col];
+  
+  if (game.selectedCell) {
+    const [selectedRow, selectedCol] = game.selectedCell;
+    if (validMoves.some(([r, c]) => r === row && c === col)) {
+      game.makeMove(selectedRow, selectedCol, row, col);
+      game.selectedCell = null;
+      validMoves = [];
+      updateGame();
+    } else {
+      game.selectedCell = null;
+      validMoves = [];
+      handleCellClick(row, col);
+    }
+  } else if (piece && piece.player === game.currentPlayer) {
+    game.selectedCell = [row, col];
+    validMoves = game.getValidMoves(row, col);
+  }
+  
+  createBoard();
+  updateStatus();
+}
+
+function updateGame() {
+  // Process ownership changes at the end of the player's turn
+  game.processOwnership();
+
+  createBoard();
+  updateStatus();
+
+  // Check for game end conditions
+  if (checkGameEndConditions()) {
+    clearInterval(gameTimerInterval);
+    clearInterval(turnTimerInterval);
+    if (typeof turnTimeout !== 'undefined') {
+      clearTimeout(turnTimeout);
+    }
+    return;
+  }
+
+  startPlayerTurn();
+
+  if (game.gameMode === 'pvc' && game.currentPlayer !== 1) {
+    setTimeout(makeComputerMove, 500);
+  } else if (game.gameMode === 'cvc') {
+    setTimeout(makeComputerMove, 500);
+  }
+}
+
+function makeComputerMove() {
+  const bestMove = game.findBestMove();
+  if (bestMove) {
+    game.makeMove(bestMove[0], bestMove[1], bestMove[2], bestMove[3]);
+  }
+  updateGame();
+}
+
+function updateStatus() {
+  const status = document.getElementById('status');
+  status.textContent = `Current Player: ${game.currentPlayer}`;
+
+  // Update individual score elements beside quadrants
+  for (let player = 1; player <= 4; player++) {
+    const scoreElement = document.getElementById(`score-player${player}`);
+    if (scoreElement) {
+      if (player <= game.numPlayers) {
+        scoreElement.style.display = 'block';
+        scoreElement.textContent = `Player ${player}: ${game.scores[player]}`;
+      } else {
+        scoreElement.style.display = 'none';
+      }
+    }
+  }
+
+  // Update turn counter
+  const turnCounterElement = document.getElementById('turnCounter');
+  if (turnCounterElement) {
+    turnCounterElement.textContent = `Turns since Quadrant Change: ${game.turnsSinceQuadrantChange}`;
+  }
+
+  // Update total turns
+  const totalTurnsElement = document.getElementById('totalTurns');
+  if (totalTurnsElement) {
+    totalTurnsElement.textContent = `Total Turns: ${totalTurns}`;
+  }
+}
+
+function setGameMode(mode) {
+  game.gameMode = mode;
+  resetGame();
+  if (mode === 'cvc') {
+    setTimeout(makeComputerMove, 500);
+  }
+  if (mode === 'pvc') {
+    updateGame();
+  }
+}
+
+function resetGame() {
+  game = new MartianChess();
+  game.numPlayers = numPlayersSetting || 2;
+  game.initScores();
+  game.initBoard();
+  validMoves = [];
+  totalTurns = 0;
+  gameStartTime = Date.now();
+  turnStartTime = Date.now();
+  clearInterval(gameTimerInterval);
+  clearInterval(turnTimerInterval);
+  if (typeof turnTimeout !== 'undefined') {
+    clearTimeout(turnTimeout);
+  }
+  gameTimerInterval = setInterval(updateGameTime, 1000);
+  turnTimerInterval = setInterval(updateTurnTime, 1000);
+  createBoard();
+  updateStatus();
+
+  // Start the game loop
+  if (game.gameMode === 'pvc' && game.currentPlayer !== 1) {
+    setTimeout(makeComputerMove, 500);
+  }
+}
+
+function checkQuadrantEmpty() {
+  let emptyQuadrants = [];
+
+  for (let player = 1; player <= game.numPlayers; player++) {
+    let piecesInQuadrant = 0;
+    for (let row = 0; row < 8; row++) {
+      for (let col = 0; col < 8; col++) {
+        const piece = game.board[row][col];
+        const quadrantOwner = game.getQuadrantOwner(row, col);
+        if (quadrantOwner === player && piece) {
+          piecesInQuadrant++;
+        }
+      }
+    }
+    if (piecesInQuadrant === 0) {
+      emptyQuadrants.push(player);
+    }
+  }
+
+  if (emptyQuadrants.length > 0) {
+    // Determine winner
+    const maxScore = Math.max(...Object.values(game.scores));
+    const playersWithMaxScore = Object.keys(game.scores).filter(player => game.scores[player] === maxScore);
+
+    let winner = null;
+
+    if (playersWithMaxScore.length === 1) {
+      winner = playersWithMaxScore[0];
+    } else {
+      // If tie, winner is the tied player with an empty quadrant
+      const tiedPlayersWithEmptyQuadrant = playersWithMaxScore.filter(player => emptyQuadrants.includes(parseInt(player)));
+      if (tiedPlayersWithEmptyQuadrant.length === 1) {
+        winner = tiedPlayersWithEmptyQuadrant[0];
+      } else {
+        winner = 'Draw';
+      }
+    }
+
+    if (winner === 'Draw') {
+      game.playSound('draw');
+      alert(`Game over! It's a draw!`);
+    } else {
+      game.playSound('win');
+      alert(`Game over! Player ${winner} wins!`);
+    }
+    return true; // Game over
+  }
+
+  return false; // Game not over
+}
+
+function checkGameEndConditions() {
+  if (checkQuadrantEmpty()) {
+    return true; // Game over
+  }
+
+  if (game.turnsSinceQuadrantChange >= 7 || game.isGameOver()) {
+    // End game
+
+    const maxScore = Math.max(...Object.values(game.scores));
+    const playersWithMaxScore = Object.keys(game.scores).filter(player => game.scores[player] === maxScore);
+
+    let winner = null;
+
+    if (playersWithMaxScore.length === 1) {
+      winner = playersWithMaxScore[0];
+    } else {
+      // If tie, winner is the tied player with an empty quadrant
+      let emptyQuadrants = [];
+
+      for (let player = 1; player <= game.numPlayers; player++) {
+        let piecesInQuadrant = 0;
+        for (let row = 0; row < 8; row++) {
+          for (let col = 0; col < 8; col++) {
+            const piece = game.board[row][col];
+            const quadrantOwner = game.getQuadrantOwner(row, col);
+            if (quadrantOwner === player && piece) {
+              piecesInQuadrant++;
+            }
+          }
+        }
+        if (piecesInQuadrant === 0) {
+          emptyQuadrants.push(player);
+        }
+      }
+
+      const tiedPlayersWithEmptyQuadrant = playersWithMaxScore.filter(player => emptyQuadrants.includes(parseInt(player)));
+      if (tiedPlayersWithEmptyQuadrant.length === 1) {
+        winner = tiedPlayersWithEmptyQuadrant[0];
+      } else {
+        winner = 'Draw';
+      }
+    }
+
+    if (winner === 'Draw') {
+      game.playSound('draw');
+      alert(`Game over! It's a draw!`);
+    } else {
+      game.playSound('win');
+      alert(`Game over! Player ${winner} wins!`);
+    }
+    return true; // Game over
+  }
+
+  return false; // Game not over
+}
+
+function updateGameTime() {
+  const now = Date.now();
+  const elapsed = now - gameStartTime;
+  const minutes = Math.floor(elapsed / 60000);
+  const seconds = Math.floor((elapsed % 60000) / 1000);
+  const gameTimeElement = document.getElementById('gameTime');
+  if (gameTimeElement) {
+    gameTimeElement.textContent = `Game Time: ${minutes}m ${seconds}s`;
+  }
+}
+
+function updateTurnTime() {
+  const now = Date.now();
+  const elapsed = now - turnStartTime;
+  const seconds = Math.floor(elapsed / 1000);
+  const turnTimeElement = document.getElementById('turnTime');
+  if (turnTimeElement) {
+    if (turnDuration !== null && turnDuration > 0) {
+      const remaining = turnDuration - seconds;
+      turnTimeElement.textContent = `Time Remaining: ${remaining}s`;
+      if (remaining <= 0) {
+        clearInterval(turnTimerInterval);
+      }
+    } else {
+      turnTimeElement.textContent = `Current Turn Time: ${seconds}s`;
+    }
+  }
+}
+
+function startPlayerTurn() {
+  turnStartTime = Date.now();
+  totalTurns++;
+  clearInterval(turnTimerInterval);
+  turnTimerInterval = setInterval(updateTurnTime, 1000);
+  if (typeof turnTimeout !== 'undefined') {
+    clearTimeout(turnTimeout);
+  }
+  if (turnDuration !== null && turnDuration > 0) {
+    // Start countdown
+    turnTimeout = setTimeout(() => {
+      alert(`Player ${game.currentPlayer} ran out of time! Turn forfeited.`);
+      game.currentPlayer = (game.currentPlayer % game.numPlayers) + 1;
+      updateGame();
+    }, turnDuration * 1000);
+  }
+}
+
+function openSettings() {
+  document.getElementById('settingsModal').style.display = 'block';
+}
+
+function closeSettings() {
+  document.getElementById('settingsModal').style.display = 'none';
+}
+
+let numPlayersSetting = 2;
+
+function saveSettings() {
+  const numPlayersInput = document.getElementById('numPlayersInput').value;
+  const turnDurationInput = document.getElementById('turnDurationInput').value;
+  const numPlayers = parseInt(numPlayersInput);
+
+  if (numPlayers >= 2 && numPlayers <= 4) {
+    numPlayersSetting = numPlayers;
+    game.numPlayers = numPlayersSetting;
+    game.initScores();
+    game.initBoard();
+    createBoard();
+    updateStatus();
+  } else {
+    alert('Number of players must be between 2 and 4.');
+  }
+
+  if (turnDurationInput === '' || parseInt(turnDurationInput) === 0) {
+    turnDuration = null; // Infinite time
+  } else {
+    turnDuration = parseInt(turnDurationInput);
+  }
+  closeSettings();
+}
+
+window.onclick = function(event) {
+  const modal = document.getElementById('settingsModal');
+  if (event.target === modal) {
+    closeSettings();
+  }
+}
+
+createBoard();
+</script>
+</body>
+</html>
