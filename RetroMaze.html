@@ -1,0 +1,1076 @@
+<html><head><base href="." />
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<style>
+  body {
+    margin: 0;
+    overflow: hidden;
+    background: #000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    font-family: 'Courier New', monospace;
+  }
+  
+  #gameCanvas {
+    border: 4px solid #30ff30;
+    image-rendering: pixelated;
+  }
+  
+  #score, #level {
+    position: fixed;
+    color: #30ff30;
+    font-size: 20px;
+  }
+
+  #score {
+    top: 20px;
+    left: 20px;
+  }
+
+  #level {
+    top: 20px;
+    right: 20px;
+  }
+  
+  .crt::before {
+    content: " ";
+    display: block;
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    right: 0;
+    background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+    background-size: 100% 2px, 3px 100%;
+    pointer-events: none;
+    z-index: 2;
+  }
+  
+  .scanline {
+    width: 100%;
+    height: 100vh;
+    background: linear-gradient(to bottom,
+        transparent 50%,
+        rgba(0, 0, 0, 0.5) 51%);
+    background-size: 100% 4px;
+    position: fixed;
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  .scanline2 {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 2px;
+    background: rgba(0, 255, 0, .25);
+    animation: scan 8s linear infinite;
+    pointer-events: none;
+  }
+
+  @keyframes glow {
+    from {
+      text-shadow: 0 0 5px #0f0;
+    }
+    to {
+      text-shadow: 0 0 20px #0f0;
+    }
+  }
+
+  @keyframes scan {
+    from { transform: translateY(-100vh); }
+    to { transform: translateY(100vh); }
+  }
+
+  #muteButton {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #30ff30;
+    color: black;
+    border: none;
+    padding: 10px 20px;
+    cursor: pointer;
+    font-family: 'Courier New', monospace;
+  }
+
+  @media (min-width: 768px) {
+      #touchControls {
+          display: none;
+      }
+  }
+
+</style>
+</head>
+<body>
+<div class="scanline2"></div>
+<div class="scanline"></div>
+ <div class="crt">
+   <canvas id="gameCanvas"></canvas>
+   <div id="score">SCORE: 0</div>
+   <div id="level">LEVEL: 1</div>
+   <button id="muteButton">
+     MUTE MUSIC
+   </button>
+</div>
+
+<script>
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+const musicOscillators = [];
+let musicPlaying = false;
+
+function playBackgroundMusic() {
+    if (musicPlaying) return;
+    musicPlaying = true;
+
+    const bassline = [ 0, 0, 0, 0, 0, 196.00, 146.83, 196.00, 246.94, 293.66, 293.66, 392.00, 392.00, 392.00, 293.66, 523.25, 293.66, 329.63, 349.23, 392.00, 293.66, 523.25, 246.94, 220.00, 246.94, 196.00, 246.94, 293.66, 293.66, 523.25, 293.66, 329.63, 293.66, 329.63, 349.23, 392.00, 349.23, 392.00, 440.00, 392.00, 293.66, 329.63, 349.23, 392.00, 349.23, 392.00, 392.00, 392.00, 392.00, 349.23, 392.00, 392.00, 392.00, 392.00, 392.00, 392.00, 392.00, 392.00, 392.00, 293.66, 293.66, 329.63, 349.23, 392.00, 349.23, 392.00, 293.66, 293.66, 293.66, 329.63, 349.23, 392.00, 392.00, 349.23, 392.00, 440.00, 493.88, 440.00, 392.00, 349.23, 392.00, 349.23, 392.00, 440.00, 392.00, 349.23, 293.66, 293.66, 246.94, 293.66, 392.00, 293.66, 293.66, 523.25, 246.94, 220.00, 196.00, 220.00, 246.94, 196.00, 246.94, 293.66, 523.25, 246.94, 220.00, 196.00, 174.61, 196.00, 220.00, 174.61, 196.00, 220.00, 246.94, 293.66, 523.25, 246.94, 220.00, 196.00, 174.61, 196.00, 196.00, 196.00, 196.00, 196.00, 196.00, 196.00, 196.00 ];   // G3 D3 G3 B3 D4 D4 G4 G4 G4 D4 C5 D4 E4 F4 G4 D4 C5 B3 A3 B3 G3 B3 D4 D4 C5 D4 E4 D4 E4 F4 G4 F4 G4 A4 G4 D4 E4 F4 G4 F4 G4 G4 G4 G4 F4 G4 G4 G4 G4 G4 G4 G4 G4 G4 D4 D4 E4 F4 G4 F4 G4 D4 D4 D4 E4 F4 G4 G4 F4 G4 A4 B4 A4 G4 F4 G4 F4 G4 A4 G4 F4 D4 D4 B3 D4 G4 D4 D4 C5 B3 A3 G3 A3 B3 G3 B3 D4 C5 B3 A3 G3 F3 G3 A3 F3 G3 A3 B3 D4 C5 B3 A3 G3 F3 G3 G3 G3 G3 G3 G3 G3 G3 
+    const melody = [ 0, 0, 0, 0, 0, 196.00, 146.83, 196.00, 246.94, 293.66, 293.66, 392.00, 392.00, 392.00, 293.66, 523.25, 293.66, 329.63, 349.23, 392.00, 293.66, 523.25, 246.94, 220.00, 246.94, 196.00, 246.94, 293.66, 293.66, 523.25, 293.66, 329.63, 293.66, 329.63, 349.23, 392.00, 349.23, 392.00, 440.00, 392.00, 293.66, 329.63, 349.23, 392.00, 349.23, 392.00, 392.00, 392.00, 392.00, 349.23, 392.00, 392.00, 392.00, 392.00, 392.00, 392.00, 392.00, 392.00, 392.00, 293.66, 293.66, 329.63, 349.23, 392.00, 349.23, 392.00, 293.66, 293.66, 293.66, 329.63, 349.23, 392.00, 392.00, 349.23, 392.00, 440.00, 493.88, 440.00, 392.00, 349.23, 392.00, 349.23, 392.00, 440.00, 392.00, 349.23, 293.66, 293.66, 246.94, 293.66, 392.00, 293.66, 293.66, 523.25, 246.94, 220.00, 196.00, 220.00, 246.94, 196.00, 246.94, 293.66, 523.25, 246.94, 220.00, 196.00, 174.61, 196.00, 220.00, 174.61, 196.00, 220.00, 246.94, 293.66, 523.25, 246.94, 220.00, 196.00, 174.61, 196.00, 196.00, 196.00, 196.00, 196.00, 196.00, 196.00, 196.00 ];   // G3 D3 G3 B3 D4 D4 G4 G4 G4 D4 C5 D4 E4 F4 G4 D4 C5 B3 A3 B3 G3 B3 D4 D4 C5 D4 E4 D4 E4 F4 G4 F4 G4 A4 G4 D4 E4 F4 G4 F4 G4 G4 G4 G4 F4 G4 G4 G4 G4 G4 G4 G4 G4 G4 D4 D4 E4 F4 G4 F4 G4 D4 D4 D4 E4 F4 G4 G4 F4 G4 A4 B4 A4 G4 F4 G4 F4 G4 A4 G4 F4 D4 D4 B3 D4 G4 D4 D4 C5 B3 A3 G3 A3 B3 G3 B3 D4 C5 B3 A3 G3 F3 G3 A3 F3 G3 A3 B3 D4 C5 B3 A3 G3 F3 G3 G3 G3 G3 G3 G3 G3 G3 
+
+  
+    const duration = 0.3;
+    
+    // Create and start bass oscillator
+    const bassOsc = audioCtx.createOscillator();
+    const bassGain = audioCtx.createGain();
+    bassOsc.type = 'square';
+    bassGain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+    bassOsc.connect(bassGain);
+    bassGain.connect(audioCtx.destination);
+    bassOsc.start();
+    musicOscillators.push(bassOsc);
+
+    // Create and start melody oscillator
+    const melodyOsc = audioCtx.createOscillator();
+    const melodyGain = audioCtx.createGain();
+    melodyOsc.type = 'sine';
+    melodyGain.gain.setValueAtTime(0.05, audioCtx.currentTime);
+    melodyOsc.connect(melodyGain);
+    melodyGain.connect(audioCtx.destination);
+    melodyOsc.start();
+    musicOscillators.push(melodyOsc);
+
+    let noteIndex = 0;
+    
+    function playNextNote() {
+        if (!musicPlaying) return;
+        
+        bassOsc.frequency.setValueAtTime(bassline[noteIndex], audioCtx.currentTime);
+        melodyOsc.frequency.setValueAtTime(melody[noteIndex], audioCtx.currentTime);
+        
+        noteIndex = (noteIndex + 1) % bassline.length;
+        setTimeout(playNextNote, duration * 1500);
+    }
+    
+    playNextNote();
+}
+
+function stopBackgroundMusic() {
+    musicPlaying = false;
+    musicOscillators.forEach(osc => {
+        try {
+            osc.stop();
+            osc.disconnect();
+        } catch (e) {}
+    });
+    musicOscillators.length = 0;
+}
+
+function playTone(frequency, duration, type = 'square') {
+    const oscillator = audioCtx.createOscillator();
+    const gainNode = audioCtx.createGain();
+    
+    oscillator.type = type;
+    oscillator.frequency.setValueAtTime(frequency, audioCtx.currentTime);
+    
+    gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
+    
+    oscillator.connect(gainNode);
+    gainNode.connect(audioCtx.destination);
+    
+    oscillator.start();
+    oscillator.stop(audioCtx.currentTime + duration);
+}
+
+function playStartJingle() {
+    const notes = [262, 330, 392, 523];
+    notes.forEach((freq, i) => {
+        setTimeout(() => playTone(freq, 0.2), i * 200);
+    });
+}
+
+function playCollectSound() {
+    playTone(660, 0.1);
+}
+
+function playPhasePowerSound() {
+    const notes = [880, 990, 1100, 1320];
+    notes.forEach((freq, i) => {
+        setTimeout(() => playTone(freq, 0.1, 'sine'), i * 50);
+    });
+}
+
+function playPhaseEndSound() {
+    const notes = [1320, 1100, 990, 880];
+    notes.forEach((freq, i) => {
+        setTimeout(() => playTone(freq, 0.1, 'sine'), i * 50);
+    });
+}
+  
+function playLevelClearSound() {
+    const notes = [523, 659, 784, 1047];
+    notes.forEach((freq, i) => {
+        setTimeout(() => playTone(freq, 0.2, 'sine'), i * 150);
+    });
+}
+
+function playDeathSound() {
+    const notes = [440, 330, 220, 110];
+    notes.forEach((freq, i) => {
+        setTimeout(() => playTone(freq, 0.2, 'sawtooth'), i * 100);
+    });
+}
+
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+const TILE_SIZE = 20;
+const MAZE_WIDTH = 31;
+const MAZE_HEIGHT = 23;
+
+canvas.width = MAZE_WIDTH * TILE_SIZE;
+canvas.height = MAZE_HEIGHT * TILE_SIZE;
+
+let score = 0;
+let level = 1;
+let playerX = 1;
+let playerY = 1;
+let mazeData = [];
+let collectiblesCount = 0;
+let enemies = [];
+let arrows = [];
+let archers = [];
+let powerUpX = -1;
+let powerUpY = -1;
+let hasPhasePower = false;
+let phasePowerTimer = 0;
+let powerUpSpawnTimer = 0;
+let powerUpLifetime = 0;
+let waypoint = [{wayX: 1, wayY: 1}]; // Initialize with starting position
+let currentPowerUpType = 'phase'; // New variable for power-up type
+
+let playerInvulnerable = false;
+let invulnerabilityTimer = 0;
+
+class Enemy {
+    constructor(x, y, type) {
+        this.x = x;
+        this.y = y;
+        this.type = type;
+        this.direction = Math.floor(Math.random() * 4);
+        this.moveCounter = 0;
+        this.shootTimer = 0;
+        this.active = true;
+    }
+
+    move() {
+        if (!this.active) return;
+        
+        const directions = [[0, -1], [1, 0], [0, 1], [-1, 0]];
+        let newX = this.x;
+        let newY = this.y;
+
+        if (this.type === 3) { // Shooting enemy
+            this.shootTimer++;
+            if (this.shootTimer >= 25) { // Shoot every 5 seconds
+                this.shoot();
+                this.shootTimer = 0;
+            }
+            // Random movement
+            if (Math.random() < 0.3) {
+                this.direction = Math.floor(Math.random() * 4);
+            }
+            [newX, newY] = this.tryMove(directions[this.direction]);
+        } else {
+            // Original enemy movement code...
+            if (this.type === 0) { // Random movement
+                if (Math.random() < 0.3) {
+                    this.direction = Math.floor(Math.random() * 4);
+                }
+                [newX, newY] = this.tryMove(directions[this.direction]);
+            } else if (this.type === 1) { // Patrol movement
+                this.moveCounter++;
+                if (this.moveCounter > 5 || !this.canMove(directions[this.direction])) {
+                    this.direction = (this.direction + 1) % 4;
+                    this.moveCounter = 0;
+                }
+                [newX, newY] = this.tryMove(directions[this.direction]);
+            } else if (this.type === 2) { // Chase player
+                const dx = Math.sign(playerX - this.x);
+                const dy = Math.sign(playerY - this.y);
+                if (Math.random() < 0.7) {
+                    if (Math.abs(playerX - this.x) > Math.abs(playerY - this.y)) {
+                        [newX, newY] = this.tryMove([dx, 0]);
+                        if (newX === this.x && newY === this.y) {
+                            [newX, newY] = this.tryMove([0, dy]);
+                        }
+                    } else {
+                        [newX, newY] = this.tryMove([0, dy]);
+                        if (newX === this.x && newY === this.y) {
+                            [newX, newY] = this.tryMove([dx, 0]);
+                        }
+                    }
+                }
+            }
+        }
+
+        this.x = newX;
+        this.y = newY;
+    }
+
+    shoot() {
+        const dx = Math.sign(playerX - this.x);
+        const dy = Math.sign(playerY - this.y);
+        arrows.push(new Arrow(this.x, this.y, [dx, dy]));
+        playArrowSound();
+    }
+
+    tryMove(dir) {
+        const newX = this.x + dir[0];
+        const newY = this.y + dir[1];
+        if (this.canMove(dir)) {
+            return [newX, newY];
+        }
+        return [this.x, this.y];
+    }
+
+    canMove(dir) {
+        const newX = this.x + dir[0];
+        const newY = this.y + dir[1];
+        return newX >= 0 && newX < MAZE_WIDTH && newY >= 0 && newY < MAZE_HEIGHT 
+            && mazeData[newY][newX] !== 1;
+    }
+
+    draw() {
+        const colors = ['#ff0000', '#ff00ff', '#00ffff', '#ffff00'];
+        ctx.fillStyle = colors[this.type];
+        ctx.beginPath();
+        ctx.moveTo(this.x * TILE_SIZE + TILE_SIZE/2, this.y * TILE_SIZE);
+        ctx.lineTo(this.x * TILE_SIZE + TILE_SIZE, this.y * TILE_SIZE + TILE_SIZE);
+        ctx.lineTo(this.x * TILE_SIZE, this.y * TILE_SIZE + TILE_SIZE);
+        ctx.closePath();
+        ctx.fill();
+    }
+}
+
+class Arrow {
+    constructor(x, y, direction) {
+        this.x = x;
+        this.y = y;
+        this.direction = direction; // [dx, dy]
+        this.active = true;
+    }
+
+    move() {
+        if (!this.active) return;
+        
+        this.x += this.direction[0] * 0.5;
+        this.y += this.direction[1] * 0.5;
+        
+        // Check collision with walls
+        if (this.x < 0 || this.x >= MAZE_WIDTH || this.y < 0 || this.y >= MAZE_HEIGHT ||
+            mazeData[Math.floor(this.y)][Math.floor(this.x)] === 1) {
+            this.active = false;
+        }
+    }
+
+    draw() {
+        if (!this.active) return;
+        
+        ctx.fillStyle = '#ff6600';
+        ctx.beginPath();
+        ctx.moveTo(
+            this.x * TILE_SIZE + TILE_SIZE/2 - this.direction[0] * TILE_SIZE/2,
+            this.y * TILE_SIZE + TILE_SIZE/2 - this.direction[1] * TILE_SIZE/2
+        );
+        ctx.lineTo(
+            this.x * TILE_SIZE + TILE_SIZE/2 + this.direction[0] * TILE_SIZE/2,
+            this.y * TILE_SIZE + TILE_SIZE/2 + this.direction[1] * TILE_SIZE/2
+        );
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = '#ff6600';
+        ctx.stroke();
+    }
+
+    checkPlayerCollision() {
+        return this.active && 
+               Math.abs(this.x - playerX) < 0.5 && 
+               Math.abs(this.y - playerY) < 0.5;
+    }
+}
+
+class Archer {
+    constructor(side) {
+        this.side = side; // 0: top, 1: right, 2: bottom, 3: left
+        this.resetPosition();
+        this.shootTimer = 0;
+    }
+
+    resetPosition() {
+        switch(this.side) {
+            case 0:
+                this.x = Math.floor(Math.random() * (MAZE_WIDTH - 2)) + 1;
+                this.y = 0;
+                break;
+            case 1:
+                this.x = MAZE_WIDTH - 1;
+                this.y = Math.floor(Math.random() * (MAZE_HEIGHT - 2)) + 1;
+                break;
+            case 2:
+                this.x = Math.floor(Math.random() * (MAZE_WIDTH - 2)) + 1;
+                this.y = MAZE_HEIGHT - 1;
+                break;
+            case 3:
+                this.x = 0;
+                this.y = Math.floor(Math.random() * (MAZE_HEIGHT - 2)) + 1;
+                break;
+        }
+    }
+
+    update() {
+        this.shootTimer++;
+        if (this.shootTimer >= 50) { // Shoot every 50 frames
+            this.shoot();
+            this.shootTimer = 0;
+            this.resetPosition();
+        }
+    }
+
+    shoot() {
+        const directions = [[0, 1], [-1, 0], [0, -1], [1, 0]];
+        const direction = directions[this.side];
+        arrows.push(new Arrow(this.x, this.y, direction));
+        playArrowSound();
+    }
+
+    draw() {
+        ctx.fillStyle = '#ff9900';
+        ctx.fillRect(
+            this.x * TILE_SIZE + TILE_SIZE/4,
+            this.y * TILE_SIZE + TILE_SIZE/4,
+            TILE_SIZE/2,
+            TILE_SIZE/2
+        );
+    }
+}
+
+function playArrowSound() {
+    playTone(440, 0.1, 'triangle');
+}
+
+function spawnPowerUp() {
+    if (powerUpX !== -1) return;
+    
+    let powerUpType;
+    if (level >= 10) {
+        // Equal chance between phase, disable, and invulnerable
+        const rand = Math.random();
+        if (rand < 0.33) {
+            powerUpType = 'phase';
+        } else if (rand < 0.66) {
+            powerUpType = 'disable';
+        } else {
+            powerUpType = 'invulnerable';
+        }
+    } else if (level >= 5) {
+        powerUpType = Math.random() < 0.5 ? 'phase' : 'disable';
+    } else {
+        powerUpType = 'phase';
+    }
+    
+    // Find random empty spot - only on paths (tile value 0)
+    let attempts = 0;
+    do {
+        powerUpX = Math.floor(Math.random() * (MAZE_WIDTH - 2)) + 1;
+        powerUpY = Math.floor(Math.random() * (MAZE_HEIGHT - 2)) + 1;
+        attempts++;
+    } while (mazeData[powerUpY][powerUpX] !== 0 && attempts < 100);
+    
+    if (attempts >= 100) {
+        powerUpX = -1;
+        powerUpY = -1;
+    } else {
+        powerUpLifetime = 0; // Reset lifetime when spawning new power-up
+        currentPowerUpType = powerUpType; // Set the current power-up type
+    }
+}
+
+function playInvulnerableSound() {
+    const notes = [440, 554, 659, 880];
+    notes.forEach((freq, i) => {
+        setTimeout(() => playTone(freq, 0.15, 'square'), i * 100);
+    });
+}
+
+function playInvulnerableEndSound() {
+    const notes = [880, 659, 554, 440];
+    notes.forEach((freq, i) => {
+        setTimeout(() => playTone(freq, 0.15, 'square'), i * 100);
+    });
+}
+
+function generateMaze() {
+    // Initialize maze with walls
+    for (let y = 0; y < MAZE_HEIGHT; y++) {
+        mazeData[y] = [];
+        for (let x = 0; x < MAZE_WIDTH; x++) {
+            mazeData[y][x] = 1;
+        }
+    }
+
+    function carve(x, y) {
+        mazeData[y][x] = 0;
+
+        const directions = [
+            [0, -2], [2, 0], [0, 2], [-2, 0]
+        ];
+        
+        for (let i = directions.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [directions[i], directions[j]] = [directions[j], directions[i]]; 
+        }
+
+        for (const [dx, dy] of directions) {
+            const newX = x + dx;
+            const newY = y + dy;
+            
+            if (newX > 0 && newX < MAZE_WIDTH - 1 && newY > 0 && newY < MAZE_HEIGHT - 1 
+                && mazeData[newY][newX] === 1) {
+                mazeData[y + dy/2][x + dx/2] = 0;
+                carve(newX, newY);
+            }
+        }
+    }
+
+    carve(1, 1);
+
+    // Add loops for levels > 1
+    if (level > 1) {
+        const numLoops = level + 50; // Increased from level + 5
+        for (let i = 0; i < numLoops; i++) {
+            const x = Math.floor(Math.random() * (MAZE_WIDTH - 4)) + 2;
+            const y = Math.floor(Math.random() * (MAZE_HEIGHT - 4)) + 2;
+            if (mazeData[y][x] === 1) {
+                mazeData[y][x] = 0;
+            }
+        }
+    }
+    
+    // Add collectibles
+    collectiblesCount = 0;
+    const numCollectibles = 15 + (level * 5);
+    for (let i = 0; i < numCollectibles; i++) {
+        const x = Math.floor(Math.random() * (MAZE_WIDTH - 2)) + 1;
+        const y = Math.floor(Math.random() * (MAZE_HEIGHT - 2)) + 1;
+        if (mazeData[y][x] === 0) {
+            mazeData[y][x] = 2;
+            collectiblesCount++;
+        }
+    }
+
+    // Add enemies
+    enemies = [];
+    if (level > 1) {
+        for (let i = 0; i < 3; i++) {
+            let x, y;
+            do {
+                x = Math.floor(Math.random() * (MAZE_WIDTH - 2)) + 1;
+                y = Math.floor(Math.random() * (MAZE_HEIGHT - 2)) + 1;
+            } while (mazeData[y][x] !== 0 || (Math.abs(x - playerX) < 5 && Math.abs(y - playerY) < 5));
+            enemies.push(new Enemy(x, y, i));
+        }
+    }
+
+    // Add first shooter enemy for level 5+
+    if (level >= 5) {
+        let x, y;
+        do {
+            x = Math.floor(Math.random() * (MAZE_WIDTH - 2)) + 1;
+            y = Math.floor(Math.random() * (MAZE_HEIGHT - 2)) + 1;
+        } while (mazeData[y][x] !== 0 || (Math.abs(x - playerX) < 5 && Math.abs(y - playerY) < 5));
+        enemies.push(new Enemy(x, y, 3)); // Add first shooting enemy
+    }
+  
+    // Add second shooter enemy for level 10+
+    if (level >= 10) {
+        let x, y;
+        do {
+            x = Math.floor(Math.random() * (MAZE_WIDTH - 2)) + 1;
+            y = Math.floor(Math.random() * (MAZE_HEIGHT - 2)) + 1;
+        } while (mazeData[y][x] !== 0 || (Math.abs(x - playerX) < 5 && Math.abs(y - playerY) < 5));
+        enemies.push(new Enemy(x, y, 3)); // Add second shooting enemy
+    }
+
+    // Add archers for level 3+
+    archers = [];
+    arrows = [];
+    if (level >= 3) {
+        const numArchers = Math.min(4, level - 2);
+        for (let i = 0; i < numArchers; i++) {
+            archers.push(new Archer(i));
+        }
+    }
+}
+
+function checkCollision() {
+    if (playerInvulnerable) return false;
+    
+    for (const enemy of enemies) {
+        if (enemy.active && Math.abs(enemy.x - playerX) < 0.5 && Math.abs(enemy.y - playerY) < 0.5) {
+            return true;
+        }
+    }
+    return false;
+}
+
+function restartLevel() {
+    playerX = 1;
+    playerY = 1;
+    powerUpX = -1;
+    powerUpY = -1;
+    hasPhasePower = false;
+    playerInvulnerable = false;
+    phasePowerTimer = 0;
+    invulnerabilityTimer = 0;
+    playDeathSound();
+    generateMaze();
+}
+
+function drawMaze() {
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    for (let y = 0; y < MAZE_HEIGHT; y++) {
+        for (let x = 0; x < MAZE_WIDTH; x++) {
+            if (mazeData[y][x] === 1) {
+                ctx.fillStyle = hasPhasePower ? '#303030' : '#30ff30';
+                ctx.fillRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+            } else if (mazeData[y][x] === 2) {
+                ctx.fillStyle = '#ffff30';
+                ctx.beginPath();
+                ctx.arc(x * TILE_SIZE + TILE_SIZE/2, y * TILE_SIZE + TILE_SIZE/2, 
+                    TILE_SIZE/4, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+    }
+
+    // Draw power-up if it exists
+    if (powerUpX !== -1) {
+        const color = currentPowerUpType === 'phase' ? '#00ffff' : (currentPowerUpType === 'invulnerable' ? '#ffffff' : '#ff00ff');
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.arc(powerUpX * TILE_SIZE + TILE_SIZE/2, powerUpY * TILE_SIZE + TILE_SIZE/2, 
+            TILE_SIZE/3, 0, Math.PI * 2);
+        ctx.fill();
+        
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 2;
+        const pulseSize = Math.sin(Date.now() / 200) * 3 + 4;
+        ctx.beginPath();
+        ctx.arc(powerUpX * TILE_SIZE + TILE_SIZE/2, powerUpY * TILE_SIZE + TILE_SIZE/2, 
+            TILE_SIZE/3 + pulseSize, 0, Math.PI * 2);
+        ctx.stroke();
+    }
+
+    // Draw enemies
+    enemies.forEach(enemy => enemy.draw());
+
+    // Draw arrows and archers
+    if (level >= 3) {
+        arrows = arrows.filter(arrow => arrow.active);
+        arrows.forEach(arrow => arrow.draw());
+        archers.forEach(archer => archer.draw());
+    }
+
+    // Draw player with phase or invulnerability effect
+    ctx.fillStyle = playerInvulnerable ? '#ffffff' : (hasPhasePower ? '#00ffff' : '#ff3030');
+    ctx.beginPath();
+    ctx.arc(playerX * TILE_SIZE + TILE_SIZE/2, playerY * TILE_SIZE + TILE_SIZE/2, 
+        TILE_SIZE/3, 0, Math.PI * 2);
+    ctx.fill();
+    
+    if (playerInvulnerable) {
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 2;
+        const pulseSize = Math.sin(Date.now() / 100) * 4 + 6; // Faster, larger pulse
+        ctx.beginPath();
+        ctx.arc(playerX * TILE_SIZE + TILE_SIZE/2, playerY * TILE_SIZE + TILE_SIZE/2, 
+            TILE_SIZE/3 + pulseSize, 0, Math.PI * 2);
+        ctx.stroke();
+    } else if (hasPhasePower) {
+        ctx.strokeStyle = '#00ffff';
+        ctx.lineWidth = 2;
+        const pulseSize = Math.sin(Date.now() / 200) * 3 + 4;
+        ctx.beginPath();
+        ctx.arc(playerX * TILE_SIZE + TILE_SIZE/2, playerY * TILE_SIZE + TILE_SIZE/2, 
+            TILE_SIZE/3 + pulseSize, 0, Math.PI * 2);
+        ctx.stroke();
+    }
+
+    // Draw waypoint marker
+    if (waypoint[0]) {
+        ctx.strokeStyle = '#ffff00';
+        ctx.lineWidth = 2;
+        const wx = waypoint[0].wayX * TILE_SIZE + TILE_SIZE/2;
+        const wy = waypoint[0].wayY * TILE_SIZE + TILE_SIZE/2;
+        ctx.beginPath();
+        ctx.arc(wx, wy, TILE_SIZE/2, 0, Math.PI * 2);
+        ctx.stroke();
+        
+        // Add crosshair
+        ctx.beginPath();
+        ctx.moveTo(wx - TILE_SIZE/3, wy);
+        ctx.lineTo(wx + TILE_SIZE/3, wy);
+        ctx.moveTo(wx, wy - TILE_SIZE/3);
+        ctx.lineTo(wx, wy + TILE_SIZE/3);
+        ctx.stroke();
+    }
+}
+
+function updateScore() {
+    document.getElementById('score').textContent = `SCORE: ${score}`;
+    document.getElementById('level').textContent = `LEVEL: ${level}`;
+}
+
+function nextLevel() {
+    level++;
+    playerX = 1;
+    playerY = 1;
+    generateMaze();
+    drawMaze();
+    updateScore();
+    playLevelClearSound();
+}
+
+// Game loop for enemy movement
+setInterval(() => {
+    if (level > 1) {
+        // Update power-up spawn timer
+        powerUpSpawnTimer++;
+        if (powerUpSpawnTimer >= (level >= 5 ? 75 : 125)) { // Faster spawns from level 5
+            spawnPowerUp();
+            powerUpSpawnTimer = 0;
+        }
+        
+        // Update power-up lifetime and remove if too old
+        if (powerUpX !== -1) {
+            powerUpLifetime++;
+            if (powerUpLifetime >= 25) { // 5 seconds (25 * 200ms)
+                powerUpX = -1;
+                powerUpY = -1;
+            }
+        }
+        
+        // Update phase power timer
+        if (hasPhasePower) {
+            phasePowerTimer++;
+            if (phasePowerTimer >= 25) { // 5 seconds (25 * 200ms)
+                hasPhasePower = false;
+                playPhaseEndSound();
+                // Check if player is in wall
+                if (mazeData[Math.floor(playerY)][Math.floor(playerX)] === 1) {
+                    restartLevel();
+                }
+            }
+        }
+        
+        // Update invulnerability timer
+        if (playerInvulnerable) {
+            invulnerabilityTimer++;
+            if (invulnerabilityTimer >= 25) { // 5 seconds
+                playerInvulnerable = false;
+                playInvulnerableEndSound();
+            }
+        }
+        
+        enemies.forEach(enemy => enemy.move());
+        if (level >= 3) {
+            archers.forEach(archer => archer.update());
+            arrows.forEach(arrow => arrow.move());
+            
+            for (const arrow of arrows) {
+                if (arrow.checkPlayerCollision()) {
+                    playDeathSound();
+                    restartLevel();
+                    break;
+                }
+            }
+        }
+        if (checkCollision()) {
+            restartLevel();
+        }
+        drawMaze();
+    }
+}, 200);
+
+document.addEventListener('keydown', (e) => {
+    let newX = playerX;
+    let newY = playerY;
+
+    switch(e.key) {
+        case 'ArrowUp':
+            newY--;
+            break;
+        case 'ArrowDown':
+            newY++;
+            break;
+        case 'ArrowLeft':
+            newX--;
+            break;
+        case 'ArrowRight':
+            newX++;
+            break;
+        case ' ':
+            waypoint[0] = {wayX: playerX, wayY: playerY};
+            break;
+        case 'Enter': 
+            if (waypoint[0]) {
+                newX = waypoint[0].wayX;
+                newY = waypoint[0].wayY;
+                playerX = waypoint[0].wayX;
+                playerY = waypoint[0].wayY;
+                drawMaze();
+            }
+            break;
+    }
+
+    // Check if move is valid (now considers phase power)
+    if (newX >= 0 && newX < MAZE_WIDTH && newY >= 0 && newY < MAZE_HEIGHT && 
+        (hasPhasePower || playerInvulnerable || mazeData[newY][newX] !== 1)) {
+        
+        // Check for power-up collection
+        if (Math.floor(newX) === powerUpX && Math.floor(newY) === powerUpY) {
+            if (currentPowerUpType === 'phase') {
+                hasPhasePower = true;
+                phasePowerTimer = 0;
+                playPhasePowerSound();
+            } else if (currentPowerUpType === 'disable') {
+                enemies.forEach(enemy => {
+                    if (enemy.type === 2) enemy.active = false;
+                });
+                playPhasePowerSound();
+            } else if (currentPowerUpType === 'invulnerable') {
+                playerInvulnerable = true;
+                invulnerabilityTimer = 0;
+                playInvulnerableSound();
+            }
+            powerUpX = -1;
+            powerUpY = -1;
+        }
+        
+        if (mazeData[newY][newX] === 2) {
+            score += 100 * level;
+            collectiblesCount--;
+            mazeData[newY][newX] = 0;
+            playCollectSound();
+            updateScore();
+            
+            if (collectiblesCount === 0) {
+                setTimeout(nextLevel, 500);
+            }
+        }
+        playerX = newX;
+        playerY = newY;
+        if (checkCollision()) {
+            restartLevel();
+        }
+        drawMaze();
+    }
+});
+
+// Touch controls
+const touchControls = document.createElement('div');
+touchControls.style.cssText = `
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    touch-action: none;
+`;
+
+const createTouchButton = (text, action) => {
+    const button = document.createElement('button');
+    button.textContent = text;
+    button.style.cssText = `
+        background: rgba(48, 255, 48, 0.3);
+        border: 2px solid #30ff30;
+        color: #30ff30;
+        padding: 20px;
+        font-size: 24px;
+        cursor: pointer;
+        font-family: 'Courier New', monospace;
+        touch-action: none;
+        user-select: none;
+        -webkit-user-select: none;
+    `;
+    button.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        action();
+    });
+    return button;
+};
+
+const leftControls = document.createElement('div');
+leftControls.style.cssText = `
+    position: fixed;
+    bottom: 20px;
+    left: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    touch-action: none;
+`;
+
+const rightControls = document.createElement('div');
+rightControls.style.cssText = `
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    display: flex;
+    flex-direction: column; 
+    gap: 10px;
+    touch-action: none;
+`;
+
+// Create buttons
+const upButton = createTouchButton('↑', () => {
+    if (playerY > 0 && (hasPhasePower || playerInvulnerable || mazeData[playerY-1][playerX] !== 1)) {
+        playerY--;
+        checkMove();
+    }
+});
+const downButton = createTouchButton('↓', () => {
+    if (playerY < MAZE_HEIGHT-1 && (hasPhasePower || playerInvulnerable || mazeData[playerY+1][playerX] !== 1)) {
+        playerY++;
+        checkMove();
+    }
+});
+const markButton = createTouchButton('M', () => {
+    waypoint[0] = {wayX: playerX, wayY: playerY};
+    drawMaze();
+});
+
+const leftButton = createTouchButton('←', () => {
+    if (playerX > 0 && (hasPhasePower || playerInvulnerable || mazeData[playerY][playerX-1] !== 1)) {
+        playerX--;
+        checkMove();
+    }
+});
+const rightButton = createTouchButton('→', () => {
+    if (playerX < MAZE_WIDTH-1 && (hasPhasePower || playerInvulnerable || mazeData[playerY][playerX+1] !== 1)) {
+        playerX++;
+        checkMove();
+    }
+});
+const warpButton = createTouchButton('W', () => {
+    if (waypoint[0]) {
+        playerX = waypoint[0].wayX;
+        playerY = waypoint[0].wayY;
+        checkMove();
+    }
+});
+
+// Add buttons to controls
+leftControls.appendChild(upButton);
+leftControls.appendChild(downButton);
+leftControls.appendChild(markButton);
+
+rightControls.appendChild(leftButton);
+rightControls.appendChild(rightButton);
+rightControls.appendChild(warpButton);
+
+// Add controls to document
+document.body.appendChild(leftControls);
+document.body.appendChild(rightControls);
+
+function checkMove() {
+    if (Math.floor(playerX) === powerUpX && Math.floor(playerY) === powerUpY) {
+        if (currentPowerUpType === 'phase') {
+            hasPhasePower = true;
+            phasePowerTimer = 0;
+            playPhasePowerSound();
+        } else if (currentPowerUpType === 'disable') {
+            enemies.forEach(enemy => {
+                if (enemy.type === 2) enemy.active = false;
+            });
+            playPhasePowerSound();
+        } else if (currentPowerUpType === 'invulnerable') {
+            playerInvulnerable = true;
+            invulnerabilityTimer = 0;
+            playInvulnerableSound();
+        }
+        powerUpX = -1;
+        powerUpY = -1;
+    }
+
+    if (mazeData[playerY][playerX] === 2) {
+        score += 100 * level;
+        collectiblesCount--;
+        mazeData[playerY][playerX] = 0;
+        playCollectSound();
+        updateScore();
+        
+        if (collectiblesCount === 0) {
+            setTimeout(nextLevel, 500);
+        }
+    }
+    
+    if (checkCollision()) {
+        restartLevel();
+    }
+    drawMaze();
+}
+
+// Prevent default touch behavior to avoid scrolling
+document.addEventListener('touchmove', (e) => {
+    e.preventDefault();
+}, { passive: false });
+
+// Initialize game
+generateMaze();
+drawMaze();
+updateScore();
+playStartJingle();
+playBackgroundMusic();
+
+// Add retro screen flicker effect
+setInterval(() => {
+    canvas.style.opacity = (Math.random() * 0.1 + 0.9).toString();
+}, 100);
+
+document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+        stopBackgroundMusic();
+    } else {
+        playBackgroundMusic();
+    }
+});
+
+document.getElementById('muteButton').addEventListener('click', () => {
+    if (musicPlaying) {
+        stopBackgroundMusic();
+        document.getElementById('muteButton').textContent = 'PLAY MUSIC';
+    } else {
+        playBackgroundMusic();
+        document.getElementById('muteButton').textContent = 'MUTE MUSIC';
+    }
+});
+</script>
+</body></html>
