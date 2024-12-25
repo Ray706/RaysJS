@@ -1,0 +1,262 @@
+<html><head><base href="." />
+<meta charset="UTF-8" />
+<title>Enhanced Snowflake Growth Simulator</title>
+<style>
+  body {
+    margin: 0;
+    overflow: hidden;
+    background-color: #001428;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+  }
+
+  canvas {
+    background: transparent;
+  }
+
+  .controls {
+    position: fixed;
+    top: 10px;
+    left: 10px;
+    color: white;
+    font-family: Arial, sans-serif;
+    background: rgba(0,0,0,0.5);
+    padding: 15px;
+    border-radius: 8px;
+  }
+
+  button {
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.3);
+    color: white;
+    padding: 8px 15px;
+    cursor: pointer;
+    margin: 5px;
+    border-radius: 4px;
+    transition: all 0.3s ease;
+  }
+
+  button:hover {
+    background: rgba(255,255,255,0.2);
+    transform: scale(1.05);
+  }
+
+  .slider-container {
+    margin: 10px 0;
+  }
+
+  label {
+    display: block;
+    margin: 5px 0;
+  }
+
+  input[type="range"] {
+    width: 200px;
+    margin: 5px 0;
+  }
+</style>
+</head>
+<body>
+<div class="controls">
+  <button onclick="startNewSnowflake()">New Snowflake</button>
+  <button onclick="togglePause()">Pause/Resume</button>
+  <div class="slider-container">
+    <label>Vapor Diffusion: <span id="diffusionValue">0.2</span></label>
+    <input type="range" min="0.1" max="0.5" step="0.1" value="0.2" id="diffusionSlider">
+    <label>Freezing Threshold: <span id="freezingValue">0.7</span></label>
+    <input type="range" min="0.5" max="0.9" step="0.1" value="0.7" id="freezingSlider">
+  </div>
+</div>
+<canvas id="snowflakeCanvas"></canvas>
+
+<script>
+const canvas = document.getElementById('snowflakeCanvas');
+const ctx = canvas.getContext('2d');
+
+// Slider controls
+const diffusionSlider = document.getElementById('diffusionSlider');
+const freezingSlider = document.getElementById('freezingSlider');
+const diffusionValue = document.getElementById('diffusionValue');
+const freezingValue = document.getElementById('freezingValue');
+
+diffusionSlider.addEventListener('input', function() {
+    VAPOR_DIFFUSION = parseFloat(this.value);
+    diffusionValue.textContent = this.value;
+});
+
+freezingSlider.addEventListener('input', function() {
+    FREEZING_TEMP = parseFloat(this.value);
+    freezingValue.textContent = this.value;
+});
+
+// Set canvas size
+function resizeCanvas() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+}
+resizeCanvas();
+window.addEventListener('resize', resizeCanvas);
+
+// Simulation parameters
+const GRID_SIZE = 400;
+const CELL_SIZE = 2;
+let grid = new Array(GRID_SIZE).fill(0).map(() => new Array(GRID_SIZE).fill(0));
+let isPaused = false;
+let frame = 0;
+
+// Diffusion and freezing parameters
+let VAPOR_DIFFUSION = 0.2;
+let FREEZING_TEMP = 0.7;
+const ATTACHMENT_PROBABILITY = 0.5;
+
+// Initialize center point with hexagonal symmetry
+function initGrid() {
+    grid = new Array(GRID_SIZE).fill(0).map(() => new Array(GRID_SIZE).fill(0));
+    const centerX = Math.floor(GRID_SIZE/2);
+    const centerY = Math.floor(GRID_SIZE/2);
+    
+    // Create initial hexagonal seed
+    grid[centerX][centerY] = 1;
+    grid[centerX+1][centerY] = 1;
+    grid[centerX-1][centerY] = 1;
+    grid[centerX][centerY+1] = 1;
+    grid[centerX][centerY-1] = 1;
+    
+    frame = 0;
+}
+
+// Add initial vapor with gradient
+function addVapor() {
+    const centerX = Math.floor(GRID_SIZE/2);
+    const centerY = Math.floor(GRID_SIZE/2);
+    
+    for(let i = 0; i < GRID_SIZE; i++) {
+        for(let j = 0; j < GRID_SIZE; j++) {
+            if(grid[i][j] === 0) {
+                const dist = Math.sqrt((i-centerX)**2 + (j-centerY)**2);
+                grid[i][j] = 0.5 + 0.3 * Math.sin(dist/20);
+            }
+        }
+    }
+}
+
+// Simulate one step
+function simulateStep() {
+    const newGrid = grid.map(row => [...row]);
+    
+    // Diffusion with enhanced physics
+    for(let i = 1; i < GRID_SIZE-1; i++) {
+        for(let j = 1; j < GRID_SIZE-1; j++) {
+            if(grid[i][j] < 1) {
+                let diffusion = 0;
+                for(let di = -1; di <= 1; di++) {
+                    for(let dj = -1; dj <= 1; dj++) {
+                        if(di === 0 && dj === 0) continue;
+                        const weight = (di === 0 || dj === 0) ? VAPOR_DIFFUSION : VAPOR_DIFFUSION * 0.7;
+                        diffusion += (grid[i+di][j+dj] - grid[i][j]) * weight;
+                    }
+                }
+                newGrid[i][j] += diffusion;
+            }
+        }
+    }
+    
+    // Enhanced freezing with direction bias
+    for(let i = 1; i < GRID_SIZE-1; i++) {
+        for(let j = 1; j < GRID_SIZE-1; j++) {
+            if(newGrid[i][j] < 1) {
+                let iceNeighbors = 0;
+                let hasIceNeighbor = false;
+                
+                for(let di = -1; di <= 1; di++) {
+                    for(let dj = -1; dj <= 1; dj++) {
+                        if(grid[i+di][j+dj] === 1) {
+                            iceNeighbors++;
+                            hasIceNeighbor = true;
+                        }
+                    }
+                }
+                
+                if(hasIceNeighbor && newGrid[i][j] > FREEZING_TEMP) {
+                    const probMultiplier = 1 + (iceNeighbors * 0.1);
+                    if(Math.random() < ATTACHMENT_PROBABILITY * probMultiplier) {
+                        newGrid[i][j] = 1;
+                    }
+                }
+            }
+        }
+    }
+    
+    grid = newGrid;
+}
+
+// Enhanced drawing with glow effect
+function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    const offsetX = (canvas.width - GRID_SIZE * CELL_SIZE) / 2;
+    const offsetY = (canvas.height - GRID_SIZE * CELL_SIZE) / 2;
+    
+    // Draw vapor
+    for(let i = 0; i < GRID_SIZE; i++) {
+        for(let j = 0; j < GRID_SIZE; j++) {
+            if(grid[i][j] > 0 && grid[i][j] < 1) {
+                ctx.fillStyle = `rgba(100,150,255,${grid[i][j] * 0.5})`;
+                ctx.fillRect(
+                    offsetX + i * CELL_SIZE,
+                    offsetY + j * CELL_SIZE,
+                    CELL_SIZE,
+                    CELL_SIZE
+                );
+            }
+        }
+    }
+    
+    // Draw ice crystals with glow
+    ctx.shadowBlur = 15;
+    ctx.shadowColor = '#aaf';
+    
+    for(let i = 0; i < GRID_SIZE; i++) {
+        for(let j = 0; j < GRID_SIZE; j++) {
+            if(grid[i][j] === 1) {
+                ctx.fillStyle = '#fff';
+                ctx.fillRect(
+                    offsetX + i * CELL_SIZE,
+                    offsetY + j * CELL_SIZE,
+                    CELL_SIZE,
+                    CELL_SIZE
+                );
+            }
+        }
+    }
+    
+    ctx.shadowBlur = 0;
+}
+
+function animate() {
+    if (!isPaused) {
+        if (frame < 500) {
+            simulateStep();
+            frame++;
+        }
+    }
+    draw();
+    requestAnimationFrame(animate);
+}
+
+function startNewSnowflake() {
+    initGrid();
+    addVapor();
+}
+
+function togglePause() {
+    isPaused = !isPaused;
+}
+
+// Start the simulation
+startNewSnowflake();
+animate();
+</script>
+</body></html>
