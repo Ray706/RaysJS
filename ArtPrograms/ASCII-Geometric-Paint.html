@@ -1,0 +1,460 @@
+<html><head><base href="/">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+<title>ASCII Geometric Paint</title>
+<style>
+  body {
+    margin: 0;
+    padding: 20px;
+    background: #1a1a1a;
+    color: #33ff33;
+    font-family: "Courier New", Courier, Consolas, "Lucida Console", Menlo, monospace;
+  }
+
+  #canvas {
+    background: #000;
+    padding: 20px;
+    border: 2px solid #33ff33;
+    white-space: pre;
+    font-size: 12px;
+    line-height: 12px;
+    overflow: auto;
+    user-select: none;
+    font-family: "Courier New", Courier, Consolas, "Lucida Console", Menlo, monospace;
+  }
+
+  .controls {
+    margin: 20px 0;
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+    align-items: center;
+    position: sticky;
+    top: 0;
+    background: #1a1a1a;
+    padding: 10px 0;
+    z-index: 100;
+  }
+
+  button, select, input {
+    background: #000;
+    color: #33ff33;
+    border: 2px solid #33ff33;
+    padding: 8px 16px;
+    font-family: "Courier New", Courier, Consolas, "Lucida Console", Menlo, monospace;
+    cursor: pointer;
+  }
+
+  /* Removed hover effect from select elements */
+
+  #animate:hover {
+    background: #33ff33;
+    color: #000;
+  }
+
+  .size-controls, .curve-controls {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  input[type="number"] {
+    width: 80px;
+  }
+
+  input[type="range"] {
+    background: #000;
+    height: 2px;
+    width: 120px;
+  }
+
+  input[type="range"]::-webkit-slider-thumb {
+    background: #33ff33;
+    width: 15px;
+    height: 15px;
+    border-radius: 50%;
+    cursor: pointer;
+  }
+
+  label {
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .tool-controls {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+  }
+
+  .animation-controls {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  .param-group {
+    border: 1px solid #33ff33;
+    padding: 10px;
+    border-radius: 4px;
+  }
+
+  .param-group > div {
+    margin: 5px 0;
+  }
+
+  /* Active state for animation button */
+  .active-animation {
+    background: #33ff33 !important;
+    color: #000 !important;
+  }
+</style>
+</head>
+<body>
+  <div class="controls">
+    <div class="tool-controls">
+      <select id="tool">
+        <option value="freehand">Freehand</option>
+        <option value="box">Box</option>
+        <option value="line">Line</option>
+        <option value="fill">Fill</option>
+      </select>
+      <select id="brush">
+        <option value="*">*</option>
+        <option value="@">@</option>
+        <option value="#">#</option>
+        <option value="$">$</option>
+        <option value="%">%</option>
+      </select>
+    </div>
+    <div class="animation-controls">
+      <select id="curveType">
+        <option value="hypocycloid">Hypocycloid</option>
+        <option value="lissajous">Lissajous</option>
+        <option value="spiral">Spiral</option>
+        <option value="rose">Rose Curve</option>
+      </select>
+      <button id="animate">Toggle Animation</button>
+      <div class="param-group">
+        <div>
+          <label>Speed: <input type="range" id="speed" min="1" max="100" value="50"></label>
+        </div>
+        <div>
+          <label title="Radius for hypocycloid, Frequency for lissajous, Scale for spiral, Scale for rose. Small numbers work better with most curve types.">
+            Param 1: <input type="number" id="param1" value="80" min="1" max="200">
+          </label>
+        </div>
+        <div>
+          <label title="Inner radius for hypocycloid, Second frequency for lissajous, Angular velocity for spiral, Petals for rose. Small numbers work better with most curve types.">
+            Param 2: <input type="number" id="param2" value="30" min="1" max="100">
+          </label>
+        </div>
+        <div>
+          <label title="Distance for hypocycloid, Phase shift for lissajous, Density for spiral, Shape for rose. Small numbers work better with most curve types.">
+            Param 3: <input type="number" id="param3" value="40" min="1" max="100">
+          </label>
+        </div>
+      </div>
+    </div>
+    <button id="clear">Clear Canvas</button>
+    <div class="size-controls">
+      Width: <input type="number" id="canvasWidth" value="137" min="10" max="200">
+      Height: <input type="number" id="canvasHeight" value="30" min="10" max="200">
+      <button id="resize">Resize Canvas</button>
+    </div>
+  </div>
+  <div id="canvas"></div>
+
+<script>
+function playClickSound() {
+  const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+  const oscillator = audioContext.createOscillator();
+  const gainNode = audioContext.createGain();
+  
+  oscillator.connect(gainNode);
+  gainNode.connect(audioContext.destination);
+  
+  oscillator.type = 'sine';
+  oscillator.frequency.value = 440;
+  gainNode.gain.value = 0.1;
+  
+  oscillator.start();
+  gainNode.gain.exponentialRampToValueAtTime(0.00001, audioContext.currentTime + 0.1);
+  
+  setTimeout(() => {
+    oscillator.stop();
+  }, 100);
+}
+
+const canvas = document.getElementById('canvas');
+const clearBtn = document.getElementById('clear');
+const toolSelect = document.getElementById('tool');
+const brushSelect = document.getElementById('brush');
+const curveTypeSelect = document.getElementById('curveType');
+const animateBtn = document.getElementById('animate');
+const widthInput = document.getElementById('canvasWidth');
+const heightInput = document.getElementById('canvasHeight');
+const resizeBtn = document.getElementById('resize');
+const speedInput = document.getElementById('speed');
+const param1Input = document.getElementById('param1');
+const param2Input = document.getElementById('param2');
+const param3Input = document.getElementById('param3');
+
+let isAnimating = false;
+let animationFrame;
+let time = 0;
+let startPos = null;
+
+// Initialize canvas size
+let cols = parseInt(widthInput.value);
+let rows = parseInt(heightInput.value);
+
+// Create ASCII canvas
+let asciiCanvas = Array(rows).fill().map(() => Array(cols).fill(' '));
+
+// Convert screen coordinates to canvas coordinates
+function screenToCanvas(x, y) {
+  const rect = canvas.getBoundingClientRect();
+  const charWidth = rect.width / cols;
+  const charHeight = rect.height / rows;
+  return {
+    col: Math.floor((x - rect.left - rect.width * 0.1) / (charWidth * 0.8)),
+    row: Math.floor((y - rect.top - rect.height * 0.1) / (charHeight * 0.8))
+  };
+}
+
+// Line drawing algorithm (Bresenham's)
+function drawLine(x0, y0, x1, y1, char) {
+  const dx = Math.abs(x1 - x0);
+  const dy = Math.abs(y1 - y0);
+  const sx = x0 < x1 ? 1 : -1;
+  const sy = y0 < y1 ? 1 : -1;
+  let err = dx - dy;
+
+  while (true) {
+    if (x0 >= 0 && x0 < cols && y0 >= 0 && y0 < rows) {
+      asciiCanvas[y0][x0] = char;
+    }
+
+    if (x0 === x1 && y0 === y1) break;
+    const e2 = 2 * err;
+    if (e2 > -dy) {
+      err -= dy;
+      x0 += sx;
+    }
+    if (e2 < dx) {
+      err += dx;
+      y0 += sy;
+    }
+  }
+}
+
+// Box drawing function
+function drawBox(x0, y0, x1, y1, char) {
+  drawLine(x0, y0, x1, y0, char);
+  drawLine(x1, y0, x1, y1, char);
+  drawLine(x1, y1, x0, y1, char);
+  drawLine(x0, y1, x0, y0, char);
+}
+
+// Revised floodFill function using a stack-based approach
+function floodFill(startX, startY, targetChar, replaceChar) {
+  if (startX < 0 || startX >= cols || startY < 0 || startY >= rows) return;
+  if (asciiCanvas[startY][startX] !== targetChar || targetChar === replaceChar) return;
+
+  const stack = [{x: startX, y: startY}];
+  
+  while (stack.length > 0) {
+    const current = stack.pop();
+    const {x, y} = current;
+    
+    if (x < 0 || x >= cols || y < 0 || y >= rows) continue;
+    if (asciiCanvas[y][x] !== targetChar) continue;
+    
+    asciiCanvas[y][x] = replaceChar;
+    
+    stack.push({x: x + 1, y: y});
+    stack.push({x: x - 1, y: y});
+    stack.push({x: x, y: y + 1});
+    stack.push({x: x, y: y - 1});
+  }
+}
+
+// Render function
+function render() {
+  canvas.textContent = asciiCanvas.map(row => row.join('')).join('\n');
+}
+
+// Draw at position
+function draw(x, y) {
+  const pos = screenToCanvas(x, y);
+  if (pos.row >= 0 && pos.row < rows && pos.col >= 0 && pos.col < cols) {
+    if (toolSelect.value === 'freehand') {
+      asciiCanvas[pos.row][pos.col] = brushSelect.value;
+      render();
+    } else if (toolSelect.value === 'fill') {
+      const targetChar = asciiCanvas[pos.row][pos.col];
+      floodFill(pos.col, pos.row, targetChar, brushSelect.value);
+      render();
+    }
+  }
+  return pos;
+}
+
+// Complete drawing
+function completeDraw(startPos, endPos) {
+  if (!startPos || !endPos) return;
+  
+  if (toolSelect.value === 'box') {
+    drawBox(startPos.col, startPos.row, endPos.col, endPos.row, brushSelect.value);
+  } else if (toolSelect.value === 'line') {
+    drawLine(startPos.col, startPos.row, endPos.col, endPos.row, brushSelect.value);
+  }
+  render();
+}
+
+// Resize canvas
+function resizeCanvas() {
+  cols = parseInt(widthInput.value);
+  rows = parseInt(heightInput.value);
+  asciiCanvas = Array(rows).fill().map(() => Array(cols).fill(' '));
+  render();
+}
+
+// Calculate curve position
+function getCurvePosition(t) {
+  const rect = canvas.getBoundingClientRect();
+  const centerX = rect.left + rect.width * 0.5;
+  const centerY = rect.top + rect.height * 0.5;
+  const scale = Math.min(rect.width, rect.height) * 0.4;
+  
+  const p1 = parseInt(param1Input.value);
+  const p2 = parseInt(param2Input.value);
+  const p3 = parseInt(param3Input.value);
+
+  let x, y;
+
+  switch(curveTypeSelect.value) {
+    case 'hypocycloid':
+      const R = p1;
+      const r = p2;
+      const d = p3;
+      x = scale * ((R - r) * Math.cos(t) + d * Math.cos((R - r) * t / r)) / (R + d);
+      y = scale * ((R - r) * Math.sin(t) - d * Math.sin((R - r) * t / r)) / (R + d);
+      break;
+      
+    case 'lissajous':
+      x = scale * Math.sin(p1 * t) / p1;
+      y = scale * Math.sin(p2 * t + p3/10) / p2;
+      break;
+      
+    case 'spiral':
+      const radius = (p1 * t) % scale;
+      x = radius * Math.cos(p2 * t) / p3;
+      y = radius * Math.sin(p2 * t) / p3;
+      break;
+      
+    case 'rose':
+      const k = p2 / p3;
+      const roseRadius = scale * Math.cos(k * t) / p1;
+      x = roseRadius * Math.cos(t);
+      y = roseRadius * Math.sin(t);
+      break;
+  }
+  
+  return {
+    x: x + centerX,
+    y: y + centerY
+  };
+}
+
+// Animation loop
+function animate() {
+  if (!isAnimating) return;
+  
+  const speed = parseFloat(speedInput.value) / 1000;
+  time += speed;
+  const pos = getCurvePosition(time);
+  draw(pos.x, pos.y);
+  
+  animationFrame = requestAnimationFrame(animate);
+}
+
+// Event listeners
+clearBtn.addEventListener('click', () => {
+  asciiCanvas = Array(rows).fill().map(() => Array(cols).fill(' '));
+  render();
+});
+
+animateBtn.addEventListener('click', () => {
+  isAnimating = !isAnimating;
+  animateBtn.classList.toggle('active-animation');
+  if (isAnimating) {
+    animate();
+  } else {
+    cancelAnimationFrame(animationFrame);
+  }
+});
+
+// Add click sound to all buttons
+document.querySelectorAll('button').forEach(button => {
+  button.addEventListener('click', playClickSound);
+});
+
+resizeBtn.addEventListener('click', resizeCanvas);
+
+// Touch and mouse handling
+let isDrawing = false;
+
+function startDrawing(e) {
+  isDrawing = true;
+  if (e.type.includes('touch')) {
+    e.preventDefault();
+    startPos = draw(e.touches[0].clientX, e.touches[0].clientY);
+  } else {
+    startPos = draw(e.clientX, e.clientY);
+  }
+}
+
+function moveDrawing(e) {
+  if (!isDrawing) return;
+  if (e.type.includes('touch')) {
+    e.preventDefault();
+    draw(e.touches[0].clientX, e.touches[0].clientY);
+  } else {
+    draw(e.clientX, e.clientY);
+  }
+}
+
+function stopDrawing(e) {
+  if (!isDrawing) return;
+  isDrawing = false;
+  
+  let endPos;
+  if (e.type.includes('touch')) {
+    const touch = e.changedTouches[0];
+    endPos = screenToCanvas(touch.clientX, touch.clientY);
+  } else {
+    endPos = screenToCanvas(e.clientX, e.clientY);
+  }
+  
+  completeDraw(startPos, endPos);
+  startPos = null;
+}
+
+canvas.addEventListener('mousedown', startDrawing);
+canvas.addEventListener('mousemove', moveDrawing);
+canvas.addEventListener('mouseup', stopDrawing);
+canvas.addEventListener('mouseleave', stopDrawing);
+
+canvas.addEventListener('touchstart', startDrawing);
+canvas.addEventListener('touchmove', moveDrawing);
+canvas.addEventListener('touchend', stopDrawing);
+
+// Initial render
+render();
+</script>
+</body></html>
