@@ -1,0 +1,873 @@
+<html><head><base href="https://example.com">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Procedural 3D Snowflake Generator</title>
+    <style>
+        body { 
+            margin: 0; 
+            overflow: hidden; 
+            background-color: #111; 
+            color: #eee; 
+            font-family: sans-serif; 
+            display: flex;
+            flex-direction: row;
+        }
+        #controls { 
+            position: relative; 
+            padding: 20px; 
+            background-color: rgba(0, 0, 0, 0.7); 
+            border-radius: 10px; 
+            margin: 10px; 
+            width: 300px; 
+            display: flex;
+            flex-direction: column;
+        }
+        #controls label { 
+            display: block; 
+            margin-bottom: 5px; 
+        }
+        #controls input[type="range"] { 
+            width: 200px; 
+        }
+        #controls button { 
+            margin-top: 10px; 
+            padding: 8px 15px; 
+            border: none; 
+            background-color: #555; 
+            color: #eee; 
+            border-radius: 5px; 
+            cursor: pointer; 
+        }
+        #controls button:hover { 
+            background-color: #777; 
+        }
+        #geometryCode { 
+            width: 95%; 
+            height: 100px; 
+            margin-top: 10px; 
+            background-color: #333; 
+            color: #eee; 
+            border: none; 
+            padding: 10px; 
+            border-radius: 5px; 
+        }
+        #attributions {
+            position: fixed;
+            bottom: 10px;
+            left: 10px;
+            padding: 20px;
+            background-color: rgba(0, 0, 0, 0.7);
+            border-radius: 10px;
+            font-size: small;
+            display: none;
+            max-width: 80%;
+            margin: auto;
+            z-index: 1000;
+        }
+        .close-button {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: none;
+            border: none;
+            color: #eee;
+            font-size: 20px;
+            cursor: pointer;
+            padding: 5px 10px;
+            border-radius: 5px;
+        }
+        .close-button:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+        #mainCanvas, #snowflakeCanvas {
+            flex-grow: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center; 
+            margin: 10px;
+            background-color: #000000;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+            overflow: hidden;
+        }
+        #mainCanvas {
+            background-color: #111a1f;
+        }
+        canvas {
+            display: block;
+            background-color: transparent;
+        }
+        .canvas-container {
+            display: flex;
+            flex-direction: column;
+            flex-grow: 1;
+            height: 100vh;
+        }
+        #attributionsContainer {
+            margin-top: auto;
+            padding-top: 20px;
+        }
+        #controls button#toggleSound,
+        #controls button#toggleAttributions {
+            width: 100%;
+            margin-top: 10px;
+            padding: 8px 15px;
+            border: none;
+            background-color: #555;
+            color: #eee;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        #controls button#toggleSound:hover,
+        #controls button#toggleAttributions:hover {
+            background-color: #777;
+        }
+        .slider-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .slider-value {
+            min-width: 40px;
+        }
+    </style>
+</head>
+<body>
+    <div id="controls">
+        <div>
+            <label for="complexity">Complexity:</label>
+            <input type="number" id="complexity" min="1" max="9" value="7">
+        </div>
+        <div>
+            <label for="numBranches">Number of Branches:</label>
+            <input type="number" id="numBranches" min="3" max="20" value="15">
+        </div>
+        <div>
+            <label for="snowflakeSize">Snowflake Size:</label>
+            <div class="slider-container">
+                <input type="range" id="snowflakeSize" min="1" max="10" value="4">
+                <span class="slider-value" id="snowflakeSizeValue">4</span>
+            </div>
+        </div>
+        <button id="regenerate">Generate Snowflake</button>
+        <button id="randomize">Generate Random</button>
+        <div>
+            <label for="rotationX">Rotate X:</label>
+            <div class="slider-container">
+                <input type="range" id="rotationX" min="-180" max="180" value="0">
+                <span class="slider-value" id="rotationXValue">0</span>
+            </div>
+        </div>
+        <div>
+            <label for="rotationY">Rotate Y:</label>
+            <div class="slider-container">
+                <input type="range" id="rotationY" min="-180" max="180" value="0">
+                <span class="slider-value" id="rotationYValue">0</span>
+            </div>
+        </div>
+        <div>
+            <label for="rotationZ">Rotate Z:</label>
+            <div class="slider-container">
+                <input type="range" id="rotationZ" min="-180" max="180" value="0">
+                <span class="slider-value" id="rotationZValue">0</span>
+            </div>
+        </div>
+        <textarea id="geometryCode" readonly placeholder="Geometry code will appear here"></textarea>
+        <button id="animateFalling">Animate Falling Snowflakes</button>
+        <div>
+            <button id="generateTerrain">Generate Terrain</button>
+            <label for="terrainResolution">Resolution:</label>
+            <input type="number" id="terrainResolution" min="16" max="256" value="64" step="16">
+            <label for="terrainHeight">Height:</label>
+            <div class="slider-container">
+                <input type="range" id="terrainHeight" min="0" max="10" value="2.5" step="0.1">
+                <span class="slider-value" id="terrainHeightValue">2.5</span>
+            </div>
+            <label for="cloudDensity">Cloud Density:</label>
+            <div class="slider-container">
+                <input type="range" id="cloudDensity" min="0" max="1" value="0.17" step="0.01">
+                <span class="slider-value" id="cloudDensityValue">0.17</span>
+            </div>
+        </div>
+        <div>
+            <label for="numSnowflakes">Number of Snowflakes:</label>
+            <input type="number" id="numSnowflakes" min="100" max="2000" value="500" step="100">
+        </div>
+        <div>
+            <button id="toggleSound">Sound Off</button>
+        </div>
+        <div>
+            <button id="toggleAttributions">Show Attributions</button>
+        </div>
+    </div>
+    <div class="canvas-container">
+        <div id="snowflakeCanvas">
+            <canvas id="snowflakeOnlyCanvas"></canvas>
+        </div>
+        <div id="mainCanvas">
+            <canvas id="mainSceneCanvas"></canvas>
+        </div>
+    </div>
+    <canvas id="terrainMaskCanvas" style="display: none;"></canvas>
+    <canvas id="diagonalLinesCanvas" style="display: none;"></canvas>
+    <div id="attributions">
+        <button class="close-button">&#xd7;</button>
+        <h3>Attributions, Copyrights, and Licenses</h3>
+        <p>This interactive 3D snowflake generator and winter scene creator utilizes the following technologies:</p>
+        <ul>
+            <li><strong>Three.js:</strong> JavaScript 3D library for rendering graphics. <a href="https://github.com/mrdoob/three.js/blob/master/LICENSE" target="_blank">MIT License</a></li>
+            <li><strong>Simplex Noise:</strong> Noise generation for procedural terrain and effects. <a href="https://github.com/josephg/noisejs/blob/master/LICENSE" target="_blank">MIT License</a></li>
+            <li><strong>Web Audio API:</strong> Browser-native audio synthesis for ambient sound. <a href="https://www.w3.org/TR/webaudio/" target="_blank">W3C Standard</a></li>
+        </ul>
+        <p>Features:</p>
+        <ul>
+            <li>Procedurally generated 3D snowflakes with customizable complexity</li>
+            <li>Interactive winter scene with dynamic terrain generation</li>
+            <li>Procedural cloud system with adjustable density</li>
+            <li>Stylized moon with custom shader effects</li>
+            <li>Ambient generative music using the Lydian scale</li>
+            <li>Falling snowflake animation system</li>
+        </ul>
+        <p>All procedural generation algorithms, shaders, and implementation code were created specifically for this project.</p>
+        <p>Generated through collaborative AI development - Public Domain</p>
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/simplex-noise/2.4.0/simplex-noise.min.js"></script>
+    <script>const mainScene = new THREE.Scene();
+const snowflakeScene = new THREE.Scene();
+let moon;
+const mainCamera = new THREE.PerspectiveCamera(75, document.getElementById('mainCanvas').offsetWidth / document.getElementById('mainCanvas').offsetHeight, 0.1, 1000);
+const snowflakeCamera = new THREE.PerspectiveCamera(75, document.getElementById('snowflakeCanvas').offsetWidth / document.getElementById('snowflakeCanvas').offsetHeight, 0.1, 1000);
+const mainRenderer = new THREE.WebGLRenderer({
+  canvas: document.querySelector('#mainSceneCanvas')
+});
+const snowflakeRenderer = new THREE.WebGLRenderer({
+  canvas: document.querySelector('#snowflakeOnlyCanvas')
+});
+mainRenderer.setSize(document.getElementById('mainCanvas').offsetWidth, document.getElementById('mainCanvas').offsetHeight);
+snowflakeRenderer.setSize(document.getElementById('snowflakeCanvas').offsetWidth, document.getElementById('snowflakeCanvas').offsetHeight);
+mainCamera.position.z = 20;
+snowflakeCamera.position.z = 20;
+let simplex = new SimplexNoise();
+let snowflakeGroup;
+const complexityInput = document.getElementById('complexity');
+const numBranchesInput = document.getElementById('numBranches');
+const rotationXSlider = document.getElementById('rotationX');
+const rotationYSlider = document.getElementById('rotationY');
+const rotationZSlider = document.getElementById('rotationZ');
+const randomizeButton = document.getElementById('randomize');
+const geometryCodeTextarea = document.getElementById('geometryCode');
+const animateFallingButton = document.getElementById('animateFalling');
+const regenerateButton = document.getElementById('regenerate');
+const snowflakeSizeSlider = document.getElementById('snowflakeSize');
+const iceMaterial = new THREE.ShaderMaterial({
+  uniforms: {
+    time: {
+      value: 0.0
+    }
+  },
+  vertexShader: `
+                void main() {
+                    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+                }
+            `,
+  fragmentShader: `
+                uniform float time;
+                void main() {
+                    vec3 color1 = vec3(0.8, 0.9, 1.0);
+                    vec3 color2 = vec3(0.6, 0.7, 0.8);
+                    float sineValue = sin(time * 0.5);
+                    gl_FragColor = vec4(mix(color1, color2, sineValue * 0.5 + 0.5), 1.0);
+                }
+            `,
+  side: THREE.DoubleSide,
+  transparent: true
+});
+let stars;
+function createStars() {
+  if (stars) {
+    mainScene.remove(stars);
+    stars.geometry.dispose();
+    stars.material.dispose();
+  }
+  const starsGeometry = new THREE.BufferGeometry();
+  const starVertices = [];
+  const starColors = [];
+  for (let i = 0; i < 500; i++) {
+    const x = (Math.random() - 0.5) * 200;
+    const y = 20 + Math.random() * 30;
+    const z = (Math.random() - 0.5) * 200;
+    starVertices.push(x, y, z);
+    starColors.push(0.8, 0.9, 1.0);
+  }
+  starsGeometry.setAttribute('position', new THREE.Float32BufferAttribute(starVertices, 3));
+  starsGeometry.setAttribute('color', new THREE.Float32BufferAttribute(starColors, 3));
+  const starsMaterial = new THREE.PointsMaterial({
+    size: 0.5,
+    vertexColors: true,
+    transparent: true,
+    blending: THREE.AdditiveBlending
+  });
+  stars = new THREE.Points(starsGeometry, starsMaterial);
+  mainScene.add(stars);
+}
+function generateBranchGeometry(level, startPoint, angle, parentLength, currentPositions, complexity) {
+  const numSegments = 6;
+  const segmentLength = parentLength * 0.3 * Math.pow(0.8, level);
+  const direction = new THREE.Vector3(Math.cos(angle), Math.sin(angle), 0);
+  let currentPoint = startPoint.clone();
+  for (let i = 0; i < numSegments; i++) {
+    const noiseFactor = simplex.noise3D(currentPoint.x * 0.5, currentPoint.y * 0.5, currentPoint.z * 0.5) * 0.2;
+    const nextPoint = new THREE.Vector3().copy(currentPoint);
+    nextPoint.addScaledVector(direction, segmentLength / numSegments * (1 + noiseFactor));
+    currentPositions.push(currentPoint.x, currentPoint.y, currentPoint.z);
+    currentPoint = nextPoint;
+  }
+  currentPositions.push(currentPoint.x, currentPoint.y, currentPoint.z);
+  if (level < complexity) {
+    const branchAngle1 = angle + Math.PI / 3 + (Math.random() - 0.5) * 0.5;
+    const branchAngle2 = angle - Math.PI / 3 + (Math.random() - 0.5) * 0.5;
+    generateBranchGeometry(level + 1, currentPoint.clone(), branchAngle1, segmentLength, currentPositions, complexity);
+    generateBranchGeometry(level + 1, currentPoint.clone(), branchAngle2, segmentLength, currentPositions, complexity);
+  }
+}
+function generateIcySnowflake() {
+  if (snowflakeGroup) {
+    snowflakeScene.remove(snowflakeGroup);
+    snowflakeGroup.children.forEach(child => {
+      child.geometry.dispose();
+    });
+  }
+  snowflakeGroup = new THREE.Group();
+  const combinedPositions = [];
+  const numBranches = parseInt(numBranchesInput.value, 10);
+  const complexity = parseInt(complexityInput.value, 10);
+  for (let i = 0; i < numBranches; i++) {
+    const angle = Math.PI * 2 / numBranches * i;
+    const startPoint = new THREE.Vector3(0, 0, 0);
+    generateBranchGeometry(0, startPoint, angle, 1, combinedPositions, complexity);
+  }
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.Float32BufferAttribute(combinedPositions, 3));
+  const lineSegments = new THREE.LineSegments(geometry, iceMaterial);
+  snowflakeGroup.add(lineSegments);
+  snowflakeScene.add(snowflakeGroup);
+  const size = parseFloat(snowflakeSizeSlider.value) * 4;
+  snowflakeGroup.scale.set(size, size, size);
+  snowflakeGroup.position.y = 0;
+  snowflakeGroup.position.x = 0;
+  updateGeometryCode(geometry.attributes.position.array, complexity, numBranches);
+}
+function updateGeometryCode(positionsArray, complexity, numBranches) {
+  let code = `// Snowflake Geometry\n`;
+  code += `// Complexity: ${complexity}, Number of Branches: ${numBranches}\n`;
+  code += `const geometry = new THREE.BufferGeometry();\n`;
+  const positions = [];
+  for (let i = 0; i < positionsArray.length; i += 3) {
+    positions.push(`[${positionsArray[i]}, ${positionsArray[i + 1]}, ${positionsArray[i + 2]}]`);
+  }
+  code += `const positions = new Float32Array([\n    ${positions.join(',\n    ')}\n]);\n`;
+  code += `geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));\n`;
+  code += `const material = new THREE.LineBasicMaterial({ color: 0xccffff });\n`;
+  code += `const lineSegments = new THREE.LineSegments(geometry, material);\n`;
+  geometryCodeTextarea.value = code;
+}
+generateIcySnowflake();
+const ambientLight = new THREE.AmbientLight(0x404040);
+mainScene.add(ambientLight);
+const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
+directionalLight.position.set(5, 5, 5);
+mainScene.add(directionalLight);
+const directionalLight2 = new THREE.DirectionalLight(0xffffff, 0.5);
+directionalLight2.position.set(-5, -5, -5);
+mainScene.add(directionalLight2);
+let fallingSnowflakes = [];
+function createFallingSnowflake() {
+  const flakeGroup = new THREE.Group();
+  const combinedPositions = [];
+  const numBranches = Math.floor(Math.random() * 8) + 3;
+  const complexity = Math.floor(Math.random() * 5) + 1;
+  for (let i = 0; i < numBranches; i++) {
+    const angle = Math.PI * 2 / numBranches * i;
+    const startPoint = new THREE.Vector3(0, 0, 0);
+    generateBranchGeometry(0, startPoint, angle, 0.5, combinedPositions, complexity);
+  }
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.Float32BufferAttribute(combinedPositions, 3));
+  const lineSegments = new THREE.LineSegments(geometry, iceMaterial.clone());
+  flakeGroup.add(lineSegments);
+  flakeGroup.position.set((Math.random() - 0.5) * 200, 15 + Math.random() * 10, (Math.random() - 0.5) * 200);
+  flakeGroup.rotation.set(Math.random() * 2 * Math.PI, Math.random() * 2 * Math.PI, Math.random() * 2 * Math.PI);
+  flakeGroup.spawnTime = performance.now() + Math.random() * 30000;
+  flakeGroup.rotationSpeed = new THREE.Vector3((Math.random() - 0.5) * 0.02, (Math.random() - 0.5) * 0.02, (Math.random() - 0.5) * 0.02);
+  mainScene.add(flakeGroup);
+  return flakeGroup;
+}
+function updateFallingSnowflakes() {
+  const maxSnowflakes = parseInt(document.getElementById('numSnowflakes').value);
+  while (fallingSnowflakes.length < maxSnowflakes) {
+    fallingSnowflakes.push(createFallingSnowflake());
+  }
+  while (fallingSnowflakes.length > maxSnowflakes) {
+    const flake = fallingSnowflakes.pop();
+    mainScene.remove(flake);
+  }
+  const currentTime = performance.now();
+  for (let i = fallingSnowflakes.length - 1; i >= 0; i--) {
+    const flake = fallingSnowflakes[i];
+    if (currentTime >= flake.spawnTime) {
+      flake.position.y -= 0.005;
+      flake.rotation.x += flake.rotationSpeed.x;
+      flake.rotation.y += flake.rotationSpeed.y;
+      flake.rotation.z += flake.rotationSpeed.z;
+      if (flake.position.y < -10) {
+        flake.position.y = 15 + Math.random() * 10;
+        flake.position.x = (Math.random() - 0.5) * 200;
+        flake.position.z = (Math.random() - 0.5) * 200;
+        flake.spawnTime = performance.now() + Math.random() * 30000;
+      }
+    }
+  }
+}
+let fallingAnimationActive = false;
+const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+let oscillator1;
+let oscillator2;
+let gainNode;
+let musicPlaying = false;
+const lydianScale = [0, 2, 4, 6, 7, 9, 11, 12];
+const rootFrequency = 77.78;
+let currentNoteIndex = 0;
+const bpm = 90;
+const quarterNoteDuration = 60 / bpm;
+const arpInterval = quarterNoteDuration;
+let nextNoteTime = 0;
+function generateIcySound() {
+  oscillator1 = audioContext.createOscillator();
+  oscillator2 = audioContext.createOscillator();
+  const reverbNode = audioContext.createConvolver();
+  gainNode = audioContext.createGain();
+  oscillator1.type = 'sine';
+  oscillator2.type = 'triangle';
+  gainNode.gain.setValueAtTime(0.03, audioContext.currentTime);
+  const sampleRate = audioContext.sampleRate;
+  const length = sampleRate * 2.0;
+  const impulseResponse = audioContext.createBuffer(2, length, sampleRate);
+  for (let channel = 0; channel < 2; channel++) {
+    const channelData = impulseResponse.getChannelData(channel);
+    for (let i = 0; i < length; i++) {
+      channelData[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / length, 2);
+    }
+  }
+  reverbNode.buffer = impulseResponse;
+  oscillator1.connect(gainNode);
+  oscillator2.connect(gainNode);
+  gainNode.connect(reverbNode);
+  reverbNode.connect(audioContext.destination);
+  function playArpeggio() {
+    const now = audioContext.currentTime;
+    if (now >= nextNoteTime) {
+      const noteIndex = currentNoteIndex % lydianScale.length;
+      const octave = Math.floor(currentNoteIndex / lydianScale.length) % 3;
+      const frequency = rootFrequency * Math.pow(2, octave) * Math.pow(2, lydianScale[noteIndex] / 12);
+      oscillator1.frequency.setValueAtTime(frequency, now);
+      oscillator2.frequency.setValueAtTime(frequency * 1.01, now);
+      gainNode.gain.setValueAtTime(0.03, now);
+      gainNode.gain.linearRampToValueAtTime(0.01, now + arpInterval * 0.8);
+      currentNoteIndex = (currentNoteIndex + 1) % (lydianScale.length * 3);
+      nextNoteTime = now + arpInterval;
+    }
+    if (musicPlaying) {
+      requestAnimationFrame(playArpeggio);
+    }
+  }
+  playArpeggio();
+}
+function startMusic() {
+  if (!musicPlaying) {
+    generateIcySound();
+    oscillator1.start();
+    oscillator2.start();
+    musicPlaying = true;
+  }
+}
+function stopMusic() {
+  if (musicPlaying) {
+    oscillator1.stop();
+    oscillator2.stop();
+    oscillator1.disconnect();
+    oscillator2.disconnect();
+    gainNode.disconnect();
+    musicPlaying = false;
+  }
+}
+const toggleSoundButton = document.getElementById('toggleSound');
+toggleSoundButton.addEventListener('click', () => {
+  if (musicPlaying) {
+    stopMusic();
+    toggleSoundButton.textContent = 'Sound On';
+  } else {
+    startMusic();
+    toggleSoundButton.textContent = 'Sound Off';
+  }
+});
+const attributionsDiv = document.getElementById('attributions');
+const toggleAttributionsButton = document.getElementById('toggleAttributions');
+toggleAttributionsButton.addEventListener('click', () => {
+  if (attributionsDiv.style.display === 'none') {
+    attributionsDiv.style.display = 'block';
+    toggleAttributionsButton.textContent = 'Hide Attributions';
+  } else {
+    attributionsDiv.style.display = 'none';
+    toggleAttributionsButton.textContent = 'Show Attributions';
+  }
+});
+document.querySelector('.close-button').addEventListener('click', () => {
+  attributionsDiv.style.display = 'none';
+  toggleAttributionsButton.textContent = 'Show Attributions';
+});
+function generateMoon() {
+  if (moon) {
+    mainScene.remove(moon);
+    moon.geometry.dispose();
+    moon.material.dispose();
+  }
+  const radius = 10;
+  const segments = 32;
+  const moonGeometry = new THREE.CircleGeometry(radius, segments);
+  const vertices = moonGeometry.attributes.position.array;
+  for (let i = 0; i < vertices.length; i += 3) {
+    const x = vertices[i] / 5;
+    const y = vertices[i + 1] / 5;
+    vertices[i + 2] = Math.round(simplex.noise2D(x, y) * 1.5) * 0.25;
+  }
+  moonGeometry.computeVertexNormals();
+  const moonMaterial = new THREE.ShaderMaterial({
+    uniforms: {
+      time: {
+        value: 0.0
+      }
+    },
+    vertexShader: `
+                        varying vec3 vPosition;
+                        varying vec3 vNormal;
+                        void main() {
+                            vPosition = position;
+                            vNormal = normal;
+                            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+                        }
+                    `,
+    fragmentShader: `
+                        uniform float time;
+                        varying vec3 vPosition;
+                        varying vec3 vNormal;
+                        
+                        void main() {
+                            float shade = dot(vNormal, normalize(vec3(1.0, 1.0, 1.0)));
+                            
+                            vec3 moonColor = vec3(0.85, 0.87, 0.9); 
+                            vec3 shadowColor = vec3(0.75, 0.8, 0.85); 
+                            
+                            float contourFreq = 4.0;
+                            float contourWidth = 0.1;
+                            float contourLine = abs(fract(vPosition.z * contourFreq));
+                            contourLine = smoothstep(0.0, contourWidth, contourLine) * 
+                                         smoothstep(contourWidth * 2.0, contourWidth, contourLine);
+                            
+                            vec3 finalColor = mix(moonColor, shadowColor, step(0.5, 1.0 - shade));
+                            finalColor = mix(finalColor, shadowColor, contourLine * 0.3);
+                            
+                            gl_FragColor = vec4(finalColor, 1.0);
+                        }
+                    `,
+    side: THREE.DoubleSide
+  });
+  moon = new THREE.Mesh(moonGeometry, moonMaterial);
+  moon.position.set(80, 30, -100);
+  moon.rotation.y = Math.PI / 6;
+  mainScene.add(moon);
+}
+let terrain;
+let clouds;
+function generateClouds() {
+  if (clouds) {
+    mainScene.remove(clouds);
+    clouds.geometry.dispose();
+    clouds.material.dispose();
+  }
+  const cloudDensity = parseFloat(document.getElementById('cloudDensity').value);
+  const cloudGeometry = new THREE.BufferGeometry();
+  const cloudParticles = [];
+  for (let i = 0; i < 1000000 * cloudDensity; i++) {
+    const x = (Math.random() - 0.5) * 200;
+    const y = 5 + Math.random() * 10;
+    const z = (Math.random() - 0.5) * 200;
+    const noise = simplex.noise3D(x / 10, y / 10, z / 10);
+    if (noise > 0.1) {
+      cloudParticles.push(x, y, z);
+    }
+  }
+  cloudGeometry.setAttribute('position', new THREE.Float32BufferAttribute(cloudParticles, 3));
+  const cloudMaterial = new THREE.PointsMaterial({
+    color: 0xffffff,
+    size: 0.5,
+    transparent: true,
+    opacity: 0.6,
+    blending: THREE.AdditiveBlending
+  });
+  clouds = new THREE.Points(cloudGeometry, cloudMaterial);
+  mainScene.add(clouds);
+}
+function generateTerrain() {
+  if (terrain) {
+    mainScene.remove(terrain);
+    terrain.geometry.dispose();
+    terrain.material.dispose();
+  }
+  const resolution = parseInt(document.getElementById('terrainResolution').value);
+  const heightScale = parseFloat(document.getElementById('terrainHeight').value);
+  const geometry = new THREE.PlaneGeometry(100, 100, resolution, resolution);
+  const vertices = geometry.attributes.position.array;
+  for (let i = 0; i < vertices.length; i += 3) {
+    const x = vertices[i] / 10;
+    const y = vertices[i + 1] / 10;
+    vertices[i + 2] = simplex.noise2D(x, y) * heightScale;
+  }
+  geometry.computeVertexNormals();
+  const material = new THREE.ShaderMaterial({
+    uniforms: {
+      time: {
+        value: 0.0
+      },
+      lineSpacing: {
+        value: 0.5
+      },
+      diagonalTexture: {
+        value: null
+      },
+      terrainMask: {
+        value: null
+      }
+    },
+    vertexShader: `
+                            varying vec3 vPosition;
+                            varying vec3 vNormal;
+                            varying vec2 vUv;
+                            void main() {
+                                vPosition = position;
+                                vNormal = normal;
+                                vUv = uv;
+                                gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+                            }
+                        `,
+    fragmentShader: `
+                            uniform float time;
+                            uniform float lineSpacing;
+                            uniform sampler2D diagonalTexture;
+                            uniform sampler2D terrainMask;
+                            varying vec3 vPosition;
+                            varying vec3 vNormal;
+                            varying vec2 vUv;
+                            
+                            float getDashedPattern(vec2 pos, float angle) {
+                                vec2 rotatedPos = vec2(
+                                    pos.x * cos(angle) - pos.y * sin(angle),
+                                    pos.x * sin(angle) + pos.y * cos(angle)
+                                );
+                                return step(0.5, fract(rotatedPos.x * 10.0));
+                            }
+
+                            void main() {
+                                float contourFreq = 2.0;
+                                float contourWidth = 0.1;
+                                float contourLine = abs(fract(vPosition.z * contourFreq));
+                                contourLine = smoothstep(0.0, contourWidth, contourLine) * 
+                                             smoothstep(contourWidth * 2.0, contourWidth, contourLine);
+                                
+                                float shade = dot(vNormal, normalize(vec3(1.0, 1.0, 1.0)));
+                                
+                                vec4 diagonalPattern = texture2D(diagonalTexture, vUv);
+                                vec4 maskValue = texture2D(terrainMask, vUv);
+                                
+                                vec3 baseColor = vec3(0.8, 0.9, 1.0);
+                                vec3 shadowColor = baseColor * 0.3;
+                                
+                                float shadowThreshold = 0.5;
+                                vec3 finalColor = (shade > shadowThreshold) ? baseColor : shadowColor;
+                                
+                                finalColor = mix(finalColor, vec3(0.6, 0.7, 0.8), contourLine);
+                                
+                                if (shade <= shadowThreshold) {
+                                    float pattern = mix(1.0, diagonalPattern.r, maskValue.r);
+                                    finalColor = mix(shadowColor * 0.5, shadowColor, pattern * 0.5);
+                                }
+
+                                gl_FragColor = vec4(finalColor, 1.0);
+                            }
+                        `,
+    wireframe: true,
+    side: THREE.DoubleSide
+  });
+  terrain = new THREE.Mesh(geometry, material);
+  terrain.rotation.x = -Math.PI / 2;
+  terrain.position.y = -10;
+  mainScene.add(terrain);
+  const terrainWidth = mainRenderer.domElement.width;
+  const terrainHeight = mainRenderer.domElement.height;
+  terrainMaskCanvas = document.getElementById('terrainMaskCanvas');
+  terrainMaskCtx = terrainMaskCanvas.getContext('2d');
+  diagonalLinesCanvas = document.getElementById('diagonalLinesCanvas');
+  diagonalLinesCtx = diagonalLinesCanvas.getContext('2d');
+  terrainMaskCanvas.width = terrainWidth;
+  terrainMaskCanvas.height = terrainHeight;
+  diagonalLinesCanvas.width = terrainWidth;
+  diagonalLinesCanvas.height = terrainHeight;
+  diagonalLinesCtx.strokeStyle = '#ffffff';
+  diagonalLinesCtx.lineWidth = 1;
+  const spacing = 10;
+  for (let x = -terrainWidth; x < terrainWidth * 2; x += spacing) {
+    diagonalLinesCtx.beginPath();
+    diagonalLinesCtx.moveTo(x, 0);
+    diagonalLinesCtx.lineTo(x + terrainHeight, terrainHeight);
+    diagonalLinesCtx.stroke();
+  }
+  terrain.material.uniforms.diagonalTexture = {
+    value: new THREE.CanvasTexture(diagonalLinesCanvas)
+  };
+  terrain.material.uniforms.terrainMask = {
+    value: new THREE.CanvasTexture(terrainMaskCanvas)
+  };
+  generateClouds();
+  generateMoon();
+}
+let terrainMaskCtx;
+let terrainMaskCanvas;
+let diagonalLinesCtx;
+let diagonalLinesCanvas;
+function animate() {
+  requestAnimationFrame(animate);
+  iceMaterial.uniforms.time.value = performance.now() / 1000;
+  if (terrain && terrain.material.uniforms) {
+    terrain.material.uniforms.time.value = performance.now() / 1000;
+    terrainMaskCtx.clearRect(0, 0, terrainMaskCanvas.width, terrainMaskCanvas.height);
+    mainRenderer.render(mainScene, mainCamera);
+    terrainMaskCtx.drawImage(mainRenderer.domElement, 0, 0);
+    terrain.material.uniforms.terrainMask.value.needsUpdate = true;
+    terrain.material.uniforms.diagonalTexture.value.needsUpdate = true;
+  }
+  if (snowflakeGroup) {
+    snowflakeGroup.rotation.x = rotationXSlider.value * Math.PI / 180;
+    snowflakeGroup.rotation.y = rotationYSlider.value * Math.PI / 180;
+    snowflakeGroup.rotation.z = rotationZSlider.value * Math.PI / 180;
+  }
+  if (clouds) {
+    clouds.rotation.y += 0.0001;
+  }
+  if (moon && moon.material.uniforms) {
+    moon.material.uniforms.time.value = performance.now() / 1000;
+    moon.rotation.y = Math.PI / 6 + Math.sin(performance.now() / 10000) * 0.1;
+  }
+  if (stars) {
+    const positions = stars.geometry.attributes.position.array;
+    const colors = stars.geometry.attributes.color.array;
+    const time = performance.now() * 0.001;
+    for (let i = 0; i < colors.length; i += 3) {
+      const twinkle = 0.7 + 0.3 * Math.sin(time + positions[i]);
+      colors[i] = 0.8 * twinkle;
+      colors[i + 1] = 0.9 * twinkle;
+      colors[i + 2] = 1.0 * twinkle;
+    }
+    stars.geometry.attributes.color.needsUpdate = true;
+  }
+  mainRenderer.render(mainScene, mainCamera);
+  snowflakeRenderer.render(snowflakeScene, snowflakeCamera);
+  if (fallingAnimationActive) {
+    updateFallingSnowflakes();
+  }
+}
+window.addEventListener('resize', () => {
+  const mainWidth = document.getElementById('mainCanvas').offsetWidth;
+  const mainHeight = document.getElementById('mainCanvas').offsetHeight;
+  const snowflakeWidth = document.getElementById('snowflakeCanvas').offsetWidth;
+  const snowflakeHeight = document.getElementById('snowflakeCanvas').offsetHeight;
+  mainCamera.aspect = mainWidth / mainHeight;
+  mainCamera.updateProjectionMatrix();
+  mainRenderer.setSize(mainWidth, mainHeight);
+  snowflakeCamera.aspect = snowflakeWidth / snowflakeHeight;
+  snowflakeCamera.updateProjectionMatrix();
+  snowflakeRenderer.setSize(snowflakeWidth, snowflakeHeight);
+});
+complexityInput.addEventListener('input', generateIcySnowflake);
+numBranchesInput.addEventListener('input', generateIcySnowflake);
+snowflakeSizeSlider.addEventListener('input', generateIcySnowflake);
+rotationXSlider.addEventListener('input', () => {
+  mainRenderer.render(mainScene, mainCamera);
+  snowflakeRenderer.render(snowflakeScene, snowflakeCamera);
+});
+rotationYSlider.addEventListener('input', () => {
+  mainRenderer.render(mainScene, mainCamera);
+  snowflakeRenderer.render(snowflakeScene, snowflakeCamera);
+});
+rotationZSlider.addEventListener('input', () => {
+  mainRenderer.render(mainScene, mainCamera);
+  snowflakeRenderer.render(snowflakeScene, snowflakeCamera);
+});
+randomizeButton.addEventListener('click', () => {
+  simplex = new SimplexNoise();
+  complexityInput.value = Math.floor(Math.random() * 5) + 1;
+  numBranchesInput.value = Math.floor(Math.random() * 8) + 3;
+  snowflakeSizeSlider.value = Math.floor(Math.random() * 10) + 1;
+  generateIcySnowflake();
+});
+regenerateButton.addEventListener('click', generateIcySnowflake);
+animateFallingButton.addEventListener('click', () => {
+  fallingAnimationActive = !fallingAnimationActive;
+  if (fallingAnimationActive) {
+    animateFallingButton.textContent = 'Stop Falling Snowflakes';
+    if (fallingSnowflakes.length === 0) {
+      const maxSnowflakes = parseInt(document.getElementById('numSnowflakes').value);
+      for (let i = 0; i < maxSnowflakes; i++) {
+        fallingSnowflakes.push(createFallingSnowflake());
+      }
+    }
+  } else {
+    animateFallingButton.textContent = 'Animate Falling Snowflakes';
+    fallingSnowflakes.forEach(flake => mainScene.remove(flake));
+    fallingSnowflakes.length = 0;
+  }
+});
+document.getElementById('generateTerrain').addEventListener('click', generateTerrain);
+document.getElementById('terrainResolution').addEventListener('change', generateTerrain);
+document.getElementById('terrainHeight').addEventListener('input', generateTerrain);
+document.getElementById('cloudDensity').addEventListener('input', generateTerrain);
+document.getElementById('numSnowflakes').addEventListener('change', () => {
+  if (fallingAnimationActive) {
+    updateFallingSnowflakes();
+  }
+});
+function updateSliderValues() {
+  document.getElementById('snowflakeSizeValue').textContent = snowflakeSizeSlider.value;
+  document.getElementById('rotationXValue').textContent = rotationXSlider.value;
+  document.getElementById('rotationYValue').textContent = rotationYSlider.value;
+  document.getElementById('rotationZValue').textContent = rotationZSlider.value;
+  document.getElementById('terrainHeightValue').textContent = document.getElementById('terrainHeight').value;
+  document.getElementById('cloudDensityValue').textContent = document.getElementById('cloudDensity').value;
+}
+snowflakeSizeSlider.addEventListener('input', updateSliderValues);
+rotationXSlider.addEventListener('input', updateSliderValues);
+rotationYSlider.addEventListener('input', updateSliderValues);
+rotationZSlider.addEventListener('input', updateSliderValues);
+document.getElementById('terrainHeight').addEventListener('input', updateSliderValues);
+document.getElementById('cloudDensity').addEventListener('input', updateSliderValues);
+mainRenderer.setClearColor(0x111a1f, 1);
+window.addEventListener('load', () => {
+  startMusic();
+  generateTerrain();
+  createStars();
+  updateSliderValues();
+  animate();
+});</script>
+</body>
+</html>
