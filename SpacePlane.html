@@ -1,0 +1,998 @@
+<html><head><base href=".">
+<title>StarFox 3D Game</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<style>
+body { margin: 0; overflow: hidden; background: #000; }
+#gameCanvas { width: 100vw; height: 100vh; }
+.hud {
+    position: fixed;
+    color: #0f0;
+    font-family: 'Press Start 2P', monospace;
+    padding: 20px;
+    text-shadow: 0 0 5px #0f0;
+    font-size: 12px;
+}
+#score { top: 0; left: 0; }
+#health { top: 0; right: 0; }
+#integrity { top: 20px; right: 0; }
+#messages {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    color: #0f0;
+    font-family: 'Press Start 2P', monospace;
+    text-align: center;
+    font-size: 12px;
+}
+#controls {
+    position: fixed;
+    bottom: 50px;
+    left: 0;
+    right: 0;
+    display: flex;
+    justify-content: space-between;
+    padding: 20px;
+    pointer-events: none;
+}
+.control-btn {
+    width: 60px;
+    height: 60px;
+    background: rgba(0, 255, 0, 0.2);
+    border: 2px solid #0f0;
+    border-radius: 50%;
+    pointer-events: auto;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: #0f0;
+    font-size: 24px;
+    touch-action: none;
+    user-select: none;
+}
+.control-group {
+    display: flex;
+    gap: 10px;
+}
+#startButton {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(0, 255, 0, 0.2);
+    border: 2px solid #0f0;
+    color: #0f0;
+    padding: 15px 30px;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 16px;
+    cursor: pointer;
+    display: block;
+}
+#radar {
+  position: fixed; 
+  bottom: 100px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 200px;
+  height: 100px;
+  border: 1px solid #0f0;
+  background: rgba(0,255,0,0.1);
+  border-radius: 10px;
+  overflow: hidden;
+}
+</style>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&amp;display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body>
+<div id="score" class="hud">SCORE: 0</div>
+<div id="health" class="hud">SHIELD: 100%</div>
+<div id="integrity" class="hud" style="top: 20px; right: 0;">INTEGRITY: 100%</div>
+<div id="rings" class="hud" style="top: 20px; left: 0;">RINGS: 0</div>
+<div id="time" class="hud" style="top: 40px; left: 0;">TIME: 0:00</div>
+<div id="recentRings" class="hud" style="top: 60px; left: 0;">RECENT: 0</div>
+<div id="messages">TAP START TO PLAY</div>
+<button id="startButton">START</button>
+<div id="radar">
+  <canvas id="radarCanvas" width="200" height="100"></canvas>
+</div>
+<div id="controls">
+    <div class="control-group">
+        <div class="control-btn" id="leftBtn">&#x2190;</div>
+        <div class="control-btn" id="rightBtn">&#x2192;</div>
+    </div>
+    <div class="control-group">
+        <div class="control-btn" id="upBtn">&#x2191;</div>
+        <div class="control-btn" id="downBtn">&#x2193;</div>
+    </div>
+</div>
+<script>let stars = [];
+let scene, camera, renderer, ship;
+let obstacles = [];
+let rings = [];
+let healingItems = [];
+let powerups = [];
+let fuelPowerups = [];
+let planet = null;
+let levelComplete = false;
+let planetDistance = -1200;
+let isInvincible = false;
+let invincibilitySound = null;
+let lastPowerupTime = 0;
+let score = 0;
+let health = 100;
+let gameStarted = false;
+let velocity = new THREE.Vector3(0, 0, 0);
+const ACCELERATION = 0.01;
+const DRAG = 0.98;
+const MAX_SPEED = 0.5;
+let audioContext;
+let isPlayerHit = false;
+let cameraShakeIntensity = 0;
+let originalCameraPosition;
+let gameTime = 0;
+let ringsCollected = 0;
+let recentRings = [];
+let lastBonusTime = 0;
+let startTime;
+let obstacleSpawnRate = 0.02;
+const INITIAL_POWERUP_INTERVAL = 120000;
+const INCREASED_POWERUP_INTERVAL = 30000;
+let powerupInterval = INITIAL_POWERUP_INTERVAL;
+let particles = [];
+const PARTICLE_COUNT = 20;
+let shipIntegrity = 100;
+let radarContext;
+let radarCanvas;
+const RADAR_PLANE_DISTANCE = 500;
+function init() {
+  scene = new THREE.Scene();
+  camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+  renderer = new THREE.WebGLRenderer();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  document.body.appendChild(renderer.domElement);
+  const shipGeometry = new THREE.Group();
+  const bodyGeometry = new THREE.ConeGeometry(1, 4, 4);
+  bodyGeometry.rotateX(Math.PI / 2);
+  const bodyMaterial = new THREE.MeshBasicMaterial({
+    color: 0x00ff00,
+    wireframe: true
+  });
+  const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
+  const wingGeometry = new THREE.BoxGeometry(4, 0.1, 1);
+  const wingMaterial = new THREE.MeshBasicMaterial({
+    color: 0x00ff00,
+    wireframe: true
+  });
+  const leftWing = new THREE.Mesh(wingGeometry, wingMaterial);
+  const rightWing = new THREE.Mesh(wingGeometry, wingMaterial);
+  leftWing.position.set(-1.5, 0, 0);
+  rightWing.position.set(1.5, 0, 0);
+  shipGeometry.add(body);
+  shipGeometry.add(leftWing);
+  shipGeometry.add(rightWing);
+  ship = shipGeometry;
+  scene.add(ship);
+  for (let i = 0; i < 1000; i++) {
+    const starGeometry = new THREE.SphereGeometry(0.05, 4, 4);
+    const starMaterial = new THREE.MeshBasicMaterial({
+      color: new THREE.Color(0.8 + Math.random() * 0.2, 0.8 + Math.random() * 0.2, 0.8 + Math.random() * 0.2)
+    });
+    const star = new THREE.Mesh(starGeometry, starMaterial);
+    const radius = Math.random() * 50 + 20;
+    const theta = Math.random() * Math.PI * 2;
+    star.position.set(radius * Math.cos(theta), radius * Math.sin(theta), Math.random() * 300 - 300);
+    star.userData.originalZ = star.position.z;
+    star.userData.speed = 0.3 + Math.random() * 0.5;
+    scene.add(star);
+    stars.push(star);
+  }
+  camera.position.z = 10;
+  radarCanvas = document.getElementById('radarCanvas');
+  radarContext = radarCanvas.getContext('2d');
+}
+function initAudio() {
+  audioContext = new (window.AudioContext || window.webkitAudioContext)();
+}
+function playHitSound() {
+  const oscillator = audioContext.createOscillator();
+  const gainNode = audioContext.createGain();
+  oscillator.connect(gainNode);
+  gainNode.connect(audioContext.destination);
+  oscillator.type = 'sawtooth';
+  oscillator.frequency.setValueAtTime(220, audioContext.currentTime);
+  oscillator.frequency.exponentialRampToValueAtTime(110, audioContext.currentTime + 0.1);
+  gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+  gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
+  oscillator.start();
+  oscillator.stop(audioContext.currentTime + 0.1);
+}
+function playHealSound() {
+  const oscillator = audioContext.createOscillator();
+  const gainNode = audioContext.createGain();
+  oscillator.connect(gainNode);
+  gainNode.connect(audioContext.destination);
+  oscillator.type = 'sine';
+  oscillator.frequency.setValueAtTime(440, audioContext.currentTime);
+  oscillator.frequency.exponentialRampToValueAtTime(880, audioContext.currentTime + 0.2);
+  gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+  gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
+  oscillator.start();
+  oscillator.stop(audioContext.currentTime + 0.2);
+}
+function playRingSound() {
+  const oscillator = audioContext.createOscillator();
+  const gainNode = audioContext.createGain();
+  oscillator.connect(gainNode);
+  gainNode.connect(audioContext.destination);
+  oscillator.type = 'sine';
+  oscillator.frequency.setValueAtTime(880, audioContext.currentTime);
+  oscillator.frequency.exponentialRampToValueAtTime(1760, audioContext.currentTime + 0.1);
+  gainNode.gain.setValueAtTime(0.2, audioContext.currentTime);
+  gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
+  oscillator.start();
+  oscillator.stop(audioContext.currentTime + 0.1);
+}
+function createRainbowMaterial() {
+  return new THREE.MeshBasicMaterial({
+    color: 0xffffff,
+    wireframe: true,
+    onBeforeCompile: shader => {
+      shader.uniforms.time = {
+        value: 0
+      };
+      shader.vertexShader = `
+                uniform float time;
+                ${shader.vertexShader}
+            `;
+      shader.fragmentShader = `
+                uniform float time;
+                ${shader.fragmentShader.replace('vec4 diffuseColor = vec4( diffuse, opacity );', `
+                    float hue = mod(time + position.x + position.y + position.z, 1.0);
+                    vec3 rainbow = 0.5 + 0.5*cos(6.28318*(hue + vec3(0.0,0.33,0.67)));
+                    vec4 diffuseColor = vec4(rainbow, opacity);
+                    `)}
+            `;
+    }
+  });
+}
+function createPowerup() {
+  const geometry = new THREE.DodecahedronGeometry(1.5);
+  const material = new THREE.MeshBasicMaterial({
+    color: 0xffffff,
+    wireframe: true
+  });
+  const powerup = new THREE.Mesh(geometry, material);
+  powerup.position.z = -100;
+  powerup.position.x = Math.random() * 20 - 10;
+  powerup.position.y = Math.random() * 20 - 10;
+  scene.add(powerup);
+  powerups.push(powerup);
+}
+function createFuelPowerup() {
+  const geometry = new THREE.TetrahedronGeometry(1);
+  const material = new THREE.MeshBasicMaterial({
+    color: 0x00ff00,
+    wireframe: true
+  });
+  const fuel = new THREE.Mesh(geometry, material);
+  fuel.position.z = -100;
+  fuel.position.x = Math.random() * 20 - 10;
+  fuel.position.y = Math.random() * 20 - 10;
+  scene.add(fuel);
+  fuelPowerups.push(fuel);
+}
+function createPlanet() {
+  const planetGroup = new THREE.Group();
+  const planetGeometry = new THREE.SphereGeometry(50, 16, 16);
+  const planetMaterial = new THREE.MeshBasicMaterial({
+    color: 0x4444ff,
+    wireframe: true
+  });
+  const planetMesh = new THREE.Mesh(planetGeometry, planetMaterial);
+  const ringGeometry = new THREE.TorusGeometry(80, 5, 16, 32);
+  const ringMaterial = new THREE.MeshBasicMaterial({
+    color: 0x888888,
+    wireframe: true
+  });
+  const ringMesh = new THREE.Mesh(ringGeometry, ringMaterial);
+  ringMesh.rotation.x = Math.PI / 3;
+  const moonGeometry = new THREE.SphereGeometry(8, 8, 8);
+  const moonMaterial = new THREE.MeshBasicMaterial({
+    color: 0xaaaaaa,
+    wireframe: true
+  });
+  const moon1 = new THREE.Mesh(moonGeometry, moonMaterial);
+  moon1.position.set(100, 30, 0);
+  const moon2 = new THREE.Mesh(moonGeometry, moonMaterial);
+  moon2.position.set(-90, -20, 20);
+  planetGroup.add(planetMesh);
+  planetGroup.add(ringMesh);
+  planetGroup.add(moon1);
+  planetGroup.add(moon2);
+  planetGroup.position.z = planetDistance;
+  scene.add(planetGroup);
+  return planetGroup;
+}
+function playVictorySound() {
+  const oscillator = audioContext.createOscillator();
+  const gainNode = audioContext.createGain();
+  oscillator.connect(gainNode);
+  gainNode.connect(audioContext.destination);
+  oscillator.type = 'square';
+  gainNode.gain.value = 0.2;
+  oscillator.frequency.setValueAtTime(440, audioContext.currentTime);
+  oscillator.frequency.linearRampToValueAtTime(880, audioContext.currentTime + 0.2);
+  oscillator.frequency.linearRampToValueAtTime(1320, audioContext.currentTime + 0.4);
+  gainNode.gain.setValueAtTime(0.2, audioContext.currentTime);
+  gainNode.gain.linearRampToValueAtTime(0.4, audioContext.currentTime + 0.2);
+  gainNode.gain.linearRampToValueAtTime(0, audioContext.currentTime + 1);
+  oscillator.start();
+  oscillator.stop(audioContext.currentTime + 1);
+}
+function startInvincibility() {
+  isInvincible = true;
+  const oscillator = audioContext.createOscillator();
+  const gainNode = audioContext.createGain();
+  oscillator.connect(gainNode);
+  gainNode.connect(audioContext.destination);
+  oscillator.type = 'sine';
+  gainNode.gain.value = 0.1;
+  const lfo = audioContext.createOscillator();
+  const lfoGain = audioContext.createGain();
+  lfo.frequency.value = 2;
+  lfoGain.gain.value = 100;
+  lfo.connect(lfoGain);
+  lfoGain.connect(oscillator.frequency);
+  oscillator.frequency.value = 440;
+  lfo.start();
+  oscillator.start();
+  invincibilitySound = {
+    oscillator,
+    gainNode,
+    lfo
+  };
+  setTimeout(() => {
+    isInvincible = false;
+    gainNode.gain.setValueAtTime(gainNode.gain.value, audioContext.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.5);
+    setTimeout(() => {
+      oscillator.stop();
+      lfo.stop();
+    }, 500);
+    ship.traverse(child => {
+      if (child.material) {
+        child.material.color.setHex(0x00ff00);
+      }
+    });
+  }, 10000);
+}
+function healEffect() {
+  playHealSound();
+  const originalMaterials = [];
+  ship.traverse(child => {
+    if (child.material) {
+      originalMaterials.push({
+        mesh: child,
+        material: child.material.clone()
+      });
+      child.material.color.setHex(0x00ff00);
+    }
+  });
+  setTimeout(() => {
+    originalMaterials.forEach(({
+      mesh,
+      material
+    }) => {
+      mesh.material = material;
+    });
+  }, 200);
+}
+function hitEffect() {
+  isPlayerHit = true;
+  cameraShakeIntensity = 0.5;
+  playHitSound();
+  const originalMaterials = [];
+  ship.traverse(child => {
+    if (child.material) {
+      originalMaterials.push({
+        mesh: child,
+        material: child.material.clone()
+      });
+      child.material.color.setHex(0xff0000);
+    }
+  });
+  setTimeout(() => {
+    isPlayerHit = false;
+    originalMaterials.forEach(({
+      mesh,
+      material
+    }) => {
+      mesh.material = material;
+    });
+  }, 200);
+}
+function createHealingItem() {
+  const geometry = new THREE.DodecahedronGeometry(1);
+  const material = new THREE.MeshBasicMaterial({
+    color: 0x0088ff,
+    wireframe: true
+  });
+  const healingItem = new THREE.Mesh(geometry, material);
+  healingItem.position.z = -100;
+  healingItem.position.x = Math.random() * 20 - 10;
+  healingItem.position.y = Math.random() * 20 - 10;
+  scene.add(healingItem);
+  healingItems.push(healingItem);
+}
+function createRing() {
+  const ringGroup = new THREE.Group();
+  const torusGeometry = new THREE.TorusGeometry(3, 0.2, 16, 32);
+  const ringMaterial = new THREE.MeshBasicMaterial({
+    color: 0x00ffff,
+    wireframe: true
+  });
+  const ring = new THREE.Mesh(torusGeometry, ringMaterial);
+  const cubeGeometry = new THREE.BoxGeometry(1, 1, 1);
+  const cubeMaterial = new THREE.MeshBasicMaterial({
+    color: 0xff0000,
+    wireframe: true,
+    visible: false
+  });
+  const cube = new THREE.Mesh(cubeGeometry, cubeMaterial);
+  ringGroup.add(ring);
+  ringGroup.add(cube);
+  ring.rotation.x = Math.PI / 2;
+  ringGroup.position.z = -100;
+  ringGroup.position.x = Math.random() * 16 - 8;
+  ringGroup.position.y = Math.random() * 16 - 8;
+  ringGroup.rotation.x = -Math.PI / 2;
+  ringGroup.pointsAwarded = false;
+  scene.add(ringGroup);
+  rings.push(ringGroup);
+}
+function createScoreText(points, position) {
+  const scoreDiv = document.createElement('div');
+  scoreDiv.style.position = 'fixed';
+  scoreDiv.style.color = '#0f0';
+  scoreDiv.style.fontFamily = "'Press Start 2P', monospace";
+  scoreDiv.style.fontSize = '16px';
+  scoreDiv.style.pointerEvents = 'none';
+  scoreDiv.textContent = `+${points}`;
+  document.body.appendChild(scoreDiv);
+  const vector = position.clone();
+  vector.project(camera);
+  const x = (vector.x * 0.5 + 0.5) * window.innerWidth;
+  const y = (-vector.y * 0.5 + 0.5) * window.innerHeight;
+  scoreDiv.style.left = `${x}px`;
+  scoreDiv.style.top = `${y}px`;
+  let opacity = 1;
+  let yPos = y;
+  function animateScore() {
+    opacity -= 0.02;
+    yPos -= 1;
+    scoreDiv.style.opacity = opacity;
+    scoreDiv.style.top = `${yPos}px`;
+    if (opacity > 0) {
+      requestAnimationFrame(animateScore);
+    } else {
+      document.body.removeChild(scoreDiv);
+    }
+  }
+  animateScore();
+}
+function createObstacle() {
+  const geometry = new THREE.BoxGeometry(2, 2, 2);
+  const material = new THREE.MeshBasicMaterial({
+    color: 0xff0000,
+    wireframe: true
+  });
+  const obstacle = new THREE.Mesh(geometry, material);
+  obstacle.position.z = -100;
+  obstacle.position.x = Math.random() * 20 - 10;
+  obstacle.position.y = Math.random() * 20 - 10;
+  scene.add(obstacle);
+  obstacles.push(obstacle);
+}
+function updateShipPhysics() {
+  if (controls.ArrowLeft) velocity.x -= ACCELERATION;
+  if (controls.ArrowRight) velocity.x += ACCELERATION;
+  if (controls.ArrowUp) velocity.y += ACCELERATION;
+  if (controls.ArrowDown) velocity.y -= ACCELERATION;
+  velocity.multiplyScalar(DRAG);
+  if (velocity.length() > MAX_SPEED) {
+    velocity.normalize().multiplyScalar(MAX_SPEED);
+  }
+  ship.position.add(velocity);
+  ship.position.x = Math.max(-10, Math.min(10, ship.position.x));
+  ship.position.y = Math.max(-10, Math.min(10, ship.position.y));
+  const targetRotationZ = -velocity.x * 0.5;
+  ship.rotation.z += (targetRotationZ - ship.rotation.z) * 0.1;
+  const targetRotationX = velocity.y * 0.5;
+  ship.rotation.x += (targetRotationX - ship.rotation.x) * 0.1;
+}
+function updateCameraShake() {
+  if (cameraShakeIntensity > 0) {
+    camera.position.x = Math.sin(Date.now() * 0.1) * cameraShakeIntensity;
+    camera.position.y = Math.cos(Date.now() * 0.15) * cameraShakeIntensity;
+    cameraShakeIntensity *= 0.9;
+  } else {
+    camera.position.x = 0;
+    camera.position.y = 0;
+  }
+  camera.position.z = 10;
+}
+function checkRingBonus() {
+  const now = Date.now();
+  recentRings = recentRings.filter(time => now - time < 30000);
+  document.getElementById('recentRings').textContent = `RECENT: ${recentRings.length}`;
+  if (recentRings.length >= 5 && now - lastBonusTime > 30000) {
+    score += 250;
+    lastBonusTime = now;
+    recentRings = [];
+    const messages = document.getElementById('messages');
+    messages.textContent = 'GREAT JOB! +250 POINTS!';
+    messages.style.display = 'block';
+    setTimeout(() => {
+      messages.textContent = '';
+    }, 2000);
+    document.getElementById('score').textContent = `SCORE: ${score}`;
+  }
+}
+function createCollisionParticles(position) {
+  for (let i = 0; i < PARTICLE_COUNT; i++) {
+    const geometry = new THREE.BufferGeometry();
+    const positions = new Float32Array(6);
+    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    const material = new THREE.LineBasicMaterial({
+      color: 0xff0000,
+      transparent: true,
+      opacity: 1
+    });
+    const line = new THREE.Line(geometry, material);
+    const angle = Math.random() * Math.PI * 2;
+    const speed = 0.2 + Math.random() * 0.3;
+    line.userData = {
+      velocity: new THREE.Vector3(Math.cos(angle) * speed, Math.sin(angle) * speed, (Math.random() - 0.5) * speed),
+      startPoint: position.clone(),
+      length: 0,
+      maxLength: 2 + Math.random() * 2,
+      age: 0,
+      maxAge: 20 + Math.random() * 10
+    };
+    scene.add(line);
+    particles.push(line);
+  }
+}
+function updateParticles() {
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const particle = particles[i];
+    particle.userData.age++;
+    const positions = particle.geometry.attributes.position.array;
+    particle.userData.startPoint.add(particle.userData.velocity);
+    positions[0] = particle.userData.startPoint.x;
+    positions[1] = particle.userData.startPoint.y;
+    positions[2] = particle.userData.startPoint.z;
+    particle.userData.length = Math.min(particle.userData.length + 0.3, particle.userData.maxLength);
+    const endPoint = particle.userData.startPoint.clone().sub(particle.userData.velocity.clone().multiplyScalar(particle.userData.length));
+    positions[3] = endPoint.x;
+    positions[4] = endPoint.y;
+    positions[5] = endPoint.z;
+    particle.geometry.attributes.position.needsUpdate = true;
+    particle.material.opacity = 1 - particle.userData.age / particle.userData.maxAge;
+    if (particle.userData.age >= particle.userData.maxAge) {
+      scene.remove(particle);
+      particles.splice(i, 1);
+    }
+  }
+  const isOnWingPlane = obj => {
+    const wingZ = ship.position.z;
+    const objZ = obj.position.z;
+    return objZ < wingZ && objZ > wingZ - 100;
+  };
+  radarContext.fillStyle = 'rgba(0,0,0,0.2)';
+  radarContext.fillRect(0, 0, radarCanvas.width, radarCanvas.height);
+  radarContext.fillStyle = '#f00';
+  obstacles.forEach(obstacle => {
+    if (isOnWingPlane(obstacle)) {
+      const x = (obstacle.position.x + 10) * (radarCanvas.width / 20);
+      const y = radarCanvas.height - ((ship.position.z - obstacle.position.z) * (radarCanvas.height / 100));
+      radarContext.fillRect(x - 2, y - 2, 4, 4);
+    }
+  });
+  radarContext.fillStyle = '#0ff';
+  rings.forEach(ring => {
+    if (isOnWingPlane(ring)) {
+      const x = (ring.position.x + 10) * (radarCanvas.width / 20);
+      const y = radarCanvas.height - ((ship.position.z - ring.position.z) * (radarCanvas.height / 100));
+      radarContext.fillRect(x - 2, y - 2, 4, 4);
+    }
+  });
+  radarContext.fillStyle = '#ff0';
+  powerups.concat(healingItems, fuelPowerups).forEach(powerup => {
+    if (isOnWingPlane(powerup)) {
+      const x = (powerup.position.x + 10) * (radarCanvas.width / 20);
+      const y = radarCanvas.height - ((ship.position.z - powerup.position.z) * (radarCanvas.height / 100));
+      radarContext.fillRect(x - 2, y - 2, 4, 4);
+    }
+  });
+  radarContext.fillStyle = '#0f0';
+  const shipX = (ship.position.x + 10) * (radarCanvas.width / 20);
+  const shipY = radarCanvas.height - 10;
+  radarContext.fillRect(shipX - 3, shipY - 3, 6, 6);
+}
+function animate() {
+  requestAnimationFrame(animate);
+  if (gameStarted && !levelComplete) {
+    gameTime = Math.floor((Date.now() - startTime) / 1000);
+    const minutes = Math.floor(gameTime / 60);
+    const seconds = gameTime % 60;
+    document.getElementById('time').textContent = `TIME: ${minutes}:${seconds.toString().padStart(2, '0')}`;
+    updateShipPhysics();
+    stars.forEach(star => {
+      star.position.z += star.userData.speed;
+      if (star.position.z > 20) {
+        star.position.z = star.userData.originalZ;
+      }
+      star.material.color.setRGB(0.8 + Math.random() * 0.2, 0.8 + Math.random() * 0.2, 0.8 + Math.random() * 0.2);
+      const scale = 1 - star.position.z / 300;
+      star.scale.set(scale, scale, scale);
+    });
+    for (let i = healingItems.length - 1; i >= 0; i--) {
+      const healingItem = healingItems[i];
+      healingItem.position.z += 0.5;
+      healingItem.rotation.x += 0.02;
+      healingItem.rotation.y += 0.03;
+      healingItem.rotation.z += 0.01;
+      if (healingItem.position.distanceTo(ship.position) < 3.5) {
+        health = 100;
+        document.getElementById('health').textContent = `SHIELD: ${health}%`;
+        healEffect();
+        scene.remove(healingItem);
+        healingItems.splice(i, 1);
+        continue;
+      }
+      if (healingItem.position.z > 10) {
+        scene.remove(healingItem);
+        healingItems.splice(i, 1);
+      }
+    }
+    const healingSpawnChance = health <= 20 ? 0.02 : 0.005;
+    if (Math.random() < healingSpawnChance) createHealingItem();
+    for (let i = obstacles.length - 1; i >= 0; i--) {
+      const obstacle = obstacles[i];
+      obstacle.position.z += 0.5;
+      obstacle.rotation.x += 0.01;
+      obstacle.rotation.y += 0.01;
+      if (obstacle.position.distanceTo(ship.position) < 2 && !isInvincible) {
+        if (health > 0) {
+          health -= 10;
+          document.getElementById('health').textContent = `SHIELD: ${health}%`;
+          hitEffect();
+        } else {
+          shipIntegrity -= 10;
+          document.getElementById('integrity').textContent = `INTEGRITY: ${shipIntegrity}%`;
+          hitEffect();
+        }
+        createCollisionParticles(obstacle.position);
+        scene.remove(obstacle);
+        obstacles.splice(i, 1);
+        if (shipIntegrity <= 0) {
+          gameStarted = false;
+          createDeathParticles();
+          playDeathSound();
+          cameraShakeIntensity = 1.0;
+          scene.remove(ship);
+          document.getElementById('messages').textContent = 'SHIP DESTROYED - TAP START';
+          document.getElementById('startButton').style.display = 'block';
+        }
+        continue;
+      }
+      if (obstacle.position.z > 10) {
+        scene.remove(obstacle);
+        obstacles.splice(i, 1);
+        score += 10;
+        document.getElementById('score').textContent = `SCORE: ${score}`;
+      }
+    }
+    for (let i = rings.length - 1; i >= 0; i--) {
+      const ringGroup = rings[i];
+      ringGroup.position.z += 0.5;
+      if (!ringGroup.pointsAwarded && Math.abs(ringGroup.position.z - ship.position.z) < 1 && Math.abs(ringGroup.position.x - ship.position.x) < 3 && Math.abs(ringGroup.position.y - ship.position.y) < 3) {
+        score += 10;
+        ringsCollected++;
+        recentRings.push(Date.now());
+        document.getElementById('score').textContent = `SCORE: ${score}`;
+        document.getElementById('rings').textContent = `RINGS: ${ringsCollected}`;
+        createScoreText(10, ringGroup.position);
+        playRingSound();
+        ringGroup.pointsAwarded = true;
+        checkRingBonus();
+      }
+      if (ringGroup.position.z > 10) {
+        scene.remove(ringGroup);
+        rings.splice(i, 1);
+      }
+    }
+    for (let i = fuelPowerups.length - 1; i >= 0; i--) {
+      const fuel = fuelPowerups[i];
+      fuel.position.z += 0.5;
+      fuel.rotation.x += 0.02;
+      fuel.rotation.y += 0.03;
+      if (fuel.position.distanceTo(ship.position) < 2) {
+        playFuelSound();
+        score += 2;
+        document.getElementById('score').textContent = `SCORE: ${score}`;
+        scene.remove(fuel);
+        fuelPowerups.splice(i, 1);
+        continue;
+      }
+      if (fuel.position.z > 10) {
+        scene.remove(fuel);
+        fuelPowerups.splice(i, 1);
+      }
+    }
+    for (let i = powerups.length - 1; i >= 0; i--) {
+      const powerup = powerups[i];
+      powerup.position.z += 0.5;
+      powerup.rotation.x += 0.02;
+      powerup.rotation.y += 0.03;
+      if (powerup.material.userData.time !== undefined) {
+        powerup.material.userData.time.value = Date.now() * 0.001;
+      }
+      if (powerup.position.distanceTo(ship.position) < 2) {
+        startInvincibility();
+        scene.remove(powerup);
+        powerups.splice(i, 1);
+        continue;
+      }
+      if (powerup.position.z > 10) {
+        scene.remove(powerup);
+        powerups.splice(i, 1);
+      }
+    }
+    if (isInvincible) {
+      ship.traverse(child => {
+        if (child.material) {
+          const hue = Date.now() % 2000 / 2000;
+          child.material.color.setHSL(hue, 1, 0.5);
+        }
+      });
+    }
+    if (gameTime >= 120) {
+      powerupInterval = INCREASED_POWERUP_INTERVAL;
+    }
+    if (Date.now() - lastPowerupTime > powerupInterval) {
+      createPowerup();
+      lastPowerupTime = Date.now();
+    }
+    if (ringsCollected >= 50 && !planet) {
+      planet = createPlanet();
+    }
+    if (planet) {
+      if (ringsCollected >= 50) {
+        planetDistance = -1200 + (ringsCollected - 50) * 7.5;
+        planet.position.z = planetDistance;
+      }
+      planet.rotation.y += 0.001;
+    }
+    if (ringsCollected >= 200 && !levelComplete) {
+      levelComplete = true;
+      playVictorySound();
+      obstacles.forEach(obj => scene.remove(obj));
+      rings.forEach(obj => scene.remove(obj));
+      powerups.forEach(obj => scene.remove(obj));
+      healingItems.forEach(obj => scene.remove(obj));
+      fuelPowerups.forEach(obj => scene.remove(obj));
+      obstacles = [];
+      rings = [];
+      powerups = [];
+      healingItems = [];
+      fuelPowerups = [];
+      document.getElementById('messages').textContent = 'LEVEL COMPLETE!';
+      setTimeout(() => {
+        document.getElementById('startButton').style.display = 'block';
+      }, 3000);
+    }
+    if (Math.random() < 0.005) {
+      createFuelPowerup();
+    }
+    if (gameTime >= 60) {
+      obstacleSpawnRate = 0.02 + (gameTime - 60) * 0.0002;
+      obstacleSpawnRate = Math.min(obstacleSpawnRate, 0.1);
+    }
+    if (Math.random() < obstacleSpawnRate) createObstacle();
+    if (Math.random() < 0.01) createRing();
+    updateParticles();
+    const isOnWingPlane = obj => {
+      const wingZ = ship.position.z;
+      const objZ = obj.position.z;
+      return Math.abs(wingZ - objZ) < 2;
+    };
+    radarContext.fillStyle = 'rgba(0,0,0,0.2)';
+    radarContext.fillRect(0, 0, radarCanvas.width, radarCanvas.height);
+    radarContext.fillStyle = '#f00';
+    obstacles.forEach(obstacle => {
+      if (isOnWingPlane(obstacle)) {
+        const x = (obstacle.position.x + 10) * (radarCanvas.width / 20);
+        const y = (obstacle.position.z + 100) * (radarCanvas.height / 110);
+        radarContext.fillRect(x - 2, y - 2, 4, 4);
+      }
+    });
+    radarContext.fillStyle = '#0ff';
+    rings.forEach(ring => {
+      if (isOnWingPlane(ring)) {
+        const x = (ring.position.x + 10) * (radarCanvas.width / 20);
+        const y = (ring.position.z + 100) * (radarCanvas.height / 110);
+        radarContext.fillRect(x - 2, y - 2, 4, 4);
+      }
+    });
+    radarContext.fillStyle = '#ff0';
+    powerups.concat(healingItems, fuelPowerups).forEach(powerup => {
+      if (isOnWingPlane(powerup)) {
+        const x = (powerup.position.x + 10) * (radarCanvas.width / 20);
+        const y = (powerup.position.z + 100) * (radarCanvas.height / 110);
+        radarContext.fillRect(x - 2, y - 2, 4, 4);
+      }
+    });
+    radarContext.fillStyle = '#0f0';
+    const shipX = (ship.position.x + 10) * (radarCanvas.width / 20);
+    const shipY = radarCanvas.height - 10;
+    radarContext.fillRect(shipX - 3, shipY - 3, 6, 6);
+  }
+  updateCameraShake();
+  renderer.render(scene, camera);
+}
+function setupMobileControls() {
+  const buttons = {
+    leftBtn: 'ArrowLeft',
+    rightBtn: 'ArrowRight',
+    upBtn: 'ArrowUp',
+    downBtn: 'ArrowDown'
+  };
+  function handleTouch(elementId, isPressed) {
+    const key = buttons[elementId];
+    if (key) {
+      controls[key] = isPressed;
+    }
+  }
+  Object.keys(buttons).forEach(btnId => {
+    const element = document.getElementById(btnId);
+    element.addEventListener('touchstart', e => {
+      e.preventDefault();
+      handleTouch(btnId, true);
+    });
+    element.addEventListener('touchend', e => {
+      e.preventDefault();
+      handleTouch(btnId, false);
+    });
+  });
+  document.getElementById('startButton').addEventListener('touchstart', e => {
+    e.preventDefault();
+    startGame();
+  });
+}
+function startGame() {
+  if (!gameStarted) {
+    if (!audioContext) {
+      initAudio();
+    }
+    gameStarted = true;
+    health = 100;
+    score = 0;
+    velocity.set(0, 0, 0);
+    document.getElementById('health').textContent = 'SHIELD: 100%';
+    document.getElementById('score').textContent = 'SCORE: 0';
+    document.getElementById('messages').textContent = '';
+    document.getElementById('startButton').style.display = 'none';
+    obstacles.forEach(obstacle => scene.remove(obstacle));
+    rings.forEach(ring => scene.remove(ring));
+    healingItems.forEach(item => scene.remove(item));
+    powerups.forEach(powerup => scene.remove(powerup));
+    fuelPowerups.forEach(fuel => scene.remove(fuel));
+    obstacles = [];
+    rings = [];
+    healingItems = [];
+    powerups = [];
+    fuelPowerups = [];
+    particles.forEach(particle => scene.remove(particle));
+    particles = [];
+    ship.position.set(0, 0, 0);
+    ship.rotation.set(0, 0, 0);
+    lastPowerupTime = Date.now();
+    isInvincible = false;
+    if (invincibilitySound) {
+      invincibilitySound.oscillator.stop();
+      invincibilitySound.lfo.stop();
+      invincibilitySound = null;
+    }
+    shipIntegrity = 100;
+    document.getElementById('integrity').textContent = 'INTEGRITY: 100%';
+    gameTime = 0;
+    ringsCollected = 0;
+    recentRings = [];
+    lastBonusTime = 0;
+    startTime = Date.now();
+    obstacleSpawnRate = 0.02;
+    powerupInterval = INITIAL_POWERUP_INTERVAL;
+    document.getElementById('rings').textContent = 'RINGS: 0';
+    document.getElementById('time').textContent = 'TIME: 0:00';
+    document.getElementById('recentRings').textContent = 'RECENT: 0';
+    if (planet) {
+      scene.remove(planet);
+      planet = null;
+    }
+    planetDistance = -1000;
+    levelComplete = false;
+  }
+}
+window.addEventListener('keydown', function (e) {
+  controls[e.code] = true;
+  if (e.code === 'Space') startGame();
+});
+window.addEventListener('keyup', function (e) {
+  controls[e.code] = false;
+});
+window.addEventListener('resize', function () {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+let controls = {};
+init();
+setupMobileControls();
+animate();
+function playFuelSound() {
+  const oscillator = audioContext.createOscillator();
+  const gainNode = audioContext.createGain();
+  oscillator.connect(gainNode);
+  gainNode.connect(audioContext.destination);
+  oscillator.type = 'triangle';
+  oscillator.frequency.setValueAtTime(880, audioContext.currentTime);
+  oscillator.frequency.exponentialRampToValueAtTime(440, audioContext.currentTime + 0.2);
+  gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+  gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
+  oscillator.start();
+  oscillator.stop(audioContext.currentTime + 0.2);
+}
+function playDeathSound() {
+  const oscillator = audioContext.createOscillator();
+  const gainNode = audioContext.createGain();
+  oscillator.connect(gainNode);
+  gainNode.connect(audioContext.destination);
+  oscillator.type = 'sawtooth';
+  oscillator.frequency.setValueAtTime(440, audioContext.currentTime);
+  oscillator.frequency.exponentialRampToValueAtTime(55, audioContext.currentTime + 0.5);
+  gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+  gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+  oscillator.start();
+  oscillator.stop(audioContext.currentTime + 0.5);
+}
+function createDeathParticles() {
+  for (let i = 0; i < 20; i++) {
+    const geometry = new THREE.BufferGeometry();
+    const positions = new Float32Array(6);
+    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    const material = new THREE.LineBasicMaterial({
+      color: 0xffff00,
+      transparent: true,
+      opacity: 1
+    });
+    const line = new THREE.Line(geometry, material);
+    const angle = Math.random() * Math.PI * 2;
+    const speed = 0.5 + Math.random() * 0.5;
+    line.userData = {
+      velocity: new THREE.Vector3(Math.cos(angle) * speed, Math.sin(angle) * speed, (Math.random() - 0.5) * speed),
+      startPoint: ship.position.clone(),
+      length: 0,
+      maxLength: 4 + Math.random() * 4,
+      age: 0,
+      maxAge: 30 + Math.random() * 10
+    };
+    scene.add(line);
+    particles.push(line);
+  }
+}</script>
+</body>
+</html>
