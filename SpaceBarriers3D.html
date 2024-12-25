@@ -1,0 +1,844 @@
+<html><head><base href="." />
+<title>Space Barriers 3D Game</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<style>
+body { margin: 0; overflow: hidden; background: #999; }
+#gameCanvas { width: 100vw; height: 100vh; }
+.hud {
+    position: fixed;
+    color: #0f0;
+    font-family: 'Press Start 2P', monospace;
+    padding: 20px;
+    text-shadow: 0 0 5px #0f0,
+                 0 0 3px #00b7eb; 
+    font-size: 14px; 
+    transition: color 0.3s; 
+}
+#score { top: 0; left: 0; }
+#health { top: 0; right: 0; }
+#messages {
+    position: fixed;
+    bottom: 300px;
+    left: 50%;
+    transform: translateX(-50%);
+    color: #0f0;
+    font-family: 'Press Start 2P', monospace;
+    text-align: center;
+    width: 100%;
+    font-size: 12px;
+    padding: 0 10px;
+    box-sizing: border-box;
+    transition: color 0.3s;
+    text-shadow: 0 0 5px #0f0,
+                 0 0 3px #00b7eb; 
+}
+.controlsContainer {
+    position: fixed;
+    bottom: 60px;
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    padding: 0 20px;
+    box-sizing: border-box;
+}
+.controlSide {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    align-items: center;
+}
+.controlBtn {
+    width: 60px;
+    height: 60px;
+    background: rgba(0, 255, 0, 0.2);
+    border: 2px solid #0f0;
+    border-radius: 50%;
+    color: #0f0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    touch-action: none;
+    user-select: none;
+    transition: all 0.3s;
+    text-shadow: 0 0 5px #0f0,
+                 0 0 3px #00b7eb; 
+}
+.controlBtn.hidden {
+    visibility: hidden;
+}
+.damage {
+    color: #f00 !important;
+    border-color: #f00 !important;
+    background: rgba(255, 0, 0, 0.2) !important;
+    text-shadow: 0 0 5px #f00,
+                 0 0 3px #00b7eb !important; 
+}
+.shake {
+    animation: shake 0.5s;
+}
+@keyframes shake {
+    0%, 100% { transform: translate(0, 0); }
+    10%, 30%, 50%, 70%, 90% { transform: translate(-10px, -8px); }
+    20%, 40%, 60%, 80% { transform: translate(10px, 8px); }
+    15%, 35%, 55%, 75%, 95% { transform: translate(8px, -10px); }
+    25%, 45%, 65%, 85% { transform: translate(-8px, 10px); }
+}
+@keyframes blink {
+    0%, 49% { opacity: 1; }
+    50%, 100% { opacity: 0; }
+}
+.low-shields {
+    color: #f00 !important;
+    border-color: #f00 !important;
+    background: rgba(255, 0, 0, 0.2) !important;
+    text-shadow: 0 0 5px #f00,
+                 0 0 3px #00b7eb !important; 
+    animation: blink 1s infinite;
+}
+</style>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body>
+<div id="score" class="hud">SCORE: 0</div>
+<div id="health" class="hud">SHIELD: 100%</div>
+<div id="messages">TAP TO START<br><span style="font-size: 10px">(OR PRESS SPACE)</span></div>
+<div class="controlsContainer">
+    <div class="controlSide left">
+        <div class="controlBtn" id="upBtn">↑</div>
+        <div class="controlBtn" id="leftBtn">←</div>
+        <div class="controlBtn" id="downBtn">↓</div>
+    </div>
+    <div class="controlSide right">
+        <div class="controlBtn" id="upBtn2">↑</div>
+        <div class="controlBtn" id="rightBtn">→</div>
+        <div class="controlBtn" id="downBtn2">↓</div>
+    </div>
+</div>
+<script>
+let scene, camera, renderer, ship, shipContainer, obstacles = [], score = 0, health = 100, gameStarted = false;
+let stars = [], warpLines = [];
+let audioContext;
+let obstacleCount = 0;
+let waveObstacleCounts = [50, 120, 250, 350, 500];
+let currentWave = 1;
+let baseObstacleSpeed = 0.5;
+let waveActive = false;
+let wavePaused = false;
+let obstaclesInWave = 0;
+const obstaclesPerWave = 1000;
+
+function createDamageSound() {
+    if (!audioContext) {
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    
+    const oscillator = audioContext.createOscillator();
+    const gainNode = audioContext.createGain();
+    
+    oscillator.type = 'square';
+    oscillator.frequency.setValueAtTime(220, audioContext.currentTime);
+    oscillator.frequency.exponentialRampToValueAtTime(110, audioContext.currentTime + 0.2);
+    
+    gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
+    
+    oscillator.connect(gainNode);
+    gainNode.connect(audioContext.destination);
+    
+    oscillator.start();
+    oscillator.stop(audioContext.currentTime + 0.2);
+}
+
+function createKlaxonSound() {
+    if (!audioContext) {
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    
+    const oscillator = audioContext.createOscillator();
+    const gainNode = audioContext.createGain();
+    
+    oscillator.type = 'square';
+    oscillator.frequency.value = 440;
+    
+    // Create an LFO for the alarm effect
+    const lfo = audioContext.createOscillator();
+    const lfoGain = audioContext.createGain();
+    lfo.type = 'square';
+    lfo.frequency.value = 2; // 2Hz modulation
+    lfoGain.gain.value = 220; // Modulation amount
+    
+    lfo.connect(lfoGain);
+    lfoGain.connect(oscillator.frequency);
+    
+    gainNode.gain.value = 0.2;
+    
+    oscillator.connect(gainNode);
+    gainNode.connect(audioContext.destination);
+    
+    lfo.start();
+    oscillator.start();
+    
+    return {
+        stop: () => {
+            oscillator.stop();
+            lfo.stop();
+        }
+    };
+}
+
+function createExplosionSound() {
+    if (!audioContext) {
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    
+    const oscillator = audioContext.createOscillator();
+    const gainNode = audioContext.createGain();
+    
+    oscillator.type = 'sawtooth';
+    oscillator.frequency.setValueAtTime(440, audioContext.currentTime);
+    oscillator.frequency.exponentialRampToValueAtTime(55, audioContext.currentTime + 1.5);
+    
+    gainNode.gain.setValueAtTime(0.5, audioContext.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 1.5);
+    
+    oscillator.connect(gainNode);
+    gainNode.connect(audioContext.destination);
+    
+    oscillator.start();
+    oscillator.stop(audioContext.currentTime + 1.5);
+}
+
+function createShipExplosion(position) {
+    const particleCount = 100;
+    const particles = [];
+    
+    for (let i = 0; i < particleCount; i++) {
+        const geometry = new THREE.BufferGeometry();
+        const startPoint = new THREE.Vector3(
+            position.x,
+            position.y,
+            position.z
+        );
+        
+        const angle = Math.random() * Math.PI * 2;
+        const verticalAngle = Math.random() * Math.PI * 2;
+        const speed = Math.random() * 4 + 2;
+        const distance = Math.random() * 20 + 10;
+        
+        const endPoint = new THREE.Vector3(
+            startPoint.x + Math.cos(angle) * Math.sin(verticalAngle) * distance,
+            startPoint.y + Math.sin(angle) * Math.sin(verticalAngle) * distance,
+            startPoint.z + Math.cos(verticalAngle) * distance
+        );
+        
+        geometry.setFromPoints([startPoint, endPoint]);
+        
+        const material = new THREE.LineBasicMaterial({ 
+            color: 0xffffff,
+            transparent: true,
+            opacity: 1
+        });
+        
+        const line = new THREE.Line(geometry, material);
+        scene.add(line);
+        
+        particles.push({
+            line: line,
+            velocity: new THREE.Vector3(
+                (endPoint.x - startPoint.x) * speed,
+                (endPoint.y - startPoint.y) * speed,
+                (endPoint.z - startPoint.z) * speed
+            ),
+            life: 1.0
+        }); 
+    } 
+    
+    function animateExplosionParticles() {
+        let allDead = true;
+        
+        particles.forEach((particle, index) => {
+            if (particle.life > 0) {
+                allDead = false;
+                
+                particle.line.position.add(particle.velocity);
+                particle.line.material.opacity = particle.life;
+                particle.life -= 1.0;
+                particle.velocity.multiplyScalar(0.98);
+            } else {
+                scene.remove(particle.line);
+            }
+        });
+        
+        if (!allDead) {
+            requestAnimationFrame(animateExplosionParticles);
+        }
+    }
+    
+    animateExplosionParticles();
+}
+
+function createCollisionParticles(collisionPoint) {
+    const particleCount = 20;
+    const particles = [];
+    
+    for (let i = 0; i < particleCount; i++) {
+        const geometry = new THREE.BufferGeometry();
+        const startPoint = new THREE.Vector3(
+            collisionPoint.x,
+            collisionPoint.y,
+            collisionPoint.z
+        );
+        
+        const angle = Math.random() * Math.PI * 2;
+        const speed = Math.random() * 2 + 1;
+        const endPoint = new THREE.Vector3(
+            startPoint.x + Math.cos(angle) * 2,
+            startPoint.y + Math.sin(angle) * 2,
+            startPoint.z + (Math.random() - 0.5) * 2
+        );
+        
+        geometry.setFromPoints([startPoint, endPoint]);
+        
+        const material = new THREE.LineBasicMaterial({ 
+            color: 0xffffff,
+            transparent: true,
+            opacity: 1
+        });
+        
+        const line = new THREE.Line(geometry, material);
+        scene.add(line);
+        
+        particles.push({
+            line: line,
+            velocity: new THREE.Vector3(
+                (endPoint.x - startPoint.x) * speed,
+                (endPoint.y - startPoint.y) * speed,
+                (endPoint.z - startPoint.z) * speed
+            ),
+            life: 1.0
+        });
+    }
+    
+    function animateParticles() {
+        let allDead = true;
+        
+        particles.forEach((particle, index) => {
+            if (particle.life > 0) {
+                allDead = false;
+                
+                particle.line.position.add(particle.velocity);
+                particle.line.material.opacity = particle.life;
+                particle.life -= 0.05;
+                particle.velocity.multiplyScalar(0.95);
+            } else {
+                scene.remove(particle.line);
+            }
+        });
+        
+        if (!allDead) {
+            requestAnimationFrame(animateParticles);
+        }
+    }
+    
+    animateParticles();
+}
+
+function showDamageEffects() {
+    ship.material.color.setHex(0xff0000);
+    setTimeout(() => ship.material.color.setHex(0x00ff00), 300);
+
+    const hudElements = document.querySelectorAll('.hud, .controlBtn, #messages');
+    hudElements.forEach(el => {
+        el.classList.add('damage');
+        setTimeout(() => el.classList.remove('damage'), 300);
+    });
+
+    const originalPosition = shipContainer.position.clone();
+    let shakeCount = 0;
+    const maxShakes = 10;
+    const shakeInterval = setInterval(() => {
+        shipContainer.position.x = originalPosition.x + (Math.random() - 0.5) * 4;
+        shipContainer.position.y = originalPosition.y + (Math.random() - 0.5) * 4;
+        shakeCount++;
+        if (shakeCount >= maxShakes) {
+            clearInterval(shakeInterval);
+            shipContainer.position.copy(originalPosition);
+        }
+    }, 30);
+
+    const originalCameraPosition = camera.position.clone();
+    let cameraShakeCount = 0;
+    const cameraShakeInterval = setInterval(() => {
+        camera.position.x = originalCameraPosition.x + (Math.random() - 0.5) * 2;
+        camera.position.y = originalCameraPosition.y + (Math.random() - 0.5) * 2;
+        camera.position.z = originalCameraPosition.z + (Math.random() - 0.5);
+        cameraShakeCount++;
+        if (cameraShakeCount >= maxShakes) {
+            clearInterval(cameraShakeInterval);
+            camera.position.copy(originalCameraPosition);
+        }
+    }, 30);
+
+    createDamageSound();
+}
+
+function checkShieldStatus() {
+    const healthDisplay = document.getElementById('health');
+    const controls = document.querySelectorAll('.controlBtn');
+    
+    if (health <= 40) {
+        if (!klaxonPlaying) {
+            klaxonPlaying = true;
+            klaxonSound = createKlaxonSound();
+        }
+        healthDisplay.classList.add('low-shields');
+        controls.forEach(control => control.classList.add('low-shields'));
+    } else {
+        if (klaxonPlaying) {
+            klaxonPlaying = false;
+            if (klaxonSound) {
+                klaxonSound.stop();
+                klaxonSound = null;
+            }
+        }
+        healthDisplay.classList.remove('low-shields');
+        controls.forEach(control => control.classList.remove('low-shields'));
+    }
+}
+
+function createWarningSound() {
+    if (!audioContext) {
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    
+    const oscillator = audioContext.createOscillator();
+    const gainNode = audioContext.createGain();
+    
+    oscillator.type = 'square';
+    oscillator.frequency.setValueAtTime(880, audioContext.currentTime);
+    oscillator.frequency.setValueAtTime(440, audioContext.currentTime + 0.2);
+    oscillator.frequency.setValueAtTime(880, audioContext.currentTime + 0.4);
+    
+    gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.6);
+    
+    oscillator.connect(gainNode);
+    gainNode.connect(audioContext.destination);
+    
+    oscillator.start();
+    oscillator.stop(audioContext.currentTime + 0.6);
+}
+
+function init() {
+    scene = new THREE.Scene();
+    camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    renderer = new THREE.WebGLRenderer();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.body.appendChild(renderer.domElement);
+
+    shipContainer = new THREE.Group();
+    const cubeGeometry = new THREE.BoxGeometry(1, 1, 1);
+    const cubeMaterial = new THREE.MeshBasicMaterial({ 
+        color: 0x00ff00, 
+        wireframe: true,
+        visible: false 
+    });
+    const cube = new THREE.Mesh(cubeGeometry, cubeMaterial);
+    shipContainer.add(cube);
+
+    const geometry = new THREE.ConeGeometry(1, 2, 4);
+    const material = new THREE.MeshBasicMaterial({ color: 0x00ff00, wireframe: true });
+    ship = new THREE.Mesh(geometry, material);
+    shipContainer.add(ship);
+
+    shipContainer.rotation.x = 1.57;
+    shipContainer.rotation.z = 3.14;
+    
+    scene.add(shipContainer); 
+    
+    for(let i = 0; i < 2000; i++) {
+        const starGeometry = new THREE.SphereGeometry(0.05, 8, 8);
+        const starMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
+        const star = new THREE.Mesh(starGeometry, starMaterial);
+        star.position.set(
+            Math.random() * 200 - 100,
+            Math.random() * 200 - 100,
+            Math.random() * 200 - 200
+        );
+        scene.add(star);
+        stars.push(star); 
+    }
+
+    for(let i = 0; i < 30; i++) {
+        const lineGeometry = new THREE.BufferGeometry();
+        const lineMaterial = new THREE.LineBasicMaterial({ color: 0x00ffff });
+        
+        const startPoint = new THREE.Vector3(
+            Math.random() * 40 - 20,
+            Math.random() * 40 - 20,
+            -100
+        );
+        const endPoint = new THREE.Vector3(
+            startPoint.x * 1.1,
+            startPoint.y * 1.1,
+            startPoint.z + 20
+        );
+        
+        lineGeometry.setFromPoints([startPoint, endPoint]);
+        const line = new THREE.Line(lineGeometry, lineMaterial);
+        scene.add(line);
+        warpLines.push({
+            line: line,
+            speed: Math.random() * 2 + 1
+        });
+    }
+
+    camera.position.z = 10; 
+}
+
+function createObstacle() {
+    const geometry = new THREE.BoxGeometry(2, 2, 2);
+    const material = new THREE.MeshBasicMaterial({ color: 0xff0000, wireframe: true });
+    const obstacle = new THREE.Mesh(geometry, material);
+    obstacle.position.z = -100;
+    obstacle.position.x = Math.random() * 20 - 10;
+    obstacle.position.y = Math.random() * 20 - 10;
+    scene.add(obstacle);
+    obstacles.push(obstacle);
+    
+    obstacleCount++;
+    obstaclesInWave++;
+
+    if (obstaclesInWave >= (currentWave <= 5 ? waveObstacleCounts[currentWave-1] : obstaclesPerWave)) {
+        waveActive = false;
+        
+        // Wait for all obstacles to clear
+        const checkObstacles = setInterval(() => {
+            if (obstacles.length === 0) {
+                clearInterval(checkObstacles);
+                wavePaused = true;
+                obstaclesInWave = 0;
+                
+                setTimeout(() => {
+                    const messages = document.getElementById('messages');
+                    messages.textContent = 'INCOMING WAVE!';
+                    messages.style.fontSize = '36px';
+                    createWarningSound();
+                    
+                    setTimeout(() => {
+                        messages.textContent = `WAVE ${currentWave + 1}`;
+                        messages.style.fontSize = '24px';
+                        setTimeout(() => {
+                            messages.textContent = '';
+                            messages.style.fontSize = '12px';
+                            currentWave++;
+                            baseObstacleSpeed += 0.4;
+                            waveActive = true;
+                            wavePaused = false;
+                        }, 1000);
+                    }, 1000);
+                }, 4000);
+            }
+        }, 100);
+    }
+}
+
+function animate() {
+    requestAnimationFrame(animate);
+
+    if (gameStarted) {
+        stars.forEach(star => {
+            star.position.z += 1;
+            if (star.position.z > 50) {
+                star.position.z = -200;
+                star.position.x = Math.random() * 200 - 100;
+                star.position.y = Math.random() * 200 - 100;
+            }
+        });
+
+        warpLines.forEach(warpLine => {
+            warpLine.line.position.z += warpLine.speed;
+            if (warpLine.line.position.z > 50) {
+                warpLine.line.position.z = -100;
+            }
+        });
+
+        // Move ship controls outside of wave active check so they work during pauses
+        if (keys.ArrowLeft || keys.left) shipContainer.position.x -= 0.2;
+        if (keys.ArrowRight || keys.right) shipContainer.position.x += 0.2;
+        if (keys.ArrowUp || keys.up) shipContainer.position.y += 0.2;
+        if (keys.ArrowDown || keys.down) shipContainer.position.y -= 0.2;
+
+        shipContainer.position.x = Math.max(-10, Math.min(10, shipContainer.position.x));
+        shipContainer.position.y = Math.max(-10, Math.min(10, shipContainer.position.y));
+
+        if (!wavePaused) {  
+            obstacles.forEach((obstacle, index) => {
+                // Ensure obstacles keep moving
+                obstacle.position.z += baseObstacleSpeed;
+                obstacle.rotation.x += 0.01;
+                obstacle.rotation.y += 0.01;
+
+                if (obstacle.position.distanceTo(shipContainer.position) < 2) {
+                    showDamageEffects();
+                    createCollisionParticles(obstacle.position);
+                    health -= 10;
+                    document.getElementById('health').textContent = `SHIELD: ${health}%`;
+                    scene.remove(obstacle);
+                    obstacles.splice(index, 1);
+                    
+                    if (health <= 0) {
+                        gameStarted = false;
+
+                        // Don't stop klaxon immediately anymore - set timeout instead
+                        setTimeout(() => {
+                            if (klaxonPlaying) {
+                                klaxonPlaying = false;
+                                if (klaxonSound) {
+                                    klaxonSound.stop();
+                                    klaxonSound = null;
+                                }
+                            }
+                        }, 5000); // 5 second delay
+
+                        // Create explosion at ship position
+                        createShipExplosion(shipContainer.position);
+                        createExplosionSound();
+
+                        // Remove ship
+                        scene.remove(shipContainer);
+
+                        // Clear warp lines
+                        warpLines.forEach(warpLine => {
+                            scene.remove(warpLine.line);
+                        });
+                        warpLines = [];
+
+                        // Hide controls
+                        document.querySelector('.controlsContainer').style.display = 'none';
+
+                        // Show game over message
+                        const messages = document.getElementById('messages');
+                        messages.style.fontSize = '48px';
+                        messages.style.fontWeight = 'bold';
+                        messages.style.color = '#ff0000';
+                        messages.textContent = 'GAME OVER';
+
+                        setTimeout(() => {
+                            messages.style.fontSize = '24px';
+                            messages.style.color = '#0f0';
+                            messages.innerHTML = 'TAP TO RESTART<br><span style="font-size: 12px">(OR PRESS SPACE)</span>';
+                        }, 2000);
+                    }
+                }
+
+                if (obstacle.position.z > 10) {
+                    const distance = obstacle.position.distanceTo(shipContainer.position);
+                    let pointsAwarded = 10;
+                    
+                    if (distance < 3) {
+                        pointsAwarded = 50;
+                        const scoreDisplay = document.getElementById('score');
+                        scoreDisplay.style.color = '#0f0';
+                        scoreDisplay.style.fontSize = '18px';
+                        scoreDisplay.style.textShadow = '0 0 10px #0f0';
+                        setTimeout(() => {
+                            scoreDisplay.style.color = '';
+                            scoreDisplay.style.fontSize = '';
+                            scoreDisplay.style.textShadow = '';
+                        }, 500);
+                    } else if (distance < 5) {
+                        pointsAwarded = 30;
+                    } else if (distance < 8) {
+                        pointsAwarded = 20;
+                    }
+                    
+                    score += pointsAwarded;
+                    document.getElementById('score').textContent = `SCORE: ${score}`;
+                    
+                    const scoreText = document.createElement('div');
+                    scoreText.textContent = `+${pointsAwarded}`;
+                    scoreText.style.position = 'fixed';
+                    scoreText.style.color = '#0f0';
+                    scoreText.style.fontFamily = "'Press Start 2P', monospace";
+                    scoreText.style.fontSize = '16px';
+                    scoreText.style.pointerEvents = 'none';
+                    
+                    const scoreDisplay = document.getElementById('score');
+                    const rect = scoreDisplay.getBoundingClientRect();
+                    scoreText.style.left = `${rect.right + 10}px`;
+                    scoreText.style.top = `${rect.top}px`;
+                    
+                    document.body.appendChild(scoreText);
+                    
+                    let opacity = 1;
+                    let yOffset = 0;
+                    const animateScore = () => {
+                        opacity -= 0.02;
+                        yOffset -= 1;
+                        scoreText.style.opacity = opacity;
+                        scoreText.style.transform = `translateY(${yOffset}px)`;
+                        if (opacity > 0) {
+                            requestAnimationFrame(animateScore);
+                        } else {
+                            document.body.removeChild(scoreText);
+                        }
+                    };
+                    requestAnimationFrame(animateScore);
+                    
+                    scene.remove(obstacle);
+                    obstacles.splice(index, 1);
+                }
+            });
+
+            checkShieldStatus();
+
+            // Only create new obstacles if wave is active
+            if (waveActive && Math.random() < 0.2) {
+                createObstacle();
+            }
+        }
+    }
+
+    renderer.render(scene, camera);
+}
+
+const keys = {};
+
+function setupMobileControls() {
+    const buttons = {
+        'upBtn': 'up',
+        'upBtn2': 'up',
+        'downBtn': 'down',
+        'downBtn2': 'down',
+        'leftBtn': 'left',
+        'rightBtn': 'right'
+    };
+
+    function handleTouch(element, direction, isDown) {
+        element.addEventListener(isDown ? 'touchstart' : 'touchend', (e) => {
+            e.preventDefault();
+            keys[direction] = isDown;
+        });
+    }
+
+    for (let [btnId, direction] of Object.entries(buttons)) {
+        const btn = document.getElementById(btnId);
+        if (btn) {
+            handleTouch(btn, direction, true);
+            handleTouch(btn, direction, false);
+        }
+    }
+}
+
+window.addEventListener('keydown', e => keys[e.code] = true);
+window.addEventListener('keyup', e => keys[e.code] = false);
+
+let klaxonSound = null;
+let klaxonPlaying = false;
+
+function startGame() {
+    if (!gameStarted) {
+        baseObstacleSpeed = 0.5;
+        
+        if (klaxonPlaying) {
+            klaxonPlaying = false;
+            if (klaxonSound) {
+                klaxonSound.stop();
+                klaxonSound = null;
+            }
+        }
+        
+        // Reset ship position and add back to scene if needed
+        if (!scene.getObjectById(shipContainer.id)) {
+            scene.add(shipContainer);
+        }
+        shipContainer.position.set(0, 0, 0);
+        
+        // Show controls
+        document.querySelector('.controlsContainer').style.display = 'flex';
+        
+        // Reset messages style
+        const messages = document.getElementById('messages');
+        messages.style.fontSize = '12px';
+        messages.style.color = '#0f0';
+        
+        // Recreate warp lines
+        warpLines = [];
+        for(let i = 0; i < 100; i++) {
+            const lineGeometry = new THREE.BufferGeometry();
+            const lineMaterial = new THREE.LineBasicMaterial({ color: 0x00ffff });
+            
+            const startPoint = new THREE.Vector3(
+                Math.random() * 40 - 20,
+                Math.random() * 40 - 20,
+                -100
+            );
+            const endPoint = new THREE.Vector3(
+                startPoint.x * 1.1,
+                startPoint.y * 1.1,
+                startPoint.z + 20
+            );
+            
+            lineGeometry.setFromPoints([startPoint, endPoint]);
+            const line = new THREE.Line(lineGeometry, lineMaterial);
+            scene.add(line);
+            warpLines.push({
+                line: line,
+                speed: Math.random() * 2 + 1
+            });
+        }
+        
+        waveActive = false;
+        wavePaused = true;
+        obstaclesInWave = 0;
+        currentWave = 1;
+
+        setTimeout(() => {
+            const messages = document.getElementById('messages');
+            messages.textContent = 'INCOMING WAVE!';
+            messages.style.fontSize = '36px';
+            createWarningSound();
+            
+            setTimeout(() => {
+                messages.textContent = `WAVE ${currentWave}`;
+                messages.style.fontSize = '24px';
+                setTimeout(() => {
+                    messages.textContent = '';
+                    messages.style.fontSize = '12px';
+                    waveActive = true;
+                    wavePaused = false;
+                    baseObstacleSpeed = 0.5; // Ensure initial speed is set correctly
+                }, 1000);
+            }, 1000);
+        }, 4000);
+
+        gameStarted = true;
+        health = 100;
+        score = 0;
+        document.getElementById('health').textContent = 'SHIELD: 100%';
+        document.getElementById('score').textContent = 'SCORE: 0';
+        document.getElementById('messages').textContent = '';
+    }
+}
+
+window.addEventListener('keydown', e => {
+    if (e.code === 'Space') startGame();
+});
+
+window.addEventListener('touchstart', startGame);
+
+window.addEventListener('resize', () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+init();
+setupMobileControls();
+animate();
+</script>
+</body></html>
