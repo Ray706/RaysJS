@@ -1,0 +1,563 @@
+<html><head><base href="https://example.com">
+  <title>Unicursal Labyrinth Generator</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.9.1/gsap.min.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <style>
+    body, html {
+      margin: 0;
+      padding: 0;
+      overflow-x: hidden;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      background: linear-gradient(to bottom, #fbf8e3, #e6e2d3);
+      min-height: 100vh;
+      touch-action: manipulation;
+    }
+    
+    #content-wrapper {
+      width: 100%;
+      max-width: 1200px;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+
+    #labyrinth-container {
+      width: 100%;
+      display: flex;
+      justify-content: center;
+      margin: 20px 0;
+    }
+
+    svg {
+      width: 100%;
+      max-width: 500px;
+      height: auto;
+    }
+
+    .button-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: center;
+      margin: 20px 0;
+    }
+
+    button, select {
+      margin: 5px;
+      padding: 12px 20px;
+      font-size: 16px;
+      cursor: pointer;
+      background: #ffffff;
+      border: 1px solid #cccccc;
+      border-radius: 5px;
+      transition: all 0.3s ease;
+      touch-action: manipulation;
+    }
+
+    button:hover, select:hover {
+      background: #f0f0f0;
+      transform: translateY(-2px);
+    }
+
+    button:active {
+      transform: translateY(1px);
+    }
+
+    .path {
+      stroke-width: 2.5;
+      fill: none;
+      transition: stroke 0.3s, stroke-width 0.3s;
+      filter: drop-shadow(0 0 3px rgba(0,0,0,0.15));
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      transform-origin: center;
+    }
+
+    .correct-path {
+      stroke: #2ecc71;
+      stroke-opacity: 0.9;
+    }
+
+    .wrong-path {
+      stroke: #e74c3c;
+      stroke-opacity: 0;
+      pointer-events: none;
+    }
+
+    .path:hover {
+      stroke-width: 4.5;
+      filter: drop-shadow(0 0 6px rgba(0,0,0,0.3));
+      cursor: pointer;
+    }
+
+    textarea {
+      width: 100%;
+      height: 200px;
+      margin-top: 10px;
+      padding: 10px;
+      border-radius: 5px;
+      border: 1px solid #cccccc;
+      font-family: monospace;
+      font-size: 14px;
+      resize: vertical;
+    }
+
+    .slider {
+      width: 150px;
+      margin: 5px;
+    }
+
+    label {
+      margin: 5px;
+      font-size: 14px;
+    }
+
+    @media (max-width: 768px) {
+      button, select {
+        padding: 10px 15px;
+        font-size: 14px;
+        width: calc(50% - 20px);
+      }
+
+      textarea {
+        height: 150px;
+      }
+    }
+
+    @media (max-width: 480px) {
+      button, select {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<div id="content-wrapper">
+  <div class="button-container">
+    <select id="algorithm-select">
+      <option value="spiral">Spiral Algorithm</option>
+      <option value="recursive">Recursive Algorithm</option>
+      <option value="random">Random Walk</option>
+      <option value="fibonacci">Fibonacci Spiral</option>
+      <option value="hilbert">Hilbert Curve</option>
+      <option value="hex">Hexagonal Maze</option>
+    </select>
+    <input type="range" id="complexity-slider" min="3" max="10" value="5" class="slider">
+    <label for="complexity-slider">Complexity</label>
+    <input type="range" id="size-slider" min="200" max="800" value="500" class="slider">
+    <label for="size-slider">Size</label>
+    <button onclick="generateLabyrinth()">Generate Labyrinth</button>
+    <button onclick="download('svg')">Export SVG</button>
+    <button onclick="download('ps')">Export PostScript</button>
+    <button onclick="download('ascii')">Export ASCII Art</button>
+    <button onclick="download('png')">Export PNG</button>
+    <button onclick="download('js')">Export JS</button>
+  </div>
+  <div id="labyrinth-container"></div>
+  <textarea id="code-editor" readonly></textarea>
+</div>
+
+<script>const labyrinthContainer = document.getElementById('labyrinth-container');
+const codeEditor = document.getElementById('code-editor');
+const algorithmSelect = document.getElementById('algorithm-select');
+const complexitySlider = document.getElementById('complexity-slider');
+const sizeSlider = document.getElementById('size-slider');
+function createWeightedGrid(width, height) {
+  const grid = [];
+  for (let y = 0; y < height; y++) {
+    grid[y] = [];
+    for (let x = 0; x < width; x++) {
+      grid[y][x] = {
+        visited: false,
+        walls: [true, true, true, true],
+        weight: Math.random() * 0.8 + 0.2,
+        distance: Infinity,
+        parent: null,
+        accessibility: Math.random() > 0.2 + parseInt(complexitySlider.value) * 0.02
+      };
+    }
+  }
+  return grid;
+}
+function generateMazePoints(startX, startY, gridSize) {
+  startX = Math.min(Math.max(0, startX), gridSize - 1);
+  startY = Math.min(Math.max(0, startY), gridSize - 1);
+  const width = gridSize;
+  const height = gridSize;
+  const grid = createWeightedGrid(width, height);
+  const stack = [];
+  const points = [];
+  let currentCell = {
+    x: startX,
+    y: startY
+  };
+  grid[currentCell.y][currentCell.x].visited = true;
+  grid[currentCell.y][currentCell.x].distance = 0;
+  function normalizeToCircle(x, y, gridSize) {
+    const centerX = gridSize / 2;
+    const centerY = gridSize / 2;
+    const dx = x - centerX;
+    const dy = y - centerY;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+    const maxRadius = gridSize / 2;
+    const angle = Math.atan2(dy, dx);
+    const radius = Math.min(distance, maxRadius);
+    const circleX = centerX + radius * Math.cos(angle);
+    const circleY = centerY + radius * Math.sin(angle);
+    return [circleX * 20, circleY * 20];
+  }
+  function getUnvisitedNeighbors(cell, grid, width, height) {
+    const neighbors = [];
+    const dirs = [[0, -1], [1, 0], [0, 1], [-1, 0]];
+    dirs.forEach(([dx, dy], i) => {
+      const newX = cell.x + dx;
+      const newY = cell.y + dy;
+      if (newX >= 0 && newX < width && newY >= 0 && newY < height && grid[newY] && grid[newY][newX] && !grid[newY][newX].visited && grid[newY][newX].accessibility) {
+        const weight = grid[newY][newX].weight;
+        neighbors.push({
+          x: newX,
+          y: newY,
+          direction: i,
+          weight: weight * (1 + Math.random() * 0.2)
+        });
+      }
+    });
+    return neighbors.sort((a, b) => a.weight - b.weight);
+  }
+  const [circleX, circleY] = normalizeToCircle(currentCell.x, currentCell.y, width);
+  points.push([circleX, circleY]);
+  while (true) {
+    const neighbors = getUnvisitedNeighbors(currentCell, grid, width, height);
+    if (neighbors.length > 0) {
+      const nextIndex = Math.floor(Math.random() * Math.min(3, neighbors.length));
+      const nextCell = neighbors[nextIndex];
+      stack.push(currentCell);
+      grid[nextCell.y][nextCell.x].visited = true;
+      grid[nextCell.y][nextCell.x].distance = grid[currentCell.y][currentCell.x].distance + 1;
+      grid[nextCell.y][nextCell.x].parent = currentCell;
+      const midX = (currentCell.x + nextCell.x) / 2;
+      const midY = (currentCell.y + nextCell.y) / 2;
+      const [midCircleX, midCircleY] = normalizeToCircle(midX, midY, width);
+      points.push([midCircleX, midCircleY]);
+      const [nextCircleX, nextCircleY] = normalizeToCircle(nextCell.x, nextCell.y, width);
+      points.push([nextCircleX, nextCircleY]);
+      currentCell = {
+        x: nextCell.x,
+        y: nextCell.y
+      };
+    } else if (stack.length > 0) {
+      currentCell = stack.pop();
+      const lastPoint = points[points.length - 1];
+      const midX = (lastPoint[0] / 20 + currentCell.x) / 2;
+      const midY = (lastPoint[1] / 20 + currentCell.y) / 2;
+      const [midCircleX, midCircleY] = normalizeToCircle(midX, midY, width);
+      points.push([midCircleX, midCircleY]);
+      const [circleX, circleY] = normalizeToCircle(currentCell.x, currentCell.y, width);
+      points.push([circleX, circleY]);
+    } else {
+      break;
+    }
+  }
+  return points;
+}
+function generateSpiralPath(centerX, centerY, numLoops, radiusStep) {
+  const gridSize = Math.floor(15 + parseInt(complexitySlider.value) * 2);
+  const startX = Math.floor(gridSize / 2);
+  const startY = Math.floor(gridSize / 2);
+  const points = generateMazePoints(startX, startY, gridSize);
+  return points.map(([x, y]) => [x + centerX - gridSize * 10, y + centerY - gridSize * 10]);
+}
+function generateRecursivePath(centerX, centerY, numLoops, radiusStep) {
+  const gridSize = Math.floor(10 + parseInt(complexitySlider.value) * 2);
+  const startX = 0;
+  const startY = 0;
+  const points = generateMazePoints(startX, startY, gridSize);
+  return points.map(([x, y]) => [x + centerX - gridSize * 10, y + centerY - gridSize * 10]);
+}
+function generateRandomWalkPath(centerX, centerY, numSteps, stepSize) {
+  const gridSize = Math.floor(20 + parseInt(complexitySlider.value) * 2);
+  const startX = Math.floor(gridSize / 2);
+  const startY = Math.floor(gridSize / 2);
+  const points = generateMazePoints(startX, startY, gridSize);
+  return points.map(([x, y]) => [x + centerX - gridSize * 10, y + centerY - gridSize * 10]);
+}
+function generateFibonacciPath(centerX, centerY, numSpirals) {
+  const gridSize = Math.max(5, Math.floor(15 + parseInt(complexitySlider.value) * 2));
+  const startX = Math.min(gridSize - 1, Math.floor(gridSize * 0.2));
+  const startY = Math.min(gridSize - 1, Math.floor(gridSize * 0.8));
+  try {
+    const points = generateMazePoints(startX, startY, gridSize);
+    return points.map(([x, y]) => [x + centerX - gridSize * 10, y + centerY - gridSize * 10]);
+  } catch (e) {
+    console.error('Error in generateFibonacciPath:', e);
+    return [[centerX, centerY]];
+  }
+}
+function generateHilbertPath(centerX, centerY) {
+  const order = Math.floor(3 + parseInt(complexitySlider.value) * 0.2);
+  const size = 200;
+  const points = [];
+
+  function hilbert(x, y, xi, xj, yi, yj, n) {
+    if (n <= 0) {
+      const scale = size / Math.pow(2, order);
+      const px = Math.abs(x * scale + size/2) + centerX - size;
+      const py = Math.abs(y * scale + size/2) + centerY - size;
+      
+      points.push([px, py]);
+      return;
+    }
+
+    hilbert(x + yi, y + yj, yi, yj, xi, xj, n - 1);
+    hilbert(x + xi, y + xj, xi, xj, yi, yj, n - 1);
+    hilbert(x + xi + yi, y + xj + yj, xi, xj, yi, yj, n - 1);
+    hilbert(x + 2 * xi + yi, y + 2 * xj + yj, -yi, -yj, -xi, -xj, n - 1);
+  }
+
+  hilbert(0, 0, 1, 0, 0, 1, order);
+
+  return points.map(([x, y]) => {
+    const dx = Math.abs(x - centerX);
+    const dy = Math.abs(y - centerY);
+    const distance = Math.sqrt(dx * dx + dy * dy);
+    const angle = Math.atan2(dy, dx);
+    const maxRadius = size/2;
+    const radius = Math.min(distance, maxRadius);
+    return [
+      Math.abs(centerX + radius * Math.cos(angle)),
+      Math.abs(centerY + radius * Math.sin(angle))
+    ];
+  });
+}
+function generateHexPath(centerX, centerY) {
+  const gridSize = Math.floor(3 + parseInt(complexitySlider.value) * 0.5);
+  const hexSize = 40;
+  const points = [];
+  function hexToPixel(q, r) {
+    let x = hexSize * (Math.sqrt(3) * q + Math.sqrt(3) / 2 * r);
+    let y = hexSize * (3 / 2 * r);
+    const distance = Math.sqrt(x * x + y * y);
+    const angle = Math.atan2(y, x);
+    const maxRadius = hexSize * gridSize * 1.5;
+    const radius = Math.min(distance, maxRadius);
+    x = radius * Math.cos(angle);
+    y = radius * Math.sin(angle);
+    return [x + centerX, y + centerY];
+  }
+  for (let q = -gridSize; q <= gridSize; q++) {
+    for (let r = -gridSize; r <= gridSize; r++) {
+      if (Math.abs(-q - r) <= gridSize) {
+        points.push(hexToPixel(q, r));
+      }
+    }
+  }
+  const visited = new Set();
+  const path = [];
+  function dfs(point) {
+    const key = `${point[0]},${point[1]}`;
+    if (visited.has(key)) return;
+    visited.add(key);
+    path.push(point);
+    const neighbors = points.filter(p => Math.hypot(p[0] - point[0], p[1] - point[1]) <= hexSize * 2 && !visited.has(`${p[0]},${p[1]}`));
+    for (const neighbor of neighbors.sort(() => Math.random() - 0.5)) {
+      dfs(neighbor);
+    }
+  }
+  dfs(points[Math.floor(points.length / 2)]);
+  return path;
+}
+function generateSmoothPath(points) {
+  if (points.length < 2) return '';
+  let pathData = `M ${points[0][0]},${points[0][1]}`;
+  const tension = 0.25;
+  for (let i = 1; i < points.length - 2; i++) {
+    const p0 = points[i - 1];
+    const p1 = points[i];
+    const p2 = points[i + 1];
+    const p3 = points[i + 2];
+    const segmentLength = Math.hypot(p2[0] - p1[0], p2[1] - p1[1]);
+    const localTension = tension * (1 + Math.min(segmentLength / 100, 0.5));
+    const cp1x = p1[0] + (p2[0] - p0[0]) * localTension;
+    const cp1y = p1[1] + (p2[1] - p0[1]) * localTension;
+    const cp2x = p2[0] - (p3[0] - p1[0]) * localTension;
+    const cp2y = p2[1] - (p3[1] - p1[1]) * localTension;
+    pathData += ` C ${cp1x},${cp1y} ${cp2x},${cp2y} ${p2[0]},${p2[1]}`;
+  }
+  const remainingPoints = points.slice(Math.max(1, points.length - 2));
+  remainingPoints.forEach(point => {
+    pathData += ` L ${point[0]},${point[1]}`;
+  });
+  return pathData;
+}
+function generateLabyrinth() {
+  labyrinthContainer.innerHTML = '';
+  const svgNS = "http://www.w3.org/2000/svg";
+  const svg = document.createElementNS(svgNS, "svg");
+  const svgSize = parseInt(sizeSlider.value);
+  const complexity = parseInt(complexitySlider.value);
+  const gridSize = complexity;
+  svg.setAttribute("viewBox", `0 0 ${svgSize} ${svgSize}`);
+  const centerX = svgSize / 2;
+  const centerY = svgSize / 2;
+  const numPaths = complexity;
+  let points;
+  try {
+    switch (algorithmSelect.value) {
+      case 'spiral':
+        points = generateSpiralPath(centerX, centerY, 5, 45);
+        break;
+      case 'recursive':
+        points = generateRecursivePath(centerX, centerY, 5, 45);
+        break;
+      case 'random':
+        points = generateRandomWalkPath(centerX, centerY, 100, 45 / 2);
+        break;
+      case 'fibonacci':
+        points = generateFibonacciPath(centerX, centerY, 5);
+        break;
+      case 'hilbert':
+        points = generateHilbertPath(centerX, centerY);
+        break;
+      case 'hex':
+        points = generateHexPath(centerX, centerY);
+        break;
+    }
+    if (!points || points.length === 0) {
+      points = [[centerX, centerY]];
+    }
+    const correctPathData = generateSmoothPath(points);
+    const correctPath = document.createElementNS(svgNS, "path");
+    correctPath.setAttribute("d", correctPathData);
+    correctPath.setAttribute("class", "path correct-path");
+    if (algorithmSelect.value === 'hilbert') {
+      const absolutePathData = correctPathData.replace(/[MLC]\s*([-\d.]+),([-\d.]+)/g, (match, x, y) => {
+        const command = match[0];
+        const absX = Math.abs(parseFloat(x));
+        const absY = Math.abs(parseFloat(y));
+        return `${command}${absX},${absY}`;
+      });
+      correctPath.setAttribute("d", absolutePathData);
+      const exportJS = `const correctPathData = "${absolutePathData}";`;
+      codeEditor.value = exportJS;
+    }
+    const paths = [correctPath];
+    for (let i = 1; i < numPaths; i++) {
+      try {
+        const wrongPoints = generateMazePoints(Math.floor(Math.random() * (gridSize - 1)), Math.floor(Math.random() * (gridSize - 1)), gridSize).map(([x, y]) => [x + centerX - gridSize * 10 / 2 + Math.random() * 50, y + centerY - gridSize * 10 / 2 + Math.random() * 50]);
+        const wrongPathData = generateSmoothPath(wrongPoints);
+        const wrongPath = document.createElementNS(svgNS, "path");
+        wrongPath.setAttribute("d", wrongPathData);
+        wrongPath.setAttribute("class", "path wrong-path");
+        paths.push(wrongPath);
+      } catch (e) {
+        console.error('Error generating wrong path:', e);
+        continue;
+      }
+    }
+    paths.forEach(path => {
+      svg.appendChild(path);
+      const pathLength = path.getTotalLength();
+      path.style.strokeDasharray = pathLength;
+      path.style.strokeDashoffset = pathLength;
+      gsap.to(path, {
+        strokeDashoffset: 0,
+        duration: 2.5,
+        ease: "power2.inOut",
+        stagger: {
+          amount: 1.5,
+          from: "random"
+        }
+      });
+    });
+    labyrinthContainer.appendChild(svg);
+    if (algorithmSelect.value !== 'hilbert') {
+      const exportJS = `const correctPathData = "${correctPathData}";`;
+      codeEditor.value = exportJS;
+    }
+  } catch (e) {
+    console.error('Error generating labyrinth:', e);
+    points = [[centerX, centerY]];
+  }
+}
+function generateContent(type) {
+  const svgElement = labyrinthContainer.querySelector('svg');
+  const correctPath = svgElement.querySelector('.correct-path');
+  const pathData = correctPath.getAttribute('d');
+  switch (type) {
+    case 'svg':
+      const svgContent = `<svg viewBox="0 0 500 500" xmlns="http://www.w3.org/2000/svg">
+        <path d="${pathData}" class="path correct-path" style="stroke: #2ecc71; stroke-width: 2.5; fill: none;"/>
+      </svg>`;
+      return svgContent;
+    case 'ps':
+      return `newpath ${pathData.replace(/([A-Za-z])/g, ' $1 ').trim()} stroke`;
+    case 'ascii':
+      return pathData.split('').map(c => c.charCodeAt(0) % 2 ? '#' : '.').join('');
+    case 'js':
+      return codeEditor.value;
+    default:
+      return '';
+  }
+}
+function download(type) {
+  const content = generateContent(type);
+  if (type === 'png') {
+    const svgElement = labyrinthContainer.querySelector('svg');
+    const correctPath = svgElement.querySelector('.correct-path');
+    const newSvg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    newSvg.setAttribute("viewBox", "0 0 500 500");
+    const pathClone = correctPath.cloneNode(true);
+    newSvg.appendChild(pathClone);
+    const svgData = new XMLSerializer().serializeToString(newSvg);
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    const img = new Image();
+    img.onload = function () {
+      canvas.width = img.width;
+      canvas.height = img.height;
+      ctx.drawImage(img, 0, 0);
+      canvas.toBlob(function (blob) {
+        saveAs(blob, "labyrinth.png");
+      });
+    };
+    img.src = 'data:image/svg+xml;base64,' + btoa(svgData);
+  } else {
+    const blob = new Blob([content], {
+      type: "text/plain;charset=utf-8"
+    });
+    saveAs(blob, `labyrinth.${type}`);
+  }
+}
+let xDown = null;
+let yDown = null;
+document.addEventListener('touchstart', handleTouchStart, false);
+document.addEventListener('touchmove', handleTouchMove, false);
+function handleTouchStart(evt) {
+  xDown = evt.touches[0].clientX;
+  yDown = evt.touches[0].clientY;
+}
+function handleTouchMove(evt) {
+  if (!xDown || !yDown) {
+    return;
+  }
+  const xUp = evt.touches[0].clientX;
+  const yUp = evt.touches[0].clientY;
+  const xDiff = xDown - xUp;
+  const yDiff = yDown - yUp;
+  if (Math.abs(xDiff) > Math.abs(yDiff)) {
+    if (xDiff > 0) {
+      generateLabyrinth();
+    }
+  }
+  xDown = null;
+  yDown = null;
+}
+generateLabyrinth();
+const script = document.createElement('script');
+script.src = 'https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js';
+document.head.appendChild(script);
+</script>
+</body>
+</html>
