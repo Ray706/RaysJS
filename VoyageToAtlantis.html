@@ -1,0 +1,233 @@
+<html><head><base href="https://ifarchive.org/if-archive/games/source/qbasic/" /><style>
+  body { 
+    font-family: monospace;
+    background: #111;
+    color: #0f0;
+    padding: 2em;
+    line-height: 1.5;
+  }
+  
+  .game-window {
+    border: 2px solid #0f0;
+    padding: 1em;
+    margin: 1em 0;
+    max-width: 800px;
+  }
+
+  .title {
+    text-align: center;
+    font-size: 1.5em;
+    margin-bottom: 1em;
+  }
+
+  .input {
+    margin-top: 1em;
+    display: flex;
+  }
+
+  .input input {
+    background: #000;
+    border: 1px solid #0f0;
+    color: #0f0;
+    padding: 0.5em;
+    margin-left: 0.5em;
+    flex-grow: 1;
+  }
+
+  .prompt {
+    color: #0f0;
+  }
+</style></head>
+<body>
+
+<div class="game-window">
+  <div class="title">
+    Voyage to Atlantis
+    <br>
+    by Greg Hassett
+  </div>
+
+  <div id="game-text">
+    *** Adventure Version 6.5 Copyright (C) 1980 by Greg Hassett ***
+    <br><br>
+    Welcome to the wonderful world of Adventure!
+    <br><br> 
+    In this 'Adventure' you are to explore the lost city Atlantis
+    in search of treasures. I will be your eyes and hands during
+    the adventure. Direct me with ordinary English sentences of one
+    or two words.
+    <br><br>
+    You find yourself in your submarine, docked in the City of Atlantis...
+  </div>
+
+  <div class="input">
+    <span class="prompt">></span>
+    <input type="text" id="command" placeholder="What do you want to do?">
+  </div>
+</div>
+
+<script>
+const gameText = document.getElementById('game-text');
+const commandInput = document.getElementById('command');
+
+// Game state
+let playerLocation = "submarine";
+let inventory = [];
+let gameOver = false;
+
+// Game map and items
+const locations = {
+  submarine: {
+    description: "You are in your submarine, docked at an ancient stone pier. Murky water surrounds you on all sides. The ruins of Atlantis loom in the darkness ahead.",
+    exits: {
+      north: "pier",
+      out: "pier"
+    }
+  },
+  pier: {
+    description: "You stand on an ancient stone pier. Your submarine is docked to the south. A crumbling street leads north into the ruins of Atlantis.",
+    exits: {
+      north: "street",
+      south: "submarine"
+    },
+    items: ["rusty_key"]
+  },
+  street: {
+    description: "You are on a wide street paved with worn marble blocks. Ancient buildings line both sides. A temple entrance lies to the east, while the pier is back to the south.",
+    exits: {
+      east: "temple",
+      south: "pier"
+    }
+  },
+  temple: {
+    description: "You stand in a vast temple chamber. Ornate columns stretch up into darkness. A golden altar gleams in the center of the room.",
+    exits: {
+      west: "street"
+    },
+    items: ["golden_chalice"]
+  }
+};
+
+const items = {
+  rusty_key: {
+    name: "rusty key",
+    description: "An ancient bronze key, green with corrosion."
+  },
+  golden_chalice: {
+    name: "golden chalice",
+    description: "A beautifully crafted chalice made of solid gold.",
+    isTreasure: true
+  }
+};
+
+function describeLocation() {
+  return locations[playerLocation].description;
+}
+
+function getValidExits() {
+  return Object.keys(locations[playerLocation].exits);
+}
+
+function getLocationItems() {
+  return locations[playerLocation].items || [];
+}
+
+// Command processing
+commandInput.addEventListener('keypress', (e) => {
+  if (e.key === 'Enter') {
+    const command = commandInput.value.toLowerCase().trim();
+    commandInput.value = '';
+    
+    gameText.innerHTML += `<br><br>> ${command}<br>`;
+    
+    const words = command.split(' ');
+    const verb = words[0];
+    const noun = words[1];
+
+    switch(verb) {
+      case 'look':
+        gameText.innerHTML += `<br>${describeLocation()}`;
+        const items = getLocationItems();
+        if (items.length > 0) {
+          const itemNames = items.map(i => items[i].name).join(', ');
+          gameText.innerHTML += `<br>You can see: ${itemNames}`;
+        }
+        break;
+
+      case 'inventory':
+      case 'i':
+        if (inventory.length === 0) {
+          gameText.innerHTML += '<br>You are not carrying anything.';
+        } else {
+          const itemNames = inventory.map(i => items[i].name).join(', ');
+          gameText.innerHTML += `<br>You are carrying: ${itemNames}`;
+        }
+        break;
+
+      case 'go':
+      case 'north':
+      case 'south':
+      case 'east':
+      case 'west':
+        const direction = verb === 'go' ? noun : verb;
+        if (locations[playerLocation].exits[direction]) {
+          playerLocation = locations[playerLocation].exits[direction];
+          gameText.innerHTML += `<br>${describeLocation()}`;
+        } else {
+          gameText.innerHTML += '<br>You cannot go that way.';
+        }
+        break;
+
+      case 'get':
+      case 'take':
+        if (!noun) {
+          gameText.innerHTML += '<br>Get what?';
+          break;
+        }
+        const locationItems = getLocationItems();
+        const itemToGet = locationItems.find(i => items[i].name.includes(noun));
+        if (itemToGet) {
+          inventory.push(itemToGet);
+          const itemIndex = locationItems.indexOf(itemToGet);
+          locations[playerLocation].items.splice(itemIndex, 1);
+          gameText.innerHTML += `<br>Taken: ${items[itemToGet].name}`;
+        } else {
+          gameText.innerHTML += '<br>I don\'t see that here.';
+        }
+        break;
+
+      case 'drop':
+        if (!noun) {
+          gameText.innerHTML += '<br>Drop what?';
+          break;
+        }
+        const itemToDrop = inventory.find(i => items[i].name.includes(noun));
+        if (itemToDrop) {
+          if (!locations[playerLocation].items) {
+            locations[playerLocation].items = [];
+          }
+          locations[playerLocation].items.push(itemToDrop);
+          const itemIndex = inventory.indexOf(itemToDrop);
+          inventory.splice(itemIndex, 1);
+          gameText.innerHTML += `<br>Dropped: ${items[itemToDrop].name}`;
+        } else {
+          gameText.innerHTML += '<br>You\'re not carrying that.';
+        }
+        break;
+
+      case 'help':
+        gameText.innerHTML += '<br>Some useful commands: LOOK, INVENTORY (or I), GO (direction), GET/TAKE (item), DROP (item)';
+        gameText.innerHTML += '<br>You can also type directions directly: NORTH, SOUTH, EAST, WEST';
+        break;
+
+      default:
+        gameText.innerHTML += '<br>I don\'t understand that command.';
+    }
+
+    // Auto-scroll to bottom
+    gameText.scrollTop = gameText.scrollHeight;
+  }
+});
+</script>
+
+</body></html>
