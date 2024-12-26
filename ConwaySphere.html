@@ -1,0 +1,358 @@
+<html><head><base href="https://threejs.org/examples/">
+<style>
+    body { margin: 0; overflow: hidden; }
+    #controls {
+        position: fixed;
+        top: 10px;
+        left: 10px;
+        background: rgba(0,0,0,0.7);
+        color: white;
+        padding: 10px;
+        border-radius: 5px;
+        font-family: Arial, sans-serif;
+    }
+    .control-group {
+        margin: 10px 0;
+    }
+    label {
+        display: block;
+        margin: 5px 0;
+    }
+    .rotation-controls {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+    }
+    .rotation-label {
+        margin-top: 10px;
+        font-weight: bold;
+    }
+</style>
+<script async src="https://unpkg.com/es-module-shims@1.6.3/dist/es-module-shims.js"></script>
+<script type="importmap">
+{
+    "imports": {
+        "three": "https://unpkg.com/three@0.150.0/build/three.module.js",
+        "three/examples/jsm/": "https://unpkg.com/three@0.150.0/examples/jsm/"
+    }
+}
+</script>
+<script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+
+    // Scene setup
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    const renderer = new THREE.WebGLRenderer();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.body.appendChild(renderer.domElement);
+
+    // Create sphere
+    const radius = 5;
+    const segments = 50;
+    const geometry = new THREE.SphereGeometry(radius, segments, segments);
+    const material = new THREE.MeshBasicMaterial({
+        color: 0x444444,
+        wireframe: true
+    });
+    const sphere = new THREE.Mesh(geometry, material);
+    scene.add(sphere);
+
+    // Controls
+    const controls = new OrbitControls(camera, renderer.domElement);
+    camera.position.z = 15;
+
+    // Game of Life logic
+    let cells = new Set();
+    let gridPoints = [];
+    
+    // Generate grid points on sphere surface
+    for (let i = 0; i < geometry.attributes.position.count; i++) {
+        const x = geometry.attributes.position.array[i * 3];
+        const y = geometry.attributes.position.array[i * 3 + 1];
+        const z = geometry.attributes.position.array[i * 3 + 2];
+        gridPoints.push(new THREE.Vector3(x, y, z));
+    }
+
+    // Cell visualization
+    const cellGeometry = new THREE.SphereGeometry(0.2, 8, 8);
+    const cellMaterial = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+    let cellMeshes = [];
+
+    function initializeCells(count) {
+        // Clear existing cells
+        cells.clear();
+        cellMeshes.forEach(mesh => scene.remove(mesh));
+        cellMeshes = [];
+
+        // Add random cells
+        while (cells.size < count) {
+            const index = Math.floor(Math.random() * gridPoints.length);
+            cells.add(index);
+        }
+
+        // Create meshes for cells
+        cells.forEach(index => {
+            const position = gridPoints[index];
+            const cellMesh = new THREE.Mesh(cellGeometry, cellMaterial);
+            cellMesh.position.copy(position);
+            scene.add(cellMesh);
+            cellMeshes.push(cellMesh);
+        });
+    }
+
+    function getNeighbors(index) {
+        const neighbors = new Set();
+        const position = gridPoints[index];
+        const neighborRadius = 1.0;
+
+        gridPoints.forEach((point, i) => {
+            if (i !== index && position.distanceTo(point) < neighborRadius) {
+                neighbors.add(i);
+            }
+        });
+
+        return neighbors;
+    }
+
+    function updateCells() {
+        const newCells = new Set();
+
+        // Check all grid points
+        for (let i = 0; i < gridPoints.length; i++) {
+            const neighbors = getNeighbors(i);
+            const liveNeighbors = Array.from(neighbors).filter(n => cells.has(n)).length;
+
+            if (cells.has(i)) {
+                // Survival rules
+                if (liveNeighbors === 2 || liveNeighbors === 3) {
+                    newCells.add(i);
+                }
+            } else {
+                // Birth rule
+                if (liveNeighbors === 3) {
+                    newCells.add(i);
+                }
+            }
+        }
+
+        // Update cells
+        cells = newCells;
+
+        // Update visualization
+        cellMeshes.forEach(mesh => scene.remove(mesh));
+        cellMeshes = [];
+
+        cells.forEach(index => {
+            const position = gridPoints[index];
+            const cellMesh = new THREE.Mesh(cellGeometry, cellMaterial);
+            cellMesh.position.copy(position);
+            scene.add(cellMesh);
+            cellMeshes.push(cellMesh);
+        });
+    }
+
+    // UI Controls
+    const controlsDiv = document.createElement('div');
+    controlsDiv.id = 'controls';
+    document.body.appendChild(controlsDiv);
+
+    // Initial cell count
+    const countGroup = document.createElement('div');
+    countGroup.className = 'control-group';
+    const countLabel = document.createElement('label');
+    countLabel.textContent = 'Initial Cells:';
+    const countInput = document.createElement('input');
+    countInput.type = 'number';
+    countInput.value = '50';
+    countInput.min = '1';
+    countInput.max = '1000';
+    countGroup.appendChild(countLabel);
+    countGroup.appendChild(countInput);
+    controlsDiv.appendChild(countGroup);
+
+    // Cell color
+    const colorGroup = document.createElement('div');
+    colorGroup.className = 'control-group';
+    const colorLabel = document.createElement('label');
+    colorLabel.textContent = 'Cell Color:';
+    const colorInput = document.createElement('input');
+    colorInput.type = 'color';
+    colorInput.value = '#00ff00';
+    colorGroup.appendChild(colorLabel);
+    colorGroup.appendChild(colorInput);
+    controlsDiv.appendChild(colorGroup);
+
+    // Cell size
+    const sizeGroup = document.createElement('div');
+    sizeGroup.className = 'control-group';
+    const sizeLabel = document.createElement('label');
+    sizeLabel.textContent = 'Cell Size:';
+    const sizeInput = document.createElement('input');
+    sizeInput.type = 'range';
+    sizeInput.min = '0.1';
+    sizeInput.max = '0.5';
+    sizeInput.step = '0.1';
+    sizeInput.value = '0.2';
+    sizeGroup.appendChild(sizeLabel);
+    sizeGroup.appendChild(sizeInput);
+    controlsDiv.appendChild(sizeGroup);
+
+    // Animation speed
+    const speedGroup = document.createElement('div');
+    speedGroup.className = 'control-group';
+    const speedLabel = document.createElement('label');
+    speedLabel.textContent = 'Speed:';
+    const speedInput = document.createElement('input');
+    speedInput.type = 'range';
+    speedInput.min = '100';
+    speedInput.max = '2000';
+    speedInput.step = '100';
+    speedInput.value = '500';
+    speedGroup.appendChild(speedLabel);
+    speedGroup.appendChild(speedInput);
+    controlsDiv.appendChild(speedGroup);
+
+    // Rotation controls
+    const rotationGroup = document.createElement('div');
+    rotationGroup.className = 'control-group rotation-controls';
+    
+    const rotationLabel = document.createElement('div');
+    rotationLabel.className = 'rotation-label';
+    rotationLabel.textContent = 'Manual Rotation:';
+    rotationGroup.appendChild(rotationLabel);
+
+    // X rotation
+    const xRotLabel = document.createElement('label');
+    xRotLabel.textContent = 'Rotate X:';
+    const xRotInput = document.createElement('input');
+    xRotInput.type = 'range';
+    xRotInput.min = '0';
+    xRotInput.max = '360';
+    xRotInput.value = '0';
+    rotationGroup.appendChild(xRotLabel);
+    rotationGroup.appendChild(xRotInput);
+
+    // Y rotation
+    const yRotLabel = document.createElement('label');
+    yRotLabel.textContent = 'Rotate Y:';
+    const yRotInput = document.createElement('input');
+    yRotInput.type = 'range';
+    yRotInput.min = '0';
+    yRotInput.max = '360';
+    yRotInput.value = '0';
+    rotationGroup.appendChild(yRotLabel);
+    rotationGroup.appendChild(yRotInput);
+
+    // Z rotation
+    const zRotLabel = document.createElement('label');
+    zRotLabel.textContent = 'Rotate Z:';
+    const zRotInput = document.createElement('input');
+    zRotInput.type = 'range';
+    zRotInput.min = '0';
+    zRotInput.max = '360';
+    zRotInput.value = '0';
+    rotationGroup.appendChild(zRotLabel);
+    rotationGroup.appendChild(zRotInput);
+
+    // Zoom control
+    const zoomLabel = document.createElement('label');
+    zoomLabel.textContent = 'Zoom:';
+    const zoomInput = document.createElement('input');
+    zoomInput.type = 'range';
+    zoomInput.min = '5';
+    zoomInput.max = '30';
+    zoomInput.value = '15';
+    rotationGroup.appendChild(zoomLabel);
+    rotationGroup.appendChild(zoomInput);
+
+    controlsDiv.appendChild(rotationGroup);
+
+    // Start/Stop button
+    const startButton = document.createElement('button');
+    startButton.textContent = 'Start';
+    controlsDiv.appendChild(startButton);
+
+    // Reset button
+    const resetButton = document.createElement('button');
+    resetButton.textContent = 'Reset';
+    controlsDiv.appendChild(resetButton);
+
+    let isRunning = false;
+    let updateInterval;
+
+    // Rotation and zoom event listeners
+    xRotInput.addEventListener('input', (e) => {
+        sphere.rotation.x = THREE.MathUtils.degToRad(parseFloat(e.target.value));
+    });
+
+    yRotInput.addEventListener('input', (e) => {
+        sphere.rotation.y = THREE.MathUtils.degToRad(parseFloat(e.target.value));
+    });
+
+    zRotInput.addEventListener('input', (e) => {
+        sphere.rotation.z = THREE.MathUtils.degToRad(parseFloat(e.target.value));
+    });
+
+    zoomInput.addEventListener('input', (e) => {
+        camera.position.z = parseFloat(e.target.value);
+    });
+
+    startButton.addEventListener('click', () => {
+        if (isRunning) {
+            clearInterval(updateInterval);
+            startButton.textContent = 'Start';
+        } else {
+            updateInterval = setInterval(updateCells, parseInt(speedInput.value));
+            startButton.textContent = 'Stop';
+        }
+        isRunning = !isRunning;
+    });
+
+    resetButton.addEventListener('click', () => {
+        initializeCells(parseInt(countInput.value));
+    });
+
+    colorInput.addEventListener('input', (e) => {
+        cellMaterial.color.setStyle(e.target.value);
+    });
+
+    sizeInput.addEventListener('input', (e) => {
+        const newSize = parseFloat(e.target.value);
+        cellGeometry.dispose();
+        cellGeometry = new THREE.SphereGeometry(newSize, 8, 8);
+        cellMeshes.forEach(mesh => {
+            mesh.geometry = cellGeometry;
+        });
+    });
+
+    speedInput.addEventListener('input', (e) => {
+        if (isRunning) {
+            clearInterval(updateInterval);
+            updateInterval = setInterval(updateCells, parseInt(e.target.value));
+        }
+    });
+
+    // Initial setup
+    initializeCells(parseInt(countInput.value));
+
+    // Animation loop
+    function animate() {
+        requestAnimationFrame(animate);
+        controls.update();
+        renderer.render(scene, camera);
+    }
+    animate();
+
+    // Window resize handler
+    window.addEventListener('resize', () => {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+</script>
+</head>
+<body>
+</body>
+</html>

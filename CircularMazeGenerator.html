@@ -1,0 +1,210 @@
+<html><head><base href="/" />
+<style>
+body {
+  margin: 0;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  background: #1a1a1a;
+  color: white;
+  font-family: system-ui, sans-serif;
+}
+
+#maze-container {
+  margin: 20px;
+  transition: all 0.3s ease;
+}
+
+.controls {
+  margin: 20px;
+  text-align: center;
+}
+
+input[type="range"] {
+  width: 200px;
+}
+
+button {
+  background: #333;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 5px;
+  cursor: pointer;
+  margin: 0 5px;
+}
+
+button:hover {
+  background: #444;
+}
+</style>
+</head>
+<body>
+<div id="maze-container"></div>
+
+<div class="controls">
+  <input type="range" min="0" max="360" value="180" id="slider">
+  <br><br>
+  <button onclick="drawBase(16, 'random')">Generate New Maze</button>
+  <button onclick="drawBase(16, '#00ff00')">Green Maze</button>
+  <button onclick="drawBase(16, '#ff00ff')">Pink Maze</button>
+</div>
+
+<script>
+const SIZE = 20;
+const STROKE = SIZE / 5;
+const xmlns = "http://www.w3.org/2000/svg";
+const siteColor = 'black';
+
+function drawCircle(position, radius, stroke, color) {
+    var circle = document.createElementNS(xmlns, "circle");
+    circle.setAttribute("transform-origin", `${position[0]} ${position[1]}`);
+    circle.setAttribute("cy", `${position[1]}`);
+    circle.setAttribute("cx", `${position[0]}`);
+    circle.setAttribute("r", `${radius}`);
+    circle.setAttribute("stroke-width", `${stroke}`);
+    circle.setAttribute("stroke", `${color}`);
+    circle.setAttribute("fill", "none");
+    return circle;
+}
+
+function drawBase(level, color) {
+    // Clear previous maze
+    const container = document.getElementById('maze-container');
+    container.innerHTML = '';
+    
+    // initiate svg canvas
+    const canvasSize = 2 * SIZE * (level + 2);
+    var svg = document.createElementNS(xmlns, "svg");
+    svg.setAttribute("viewBox", "0 0 " + canvasSize + " " + canvasSize);
+    svg.setAttribute("transform-origin", `${canvasSize / 2} ${canvasSize / 2}`);
+    svg.setAttribute("width", canvasSize);
+    svg.setAttribute("height", canvasSize);
+    svg.setAttribute("id", "maze");
+    svg.setAttribute("position", "absolute");
+    svg.style.display = "block";
+    container.setAttribute("width", canvasSize);
+    container.setAttribute("height", canvasSize);
+
+    exitPath = generateExitPath(level);
+
+    for (let i = 0; i <= level; i++) {
+        let clr;
+        if (color == 'random') { clr = randColor(1); } else { clr = color; };
+        svg.appendChild(drawCircle([canvasSize / 2, canvasSize / 2], ((i + 1) * SIZE), STROKE, clr));
+        svg.appendChild(drawExitPath(exitPath[i], [canvasSize / 2, canvasSize / 2], STROKE, clr));
+    }
+
+    container.appendChild(svg);
+}
+
+const rotateMaze = () => {
+    const maze = document.getElementById('maze');
+    const slider = document.getElementById('slider');
+    let deg = 180 - slider.value;
+    maze.style.transform = `rotate(${deg}deg)`;
+};
+
+const generateExitPath = (level) => {
+    let exit = [];
+    exit.push([180, SIZE]);
+    let wall = [];
+    wall.push([0, 0]);
+    let exitPath = [];
+    exitPath.push([exit, wall]);
+
+    exit = [], wall = [];
+    for (let i = 1; i < level; i++) {
+        let deg = (Math.ceil(Math.random() * 360) % 360);
+        let dy = (i + 1) * SIZE;
+        let numOfTuple = Math.ceil(i / 4);
+        if (i%4 == 0) {numOfTuple=1;} 
+        
+        for (let j = 0; j < numOfTuple; j++) {
+            exit.push([deg, dy]);
+            wall.push([deg + 30, dy]);
+            deg += Math.ceil((360 / numOfTuple) + (Math.random() * 10));
+            deg = deg % 360;
+        }
+       
+        exitPath.push([exit, wall]);
+        exit = [];
+        wall = [];
+    }
+
+    for (let i = 1; i < level - 1; i++) {
+        let walls = exitPath[i][1];
+        let pathsBelow = exitPath[i][0];
+        let pathsAbove = exitPath[i + 1][0];
+        
+        for (let j = 0; j < walls.length; j++) {
+            for (let k = 0; k < pathsBelow.length; k++) {
+                if (Math.abs(walls[j][0] - pathsBelow[k][0]) < 5) {
+                    walls[j][0] += 5;
+                }
+            }
+            for (let k = 0; k < pathsAbove.length; k++) {
+                if (Math.abs(walls[j][0] - pathsAbove[k][0]) < 5) {
+                    walls[j][0] += 3;
+                    pathsAbove[k][0] -=3;
+                }
+            }
+        }
+    }
+    
+    exit.push([Math.ceil(Math.random() * 360), (level + 1) * SIZE]);
+    wall.push([0, 0]);
+    exitPath.push([exit, wall]);
+    return exitPath;
+};
+
+const randColor = (a) => {
+    var r = Math.floor(256 * Math.random());
+    var g = Math.floor(256 * Math.random());
+    var b = Math.floor(256 * Math.random());
+    return `rgb(${r},${g},${b},${a})`;
+};
+
+const drawExitPath = (levelExitPaths, coordinate, stroke, color) => {
+    let svg = document.createElementNS(xmlns, "svg");
+    let wallList = levelExitPaths[1];
+    let pathList = levelExitPaths[0];
+    
+    for (const paths of pathList) {
+        var circle = document.createElementNS(xmlns, "circle");
+        circle.setAttribute("transform-origin", `${coordinate[0]} ${coordinate[1]}`);
+        circle.setAttribute("cy", `${coordinate[1] + paths[1]}`);
+        circle.setAttribute("cx", `${coordinate[0]}`);
+        circle.setAttribute("r", `${SIZE / 2}`);
+        circle.setAttribute("fill", siteColor);
+        circle.style.transform = `rotate(${paths[0]}deg)`;
+        svg.appendChild(circle);
+    }
+    
+    for (const walls of wallList) {
+        var rect = document.createElementNS(xmlns, "rect");
+        rect.setAttribute("transform-origin", `${coordinate[0]} ${coordinate[1]}`);
+        rect.setAttribute("y", `${coordinate[1] + walls[1]}`);
+        rect.setAttribute("x", `${coordinate[0]}`);
+        rect.setAttribute("width", `${stroke}`);
+        rect.setAttribute("height", `${(walls[1] ? SIZE : 0)}`);
+        rect.setAttribute("fill", color);
+        rect.style.transform = `rotate(${walls[0]}deg)`;
+        svg.appendChild(rect);
+    }
+    return svg;
+};
+
+// Initial draw
+drawBase(16, 'random');
+
+// Add event listener for slider
+const slider = document.getElementById('slider');
+slider.oninput = rotateMaze;
+</script>
+
+</body>
+</html>

@@ -1,0 +1,304 @@
+<html><head><base href="https://websim/qr-code-app/" />
+<title>Modern QR Code Generator with Icon Support</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.6.10/firebase-app-compat.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.6.10/firebase-database-compat.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css" rel="stylesheet">
+<style>
+  :root {
+    --primary-color: #3498db;
+    --secondary-color: #2ecc71;
+    --background-color: #f5f7fa;
+    --text-color: #34495e;
+  }
+  body {
+    font-family: 'Roboto', sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    margin: 0;
+    background-color: var(--background-color);
+    color: var(--text-color);
+  }
+  .container {
+    background-color: white;
+    padding: 2rem;
+    border-radius: 15px;
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+    max-width: 500px;
+    width: 100%;
+  }
+  h1 {
+    text-align: center;
+    color: var(--primary-color);
+    font-size: 2rem;
+    margin-bottom: 1.5rem;
+  }
+  #qrcode {
+    display: flex;
+    justify-content: center;
+    margin: 1.5rem 0;
+  }
+  #qrcode img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 10px;
+  }
+  .form-group {
+    margin-bottom: 1rem;
+  }
+  label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: bold;
+    color: var(--text-color);
+  }
+  input, select {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    font-size: 1rem;
+    transition: border-color 0.3s ease;
+  }
+  input:focus, select:focus {
+    outline: none;
+    border-color: var(--primary-color);
+  }
+  .color-picker {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+  .color-preview {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    border: 1px solid #ddd;
+  }
+  #generateBtn {
+    display: block;
+    width: 100%;
+    padding: 1rem;
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 1.1rem;
+    margin-top: 1.5rem;
+    transition: background-color 0.3s ease;
+  }
+  #generateBtn:hover {
+    background-color: #2980b9;
+  }
+  #scanCounter {
+    text-align: center;
+    font-size: 1.2rem;
+    margin-top: 1.5rem;
+    color: var(--secondary-color);
+    font-weight: bold;
+  }
+  .icon-selector {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 0.5rem;
+  }
+  .icon-option {
+    font-size: 1.5rem;
+    cursor: pointer;
+    transition: color 0.3s ease;
+  }
+  .icon-option:hover, .icon-option.selected {
+    color: var(--primary-color);
+  }
+  .preset-colors {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+  }
+  .color-option {
+    width: 25px;
+    height: 25px;
+    border-radius: 50%;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: transform 0.2s;
+  }
+  .color-option:hover {
+    transform: scale(1.1);
+  }
+  .color-option.selected {
+    border-color: var(--primary-color);
+  }
+</style>
+</head>
+<body>
+  <div class="container">
+    <h1>Modern QR Code Generator</h1>
+    <div id="qrcode"></div>
+    <div class="form-group">
+      <label for="qrText">QR Code Content:</label>
+      <input type="text" id="qrText" value="https://websim/qr-code-app/scan">
+    </div>
+    <div class="form-group">
+      <label for="qrSize">QR Code Size:</label>
+      <input type="range" id="qrSize" value="200" min="100" max="400" step="10">
+      <span id="sizeValue">200x200</span>
+    </div>
+    <div class="form-group">
+      <label>QR Code Color:</label>
+      <div class="preset-colors">
+        <div class="color-option selected" style="background-color: #000000" data-color="#000000"></div>
+        <div class="color-option" style="background-color: #3498db" data-color="#3498db"></div>
+        <div class="color-option" style="background-color: #e74c3c" data-color="#e74c3c"></div>
+        <div class="color-option" style="background-color: #2ecc71" data-color="#2ecc71"></div>
+        <div class="color-option" style="background-color: #f1c40f" data-color="#f1c40f"></div>
+        <div class="color-option" style="background-color: #9b59b6" data-color="#9b59b6"></div>
+      </div>
+      <div class="color-picker">
+        <input type="color" id="qrColor" value="#000000">
+        <div class="color-preview" id="colorPreview" style="background-color: #000000"></div>
+      </div>
+    </div>
+    <div class="form-group">
+      <label for="qrShape">QR Code Shape:</label>
+      <select id="qrShape">
+        <option value="square">Square</option>
+        <option value="circle">Circle</option>
+        <option value="rounded">Rounded</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Icon:</label>
+      <div class="icon-selector">
+        <i class="icon-option fas fa-user" data-icon="user"></i>
+        <i class="icon-option fas fa-home" data-icon="home"></i>
+        <i class="icon-option fas fa-envelope" data-icon="envelope"></i>
+        <i class="icon-option fas fa-phone" data-icon="phone"></i>
+        <i class="icon-option fas fa-link" data-icon="link"></i>
+      </div>
+    </div>
+    <button id="generateBtn">Generate QR Code</button>
+    <div id="scanCounter">Scans: 0</div>
+  </div>
+
+  <script>
+    // Initialize Firebase (Replace with your own Firebase config)
+    const firebaseConfig = {
+      apiKey: "YOUR_API_KEY",
+      authDomain: "your-app.firebaseapp.com",
+      databaseURL: "https://your-app.firebaseio.com",
+      projectId: "your-project-id",
+      storageBucket: "your-app.appspot.com",
+      messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+      appId: "YOUR_APP_ID"
+    };
+    firebase.initializeApp(firebaseConfig);
+
+    const database = firebase.database();
+    const scanCountRef = database.ref('scanCount');
+
+    let qrcode = null;
+    let selectedIcon = null;
+    let currentColor = "#000000";
+
+    function generateQRCode() {
+      const text = document.getElementById('qrText').value;
+      const size = parseInt(document.getElementById('qrSize').value);
+      const color = currentColor;
+      const shape = document.getElementById('qrShape').value;
+
+      // Clear the previous QR code
+      const qrcodeElement = document.getElementById('qrcode');
+      qrcodeElement.innerHTML = '';
+
+      qrcode = new QRCode(qrcodeElement, {
+        text: text,
+        width: size,
+        height: size,
+        colorDark: color,
+        colorLight: "#ffffff",
+        correctLevel: QRCode.CorrectLevel.H
+      });
+
+      // Apply shape styles
+      setTimeout(() => {
+        const qrImage = qrcodeElement.querySelector('img');
+        if (qrImage) {
+          switch (shape) {
+            case 'circle':
+              qrImage.style.borderRadius = '50%';
+              break;
+            case 'rounded':
+              qrImage.style.borderRadius = '15%';
+              break;
+            default:
+              qrImage.style.borderRadius = '0';
+          }
+        }
+
+        // Add icon if selected
+        if (selectedIcon) {
+          const iconOverlay = document.createElement('div');
+          iconOverlay.innerHTML = `<i class="fas fa-${selectedIcon}" style="font-size: ${size * 0.2}px; color: ${color};"></i>`;
+          iconOverlay.style.position = 'absolute';
+          iconOverlay.style.top = '50%';
+          iconOverlay.style.left = '50%';
+          iconOverlay.style.transform = 'translate(-50%, -50%)';
+          iconOverlay.style.backgroundColor = 'white';
+          iconOverlay.style.padding = `${size * 0.05}px`;
+          iconOverlay.style.borderRadius = '50%';
+          qrcodeElement.style.position = 'relative';
+          qrcodeElement.appendChild(iconOverlay);
+        }
+      }, 50);
+    }
+
+    // Event Listeners
+    document.getElementById('generateBtn').addEventListener('click', generateQRCode);
+    
+    document.getElementById('qrSize').addEventListener('input', (e) => {
+      document.getElementById('sizeValue').textContent = `${e.target.value}x${e.target.value}`;
+    });
+
+    document.getElementById('qrColor').addEventListener('input', (e) => {
+      currentColor = e.target.value;
+      document.getElementById('colorPreview').style.backgroundColor = currentColor;
+      document.querySelectorAll('.color-option').forEach(opt => opt.classList.remove('selected'));
+    });
+
+    document.querySelectorAll('.color-option').forEach(option => {
+      option.addEventListener('click', (e) => {
+        currentColor = e.target.dataset.color;
+        document.getElementById('qrColor').value = currentColor;
+        document.getElementById('colorPreview').style.backgroundColor = currentColor;
+        document.querySelectorAll('.color-option').forEach(opt => opt.classList.remove('selected'));
+        e.target.classList.add('selected');
+      });
+    });
+
+    document.querySelectorAll('.icon-option').forEach(icon => {
+      icon.addEventListener('click', (e) => {
+        document.querySelectorAll('.icon-option').forEach(i => i.classList.remove('selected'));
+        e.target.classList.add('selected');
+        selectedIcon = e.target.dataset.icon;
+      });
+    });
+
+    // Initialize QR code on page load
+    generateQRCode();
+
+    // Listen for scan count changes
+    scanCountRef.on('value', (snapshot) => {
+      const count = snapshot.val() || 0;
+      document.getElementById('scanCounter').textContent = `Scans: ${count}`;
+    });
+  </script>
+</body>
+</html>

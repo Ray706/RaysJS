@@ -1,0 +1,1162 @@
+<html><head><base href="." /><title>Retro Ladder Climber</title><style>
+body {
+  background: #000;
+  margin: 0;
+  display: flex;
+  flex-direction: column; /* Stack elements vertically */
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  font-family: 'Press Start 2P', cursive;
+  overflow: hidden;
+  padding-bottom: 100px; /* Add padding at bottom to make room for controls */
+}
+
+#gameCanvas {
+  background: #000;
+  border: 4px solid #ff00ff;
+  box-shadow: 0 0 20px #ff00ff;
+}
+
+.game-container {
+  position: relative;
+  margin-bottom: 20px; /* Add space between game and controls */
+}
+
+.score {
+  position: absolute;
+  top: -40px;
+  left: 0;
+  color: #ff00ff;
+  font-size: 20px;
+  z-index: 1;
+  text-shadow: 0 0 10px #ff00ff;
+  animation: pulse 2s infinite;
+}
+
+.start-screen {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: #ff00ff;
+  text-align: center;
+  font-size: 24px;
+  cursor: pointer;
+  z-index: 1;
+}
+
+.combo-text {
+  position: absolute;
+  color: #ffff00;
+  font-size: 16px;
+  pointer-events: none;
+  text-shadow: 0 0 10px #ff00ff;
+  opacity: 1;
+  transition: opacity 0.5s;
+}
+
+@keyframes pulse {
+  0% { text-shadow: 0 0 10px #ff00ff; }
+  50% { text-shadow: 0 0 20px #ff00ff; }
+  100% { text-shadow: 0 0 10px #ff00ff; }
+}
+
+@keyframes floatUp {
+  0% { transform: translateY(0); opacity: 1; }
+  100% { transform: translateY(-50px); opacity: 0; }
+}
+
+@keyframes flicker {
+  0% { opacity: 0.8; }
+  50% { opacity: 1; }
+  100% { opacity: 0.8; }
+}
+
+.jetpack-fuel {
+  position: absolute;
+  left: 10px;
+  top: 40px;
+  width: 100px;
+  height: 10px;
+  border: 2px solid #ff4400;
+  animation: flicker 0.5s infinite;
+}
+
+.jetpack-fuel-inner {
+  height: 100%;
+  background: #ff4400;
+  transition: width 0.1s;
+}
+
+.controls {
+  position: fixed;
+  bottom: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: #ff00ff;
+  font-size: 12px;
+  text-align: center;
+  background: rgba(0, 0, 0, 0.7);
+  padding: 10px;
+  border: 2px solid #ff00ff;
+  border-radius: 5px;
+  z-index: 100;
+  text-shadow: 0 0 5px #ff00ff;
+  font-family: 'Press Start 2P', cursive;
+  max-width: 80%;
+  width: auto; /* Allow width to adjust to content */
+}
+
+.controls ul {
+  list-style-type: none;
+  padding: 0;
+  margin: 0;
+}
+
+.controls li {
+  margin: 5px 0;
+}
+</style>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+</head>
+<body>
+<div class="game-container">
+  <div class="score">SCORE: <span id="scoreValue">0</span></div>
+  <canvas id="gameCanvas" width="400" height="600"></canvas>
+  <div class="start-screen" id="startScreen">CLICK TO START</div>
+  <div class="jetpack-fuel" id="jetpackFuel">
+    <div class="jetpack-fuel-inner" id="jetpackFuelInner"></div>
+  </div>
+</div>
+
+<script>
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+const startScreen = document.getElementById('startScreen');
+const scoreElement = document.getElementById('scoreValue');
+const jetpackFuelInner = document.getElementById('jetpackFuelInner');
+
+const WORLD_HEIGHT = 2000;
+let cameraY = 0;
+
+// Add collectible coins
+const COIN_SIZE = 15;
+let coins = [];
+
+// Add enemies
+const ENEMY_SIZE = 20;
+const ENEMY_SPEED = 2;
+let enemies = [];
+let flyingEnemies = []; // Added flying enemies array
+
+// Add boss
+let boss = {
+  x: 0,
+  y: 0,
+  width: 40,
+  height: 40,
+  health: 3,
+  throwTimer: 0,
+  throwInterval: 120, // Throw every 120 frames
+  projectiles: []
+};
+
+// Add projectile class
+const PROJECTILE_SIZE = 15;
+const PROJECTILE_SPEED = 4;
+
+// Add jetpacks
+const JETPACK_SIZE = 20;
+let jetpacks = [];
+
+let player = {
+  x: 200,
+  y: WORLD_HEIGHT - 40,
+  width: 20,
+  height: 30,
+  speed: 3,
+  boostSpeed: 6, // Add boost speed property
+  climbing: false,
+  jumping: false,
+  canDoubleJump: true, // New property for double jump
+  verticalVelocity: 0,
+  jumpStrength: -7.5,
+  doubleJumpStrength: -6, // Slightly weaker than regular jump
+  worldY: WORLD_HEIGHT - 40,
+  lives: 3,
+  score: 0,
+  jetpackFuel: 0,
+  maxJetpackFuel: 100,
+  isFlying: false,
+};
+
+let ladders = [];
+let platforms = [];
+let gameStarted = false;
+
+const GRAVITY = 0.5;
+
+let levelButton = {
+  x: 0,
+  y: 0,
+  width: 30,
+  height: 30,
+  pressed: false
+};
+
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+// Add coin collection sound
+function playCoinSound() {
+  const { oscillator, gainNode } = createOscillator(880, 0.1, 'sine');
+  oscillator.start();
+  oscillator.stop(audioCtx.currentTime + 0.1);
+}
+
+function playCollisionSound() {
+  const { oscillator, gainNode } = createOscillator(220, 0.3, 'sawtooth');
+  oscillator.start();
+  oscillator.stop(audioCtx.currentTime + 0.3);
+  
+  setTimeout(() => {
+    const { oscillator: osc2, gainNode: gain2 } = createOscillator(440, 0.2, 'square');
+    osc2.start();
+    osc2.stop(audioCtx.currentTime + 0.2);
+  }, 50);
+}
+
+function playPowerupSound() {
+  const notes = [440, 554.37, 659.25, 880];
+  notes.forEach((freq, index) => {
+    setTimeout(() => {
+      const { oscillator, gainNode } = createOscillator(freq, 0.1, 'sine');
+      oscillator.start();
+      oscillator.stop(audioCtx.currentTime + 0.1);
+    }, index * 50);
+  });
+}
+
+function playStartJingle() {
+  const notes = [440, 554.37, 659.25, 880, 1108.73];
+  notes.forEach((freq, index) => {
+    setTimeout(() => {
+      const { oscillator, gainNode } = createOscillator(freq, 0.2, 'triangle');
+      oscillator.start();
+      oscillator.stop(audioCtx.currentTime + 0.2);
+    }, index * 100);
+  });
+}
+
+function playClimbSound() {
+  const { oscillator, gainNode } = createOscillator(220, 0.1, 'sine');
+  oscillator.start();
+  oscillator.stop(audioCtx.currentTime + 0.1);
+}
+
+function playJumpSound() {
+  const { oscillator, gainNode } = createOscillator(440, 0.15, 'square');
+  oscillator.start();
+  oscillator.stop(audioCtx.currentTime + 0.15);
+}
+
+function playJetpackSound() {
+  const { oscillator, gainNode } = createOscillator(220, 0.1, 'sawtooth');
+  oscillator.start();
+  oscillator.stop(audioCtx.currentTime + 0.1);
+  
+  setTimeout(() => {
+    const { oscillator: osc2, gainNode: gain2 } = createOscillator(110, 0.1, 'sawtooth');
+    osc2.start();
+    osc2.stop(audioCtx.currentTime + 0.1);
+  }, 50);
+}
+
+function playBoostSound() {
+  const { oscillator, gainNode } = createOscillator(330, 0.1, 'square');
+  oscillator.start();
+  oscillator.stop(audioCtx.currentTime + 0.1);
+}
+
+function createOscillator(frequency, duration, type = 'square') {
+  const oscillator = audioCtx.createOscillator();
+  const gainNode = audioCtx.createGain();
+  
+  oscillator.type = type;
+  oscillator.frequency.setValueAtTime(frequency, audioCtx.currentTime);
+  
+  gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime);
+  gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
+  
+  oscillator.connect(gainNode);
+  gainNode.connect(audioCtx.destination);
+  
+  return { oscillator, gainNode };
+}
+
+function generateCoins() {
+  coins = [];
+  platforms.forEach(platform => {
+    if (Math.random() < 0.7) {
+      coins.push({
+        x: platform.x + Math.random() * (platform.width - COIN_SIZE),
+        y: platform.y - COIN_SIZE - 5,
+        collected: false
+      });
+    }
+  });
+}
+
+function generateJetpacks() {
+  jetpacks = [];
+  // Add jetpack on every 4th platform, starting from index 4
+  platforms.forEach((platform, index) => {
+    if (index > 0 && index % 4 === 0) {
+      jetpacks.push({
+        x: platform.x + Math.random() * (platform.width - JETPACK_SIZE),
+        y: platform.y - JETPACK_SIZE - 5,
+        collected: false
+      });
+    }
+  });
+}
+
+function generateEnemies() {
+  enemies = [];
+  flyingEnemies = []; // Reset flying enemies
+  
+  platforms.forEach((platform, index) => {
+    if (index > 0 && Math.random() < 0.3 && platform.width > ENEMY_SIZE * 3) {
+      enemies.push({
+        x: platform.x + Math.random() * (platform.width - ENEMY_SIZE),
+        y: platform.y - ENEMY_SIZE,
+        platformStart: platform.x,
+        platformEnd: platform.x + platform.width - ENEMY_SIZE,
+        direction: 1,
+        isSleeping: false,
+        sleepTimer: 0,
+        nextSleepTime: Math.random() * 10000 + 5000 // Random time between 5-15 seconds
+      });
+    }
+  });
+  
+  // Add 3-4 flying enemies at different heights
+  const numFlyingEnemies = Math.floor(Math.random() * 2) + 3;
+  for(let i = 0; i < numFlyingEnemies; i++) {
+    flyingEnemies.push({
+      x: Math.random() * canvas.width,
+      y: WORLD_HEIGHT - (WORLD_HEIGHT / numFlyingEnemies) * (i + 0.5),
+      speed: (Math.random() * 2 + 2) * (Math.random() < 0.5 ? 1 : -1)
+    });
+  }
+}
+
+function generateLevel() {
+  ladders = [];
+  platforms = [];
+  
+  // Add several full-width platforms at the bottom
+  for(let i = 0; i < 3; i++) {
+    platforms.push({
+      x: 0,
+      y: WORLD_HEIGHT - (10 + i * 50),
+      width: canvas.width,
+      height: 10
+    });
+  }
+
+  const firstLadderX = Math.random() * (canvas.width - 100) + 35;
+  const firstPlatformY = WORLD_HEIGHT - 160;
+  
+  ladders.push({
+    x: firstLadderX,
+    y: firstPlatformY,
+    width: 30,
+    height: 150
+  });
+  
+  platforms.push({
+    x: Math.max(0, firstLadderX - 75),
+    y: firstPlatformY,
+    width: 150,
+    height: 10
+  });
+  
+  // Increase number of platforms from 25 to 100
+  for (let i = 1; i < 100; i++) {
+    const ladderX = Math.random() * (canvas.width - 100) + 35;
+    const ladderY = firstPlatformY - (i * 75);
+    const ladderHeight = Math.random() * 50 + 75;
+    
+    ladders.push({
+      x: ladderX,
+      y: ladderY,
+      width: 30,
+      height: ladderHeight
+    });
+    
+    const platformWidth = Math.random() * 150 + 50;
+    platforms.push({
+      x: Math.max(0, ladderX - platformWidth/2),
+      y: ladderY,
+      width: platformWidth,
+      height: 10
+    });
+  }
+
+  // Initialize the boss with all required properties
+  boss = {
+    x: 0,
+    y: 0,
+    width: 40,
+    height: 40,
+    health: 3,
+    throwTimer: 0,
+    throwInterval: 120,
+    projectiles: [] // Make sure projectiles array is initialized
+  };
+  
+  // Set up the boss position using the topmost platform
+  const topPlatform = platforms.reduce((highest, current) => 
+    current.y < highest.y ? current : highest
+  , platforms[0]); // Add initial value to reduce to prevent undefined
+  
+  // Find the platform right before the top platform
+  const secondHighestPlatform = platforms.reduce((highest, current) => 
+    current.y < highest.y && current.y > topPlatform.y ? current : highest
+  , platforms[0]); // Add initial value to reduce to prevent undefined
+  
+  // Place button on second highest platform
+  levelButton = {
+    x: secondHighestPlatform.x + secondHighestPlatform.width - 40,
+    y: secondHighestPlatform.y - 30,
+    width: 30,
+    height: 30,
+    pressed: false
+  };
+  
+  // Set boss position relative to top platform
+  boss.x = topPlatform.x + topPlatform.width/2 - boss.width/2;
+  boss.y = topPlatform.y - boss.height;
+  
+  generateCoins();
+  generateJetpacks();
+  generateEnemies();
+}
+
+// Modify player initialization to start with a jetpack
+function resetGame() {
+  player = {
+    x: 200,
+    y: WORLD_HEIGHT - 40,
+    width: 20,
+    height: 30,
+    speed: 3,
+    boostSpeed: 6,
+    climbing: false,
+    jumping: false,
+    canDoubleJump: true,
+    verticalVelocity: 0,
+    jumpStrength: -7.5,
+    doubleJumpStrength: -6,
+    worldY: WORLD_HEIGHT - 40,
+    lives: 3,
+    score: 0,
+    jetpackFuel: 100, // Start with full jetpack fuel
+    maxJetpackFuel: 100,
+    isFlying: false,
+  };
+  cameraY = 0;
+  combo = 0;
+  lastCoinTime = 0;
+  scoreElement.textContent = player.score;
+  generateLevel();
+}
+
+function createFloatingText(x, y, text) {
+  const element = document.createElement('div');
+  element.className = 'combo-text';
+  element.style.left = `${x}px`;
+  element.style.top = `${y}px`;
+  element.textContent = text;
+  document.querySelector('.game-container').appendChild(element);
+  
+  element.style.animation = 'floatUp 1s forwards';
+  setTimeout(() => element.remove(), 1000);
+}
+
+let combo = 0;
+let lastCoinTime = 0;
+const COMBO_TIMEOUT = 2000; // 2 seconds to maintain combo
+
+function drawPlayer() {
+  ctx.fillStyle = '#00ff00';
+  ctx.fillRect(player.x, player.y, player.width, player.height);
+  
+  // Draw boost effect when A is pressed
+  if (keys.a) {
+    ctx.fillStyle = '#00ff88';
+    const trailLength = 15;
+    if (keys.ArrowLeft) {
+      ctx.fillRect(player.x + player.width, player.y + player.height/4, trailLength, player.height/2);
+    } else if (keys.ArrowRight) {
+      ctx.fillRect(player.x - trailLength, player.y + player.height/4, trailLength, player.height/2);
+    }
+  }
+  
+  // Draw lives
+  for (let i = 0; i < player.lives; i++) {
+    ctx.fillStyle = '#ff0000';
+    ctx.fillRect(10 + i * 25, 10, 20, 20);
+  }
+  
+  // Draw jetpack fuel meter when active
+  if (player.jetpackFuel > 0) {
+    jetpackFuelInner.style.width = `${(player.jetpackFuel / player.maxJetpackFuel) * 100}px`;
+  }
+}
+
+function drawCoins() {
+  ctx.fillStyle = '#ffff00';
+  coins.forEach(coin => {
+    if (!coin.collected) {
+      const screenY = coin.y - cameraY;
+      if (screenY + COIN_SIZE < 0 || screenY > canvas.height) return;
+      ctx.beginPath();
+      ctx.arc(coin.x + COIN_SIZE/2, screenY + COIN_SIZE/2, COIN_SIZE/2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  });
+}
+
+function drawJetpacks() {
+  ctx.fillStyle = '#ff4400';
+  jetpacks.forEach(jetpack => {
+    if (!jetpack.collected) {
+      const screenY = jetpack.y - cameraY;
+      if (screenY + JETPACK_SIZE < 0 || screenY > canvas.height) return;
+      
+      // Draw jetpack
+      ctx.fillRect(jetpack.x, screenY, JETPACK_SIZE, JETPACK_SIZE);
+      
+      // Draw flame effect
+      ctx.fillStyle = '#ffff00';
+      ctx.beginPath();
+      ctx.moveTo(jetpack.x + 5, screenY + JETPACK_SIZE);
+      ctx.lineTo(jetpack.x + jetpack.width/2, screenY + JETPACK_SIZE + 10);
+      ctx.lineTo(jetpack.x + JETPACK_SIZE - 5, screenY + JETPACK_SIZE);
+      ctx.fill();
+      ctx.fillStyle = '#ff4400';
+    }
+  });
+}
+
+function drawEnemies() {
+  ctx.fillStyle = '#ff0000';
+  enemies.forEach(enemy => {
+    const screenY = enemy.y - cameraY;
+    if (screenY + ENEMY_SIZE < 0 || screenY > canvas.height) return;
+    
+    ctx.fillRect(enemy.x, screenY, ENEMY_SIZE, ENEMY_SIZE);
+    
+    // Draw sleeping animation
+    if (enemy.isSleeping) {
+      ctx.fillStyle = '#ffffff';
+      ctx.font = '14px Arial';
+      ctx.fillText('💤', enemy.x + ENEMY_SIZE/2, screenY - 5);
+      ctx.fillStyle = '#ff0000';
+    }
+  });
+  
+  // Draw flying enemies
+  ctx.fillStyle = '#ff6600';
+  flyingEnemies.forEach(enemy => {
+    const screenY = enemy.y - cameraY;
+    if (screenY + ENEMY_SIZE < 0 || screenY > canvas.height) return;
+    
+    // Draw triangle shape for flying enemies
+    ctx.beginPath();
+    ctx.moveTo(enemy.x, screenY + ENEMY_SIZE);
+    ctx.lineTo(enemy.x + ENEMY_SIZE/2, screenY);
+    ctx.lineTo(enemy.x + ENEMY_SIZE, screenY + ENEMY_SIZE);
+    ctx.closePath();
+    ctx.fill();
+  });
+  
+  drawBoss(); // Add this line to draw the boss
+}
+
+function updateBoss() {
+  if (!boss || !boss.projectiles) return; // Add safety check
+  
+  // Update throw timer
+  boss.throwTimer++;
+  if (boss.throwTimer >= boss.throwInterval) {
+    boss.throwTimer = 0;
+    // Create new projectile
+    boss.projectiles.push({
+      x: boss.x + boss.width/2 - PROJECTILE_SIZE/2,
+      y: boss.y + boss.height,
+      speed: PROJECTILE_SPEED
+    });
+  }
+  
+  // Update projectiles with safety checks
+  for (let i = boss.projectiles.length - 1; i >= 0; i--) {
+    const projectile = boss.projectiles[i];
+    if (!projectile) continue; // Skip if projectile is undefined
+    
+    projectile.y += projectile.speed;
+    
+    // Check collision with player
+    const projectileRect = {
+      x: projectile.x,
+      y: projectile.y,
+      width: PROJECTILE_SIZE,
+      height: PROJECTILE_SIZE
+    };
+    
+    const playerRect = {
+      x: player.x,
+      y: player.worldY,
+      width: player.width,
+      height: player.height
+    };
+    
+    if (checkCollision(playerRect, projectileRect)) {
+      player.lives--;
+      playCollisionSound();
+      boss.projectiles.splice(i, 1);
+      
+      if (player.lives <= 0) {
+        gameStarted = false;
+        startScreen.style.display = 'block';
+        startScreen.textContent = 'GAME OVER - CLICK TO RESTART';
+        resetGame();
+      } else {
+        // Reset position but maintain proper world coordinates
+        player.worldY = WORLD_HEIGHT - 40;
+        player.x = 200;
+        player.verticalVelocity = 0;
+        player.jumping = false;
+        player.climbing = false;
+        cameraY = 0;
+      }
+      continue;
+    }
+    
+    // Remove projectiles that are off screen
+    if (projectile.y > WORLD_HEIGHT) {
+      boss.projectiles.splice(i, 1);
+    }
+  }
+}
+
+function drawBoss() {
+  const screenY = boss.y - cameraY;
+  if (screenY + boss.height >= 0 && screenY <= canvas.height) {
+    // Draw boss body
+    ctx.fillStyle = '#ff0000';
+    ctx.fillRect(boss.x, screenY, boss.width, boss.height);
+    
+    // Draw boss health
+    for (let i = 0; i < boss.health; i++) {
+      ctx.fillStyle = '#ff6666';
+      ctx.fillRect(boss.x + (i * 15), screenY - 15, 10, 10);
+    }
+  }
+  
+  // Draw projectiles
+  ctx.fillStyle = '#ff3333';
+  boss.projectiles.forEach(projectile => {
+    const projectileScreenY = projectile.y - cameraY;
+    if (projectileScreenY >= 0 && projectileScreenY <= canvas.height) {
+      ctx.beginPath();
+      ctx.moveTo(projectile.x + PROJECTILE_SIZE/2, projectileScreenY);
+      ctx.lineTo(projectile.x + PROJECTILE_SIZE, projectileScreenY + PROJECTILE_SIZE);
+      ctx.lineTo(projectile.x, projectileScreenY + PROJECTILE_SIZE);
+      ctx.closePath();
+      ctx.fill();
+    }
+  });
+}
+
+function checkCollision(rect1, rect2) {
+  return rect1.x < rect2.x + rect2.width &&
+         rect1.x + rect1.width > rect2.x &&
+         rect1.y < rect2.y + rect2.height &&
+         rect1.y + rect1.height > rect2.y;
+}
+
+function checkPlatformCollisions() {
+  let onPlatform = false;
+  platforms.forEach(platform => {
+    if (player.verticalVelocity >= 0 &&
+        player.worldY + player.height >= platform.y - 5 &&
+        player.worldY + player.height <= platform.y + platform.height + 5 &&
+        player.x + player.width > platform.x &&
+        player.x < platform.x + platform.width) {
+      player.worldY = platform.y - player.height;
+      player.verticalVelocity = 0;
+      player.jumping = false;
+      onPlatform = true;
+    }
+  });
+  return onPlatform;
+}
+
+function updateEnemies() {
+  // Existing platform enemy updates
+  enemies.forEach(enemy => {
+    // Handle sleeping state
+    if (enemy.isSleeping) {
+      enemy.sleepTimer--;
+      if (enemy.sleepTimer <= 0) {
+        enemy.isSleeping = false;
+        enemy.nextSleepTime = Math.random() * 10000 + 5000;
+      }
+    } else {
+      enemy.nextSleepTime--;
+      if (enemy.nextSleepTime <= 0) {
+        enemy.isSleeping = true;
+        enemy.sleepTimer = 200; // Sleep for 200 frames (about 3 seconds)
+      }
+      
+      // Only move if not sleeping
+      if (!enemy.isSleeping) {
+        enemy.x += enemy.direction * ENEMY_SPEED;
+        if (enemy.x <= enemy.platformStart) {
+          enemy.x = enemy.platformStart;
+          enemy.direction = 1;
+        } else if (enemy.x >= enemy.platformEnd) {
+          enemy.x = enemy.platformEnd;
+          enemy.direction = -1;
+        }
+      }
+    }
+    
+    const enemyRect = {
+      x: enemy.x,
+      y: enemy.y,
+      width: ENEMY_SIZE,
+      height: ENEMY_SIZE
+    };
+    
+    checkEnemyCollision(enemyRect);
+  });
+  
+  // Update flying enemies
+  flyingEnemies.forEach(enemy => {
+    enemy.x += enemy.speed;
+    
+    // Wrap around screen
+    if (enemy.x < -ENEMY_SIZE) {
+      enemy.x = canvas.width;
+    } else if (enemy.x > canvas.width) {
+      enemy.x = -ENEMY_SIZE;
+    }
+    
+    const enemyRect = {
+      x: enemy.x,
+      y: enemy.y,
+      width: ENEMY_SIZE,
+      height: ENEMY_SIZE
+    };
+    
+    checkEnemyCollision(enemyRect);
+  });
+
+  updateBoss(); // Add this line to update the boss
+}
+
+// Add helper function for enemy collision checking
+function checkEnemyCollision(enemyRect) {
+  const playerRect = {
+    x: player.x,
+    y: player.worldY,
+    width: player.width,
+    height: player.height
+  };
+  
+  if (checkCollision(playerRect, enemyRect)) {
+    player.lives--;
+    playCollisionSound();
+    if (player.lives <= 0) {
+      gameStarted = false;
+      startScreen.style.display = 'block';
+      startScreen.textContent = 'GAME OVER - CLICK TO RESTART';
+      resetGame();
+    } else {
+      // Reset position but maintain proper world coordinates
+      player.worldY = WORLD_HEIGHT - 40;
+      player.x = 200;
+      player.verticalVelocity = 0;
+      player.jumping = false;
+      player.climbing = false;
+      cameraY = 0; // Reset camera when respawning
+    }
+  }
+}
+
+function checkCoinCollisions() {
+  coins.forEach(coin => {
+    if (!coin.collected) {
+      const coinRect = {
+        x: coin.x,
+        y: coin.y,
+        width: COIN_SIZE,
+        height: COIN_SIZE
+      };
+      
+      const playerRect = {
+        x: player.x,
+        y: player.worldY,
+        width: player.width,
+        height: player.height
+      };
+      
+      if (checkCollision(playerRect, coinRect)) {
+        coin.collected = true;
+        
+        // Handle combo system
+        const now = Date.now();
+        if (now - lastCoinTime < COMBO_TIMEOUT) {
+          combo++;
+          const bonus = combo * 50; // Increasing bonus for maintaining combo
+          player.score += 100 + bonus;
+          createFloatingText(player.x, player.y - 20, `COMBO x${combo} (+${bonus})`);
+        } else {
+          combo = 1;
+          player.score += 100;
+          createFloatingText(player.x, player.y - 20, '+100');
+        }
+        lastCoinTime = now;
+        
+        scoreElement.textContent = player.score;
+        playCoinSound();
+        
+        // Check if all coins are collected
+        if (coins.every(c => c.collected)) {
+          createFloatingText(canvas.width/2 - 100, canvas.height/2, 'LEVEL COMPLETE! +1000');
+          player.score += 1000;
+          scoreElement.textContent = player.score;
+          setTimeout(() => {
+            generateLevel();
+            player.worldY = WORLD_HEIGHT - 40;
+            player.x = 200;
+            cameraY = 0;
+          }, 1500);
+        }
+      }
+    }
+  });
+}
+
+function checkJetpackCollisions() {
+  jetpacks.forEach(jetpack => {
+    if (!jetpack.collected) {
+      const jetpackRect = {
+        x: jetpack.x,
+        y: jetpack.y,
+        width: JETPACK_SIZE,
+        height: JETPACK_SIZE
+      };
+      
+      const playerRect = {
+        x: player.x,
+        y: player.worldY,
+        width: player.width,
+        height: player.height
+      };
+      
+      if (checkCollision(playerRect, jetpackRect)) {
+        jetpack.collected = true;
+        player.jetpackFuel = player.maxJetpackFuel;
+        createFloatingText(player.x, player.y - 20, 'JETPACK!');
+        playPowerupSound();
+      }
+    }
+  });
+}
+
+// Check button press
+function checkButtonPress() {
+  const playerRect = {
+    x: player.x,
+    y: player.worldY,
+    width: player.width,
+    height: player.height
+  };
+  
+  const buttonRect = {
+    x: levelButton.x,
+    y: levelButton.y,
+    width: levelButton.width,
+    height: levelButton.height
+  };
+  
+  if (checkCollision(playerRect, buttonRect) && !levelButton.pressed) {
+    levelButton.pressed = true;
+    playPowerupSound();
+    createFloatingText(
+      levelButton.x, 
+      levelButton.y - 40, 
+      'LEVEL CLEARED! +2000'
+    );
+    player.score += 2000;
+    scoreElement.textContent = player.score;
+    
+    // Reset level after a short delay
+    setTimeout(() => {
+      generateLevel();
+      player.worldY = WORLD_HEIGHT - 40;
+      player.x = 200;
+      cameraY = 0;
+    }, 1500);
+  }
+}
+
+// Update the resetGame function to properly reset all player states
+function resetGame() {
+  player = {
+    x: 200,
+    y: WORLD_HEIGHT - 40,
+    width: 20,
+    height: 30,
+    speed: 3,
+    boostSpeed: 6,
+    climbing: false,
+    jumping: false,
+    canDoubleJump: true,
+    verticalVelocity: 0,
+    jumpStrength: -7.5,
+    doubleJumpStrength: -6,
+    worldY: WORLD_HEIGHT - 40,
+    lives: 3,
+    score: 0,
+    jetpackFuel: 100, // Start with full jetpack fuel
+    maxJetpackFuel: 100,
+    isFlying: false,
+  };
+  cameraY = 0;
+  combo = 0;
+  lastCoinTime = 0;
+  scoreElement.textContent = player.score;
+  generateLevel(); // Regenerate the level when fully resetting
+}
+
+function drawLadders() {
+  ctx.fillStyle = '#888888';
+  ladders.forEach(ladder => {
+    const screenY = ladder.y - cameraY;
+    // Extend the view range
+    if (screenY + ladder.height < -200 || screenY > canvas.height + 200) return;
+    
+    // Draw ladder sides
+    ctx.fillRect(ladder.x, screenY, 5, ladder.height);
+    ctx.fillRect(ladder.x + ladder.width - 5, screenY, 5, ladder.height);
+    
+    // Draw rungs
+    for (let i = 0; i < ladder.height; i += 20) {
+      ctx.fillRect(ladder.x, screenY + i, ladder.width, 5);
+    }
+  });
+}
+
+function drawPlatforms() {
+  ctx.fillStyle = '#666666';
+  platforms.forEach(platform => {
+    const screenY = platform.y - cameraY;
+    // Extend the view range
+    if (screenY + platform.height < -200 || screenY > canvas.height + 200) return;
+    ctx.fillRect(platform.x, screenY, platform.width, platform.height);
+  });
+}
+
+// Add this function before the draw() function
+function drawButton() {
+  if (!levelButton.pressed) {
+    // Draw the button
+    ctx.fillStyle = '#ff0000';
+    const buttonScreenY = levelButton.y - cameraY;
+    
+    // Only draw if in viewport
+    if (buttonScreenY + levelButton.height >= 0 && buttonScreenY <= canvas.height) {
+      ctx.fillRect(levelButton.x, buttonScreenY, levelButton.width, levelButton.height);
+      
+      // Add a glowing effect
+      ctx.fillStyle = 'rgba(255, 0, 0, 0.3)';
+      ctx.beginPath();
+      ctx.arc(
+        levelButton.x + levelButton.width/2,
+        buttonScreenY + levelButton.height/2,
+        Math.sin(Date.now() / 200) * 5 + 20, // Pulsing glow
+        0,
+        Math.PI * 2
+      );
+      ctx.fill();
+    }
+  }
+}
+
+function update() {
+  if (!gameStarted) return;
+  
+  // Get current movement speed based on boost key
+  const currentSpeed = keys.a ? player.boostSpeed : player.speed;
+  
+  // Add boost sound effect
+  if (keys.a && (keys.ArrowLeft || keys.ArrowRight)) {
+    playBoostSound();
+  }
+  
+  // Add jetpack controls (using 'j' key)
+  if (keys.j && player.jetpackFuel > 0) {
+    player.verticalVelocity = -5;
+    player.jetpackFuel--;
+    playJetpackSound();
+    
+    // Create jetpack visual effect
+    ctx.fillStyle = '#ff4400';
+    ctx.beginPath();
+    ctx.moveTo(player.x + 5, player.y + player.height);
+    ctx.lineTo(player.x + player.width/2, player.y + player.height + 15);
+    ctx.lineTo(player.x + player.width - 5, player.y + player.height);
+    ctx.fill();
+  }
+
+  if (keys.ArrowLeft) {
+    player.x -= currentSpeed;
+    if (player.x < -player.width) {
+      player.x = canvas.width;
+    }
+  }
+  if (keys.ArrowRight) {
+    player.x += currentSpeed;
+    if (player.x > canvas.width) {
+      player.x = -player.width;
+    }
+  }
+  
+  player.climbing = false;
+  ladders.forEach(ladder => {
+    const ladderWithScreenY = {...ladder, y: ladder.y - cameraY};
+    if (checkCollision(player, ladderWithScreenY)) {
+      player.climbing = true;
+      if (keys.ArrowUp && player.worldY > 0) {
+        player.worldY -= player.speed;
+        playClimbSound();
+        player.score += 1;
+        scoreElement.textContent = player.score;
+      }
+      if (keys.ArrowDown && player.worldY < WORLD_HEIGHT - player.height) {
+        player.worldY += player.speed;
+      }
+    }
+  });
+  
+  // Update jumping mechanics
+  if (!player.climbing) {
+    player.verticalVelocity += GRAVITY;
+    player.worldY += player.verticalVelocity;
+    
+    const onPlatform = checkPlatformCollisions();
+    
+    // Reset double jump when landing on platform
+    if (onPlatform) {
+      player.canDoubleJump = true;
+      player.jumping = false;
+    }
+    
+    // Regular jump from platform
+    if (keys[" "] && !player.jumping && onPlatform) {
+      player.verticalVelocity = player.jumpStrength;
+      player.jumping = true;
+      playJumpSound();
+    }
+    // Double jump in air
+    else if (keys[" "] && player.jumping && player.canDoubleJump && !onPlatform) {
+      if (!keys.prevSpace) { // Only trigger on initial press
+        player.verticalVelocity = player.doubleJumpStrength;
+        player.canDoubleJump = false;
+        playJumpSound();
+        
+        // Create a visual effect for double jump
+        createFloatingText(
+          player.x + player.width/2,
+          player.y + player.height,
+          '💨'
+        );
+      }
+    }
+  }
+  
+  // Update player bounds check to only prevent going below bottom
+  player.worldY = Math.max(0, player.worldY);
+  
+  // Use the new camera calculation
+  const targetCameraY = player.worldY - canvas.height/2;
+  cameraY = Math.max(0, targetCameraY); // Remove the upper bound limit
+  player.y = player.worldY - cameraY;
+  
+  checkButtonPress();  // Add this line before updateEnemies()
+  updateEnemies();
+  checkCoinCollisions();
+  checkJetpackCollisions(); // Check for jetpack collisions
+}
+
+let keys = {};
+window.addEventListener('keydown', e => {
+  keys.prevSpace = keys[" "]; // Track previous space state
+  keys[e.key] = true;
+  if (e.key === ' ') e.preventDefault();
+});
+window.addEventListener('keyup', e => {
+  keys.prevSpace = keys[" "]; // Track previous space state
+  keys[e.key] = false;
+});
+
+startScreen.addEventListener('click', () => {
+  if (!gameStarted) {
+    gameStarted = true;
+    startScreen.style.display = 'none';
+    generateLevel();
+    playStartJingle();
+  }
+});
+
+function draw() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  
+  // Draw game elements
+  drawLadders();
+  drawPlatforms();
+  drawButton();  // Add this line
+  drawCoins();
+  drawJetpacks();
+  drawEnemies();
+  drawBoss();
+  drawPlayer();
+}
+
+function gameLoop() {
+  update();
+  draw();
+  requestAnimationFrame(gameLoop);
+}
+
+gameLoop();
+</script>
+<div class="controls">
+  <ul>
+    <li>←/→ : Move Left/Right</li>
+    <li>↑/↓ : Climb Ladders</li>
+    <li>SPACE : Jump (Press twice for Double Jump!)</li>
+    <li>A : Speed Boost</li>
+    <li>J : Use Jetpack</li>
+    <li>⭐ Collect coins for points!</li>
+    <li>🚀 Find jetpacks to fly!</li>
+    <li>🔴 Find the red button to clear the level!</li>
+  </ul>
+</div>
+</body></html>

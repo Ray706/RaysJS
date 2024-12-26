@@ -1,0 +1,267 @@
+<html><head><base href="https://example.com">
+<style>
+  body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background: #1a1a1a;
+    color: #fff;
+    font-family: monospace;
+  }
+  
+  #maze {
+    border: 2px solid #444;
+    margin: 20px;
+    cursor: pointer;
+    transition: transform 0.2s;
+  }
+  
+  #maze:hover {
+    transform: scale(1.02);
+    box-shadow: 0 0 15px rgba(255,255,255,0.2);
+  }
+  
+  #controls {
+    margin: 20px;
+  }
+  
+  button {
+    background: #333;
+    color: #fff;
+    border: 1px solid #666;
+    padding: 8px 16px;
+    cursor: pointer;
+    margin: 0 5px;
+  }
+  
+  button:hover {
+    background: #444;
+  }
+  
+  #timer {
+    font-size: 24px;
+    margin: 10px;
+  }
+  
+  #maze-tooltip {
+    position: absolute;
+    background: rgba(0,0,0,0.8);
+    color: white;
+    padding: 5px 10px;
+    border-radius: 4px;
+    font-size: 12px;
+    pointer-events: none;
+    display: none;
+  }
+</style>
+</head><body>
+<h2>Randomized Prim's Maze Generation</h2>
+<div id="timer">1:00</div>
+<canvas id="maze" width="600" height="400" title="Click to view details"></canvas>
+<div id="maze-tooltip">Canvas Size: 600x400 | Cell Size: 20px | Grid: 30x20</div>
+<div id="controls">
+  <button onclick="startGeneration()">Generate New Maze</button>
+  <button onclick="downloadMaze()">Download PNG</button>
+</div>
+
+<script>
+const COLS = 30;
+const ROWS = 20;
+const CELL_SIZE = 20;
+const WALL_COLOR = "#ffffff";
+const PATH_COLOR = "#000000";
+const ACTIVE_COLOR = "#ff4444";
+
+let canvas = document.getElementById('maze');
+let ctx = canvas.getContext('2d');
+let grid = [];
+let walls = [];
+let timeLeft = 60;
+let timerInterval;
+
+const tooltip = document.getElementById('maze-tooltip');
+canvas.addEventListener('mousemove', (e) => {
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    
+    tooltip.style.display = 'block';
+    tooltip.style.left = (e.pageX + 10) + 'px';
+    tooltip.style.top = (e.pageY + 10) + 'px';
+    
+    const cellX = Math.floor(x / CELL_SIZE);
+    const cellY = Math.floor(y / CELL_SIZE);
+    if(cellX >= 0 && cellX < COLS && cellY >= 0 && cellY < ROWS) {
+        tooltip.textContent = `Cell: (${cellX},${cellY}) | Canvas Size: 600x400 | Grid: 30x20`;
+    }
+});
+
+canvas.addEventListener('mouseout', () => {
+    tooltip.style.display = 'none';
+});
+
+function downloadMaze() {
+    // Create temporary link element
+    const link = document.createElement('a');
+    // Set download attribute with filename
+    link.download = 'maze.png';
+    // Convert canvas to data URL
+    link.href = canvas.toDataURL('image/png');
+    // Append to document
+    document.body.appendChild(link);
+    // Trigger click
+    link.click();
+    // Clean up
+    document.body.removeChild(link);
+}
+
+function initGrid() {
+  grid = [];
+  walls = [];
+  for(let i = 0; i < ROWS; i++) {
+    grid[i] = [];
+    for(let j = 0; j < COLS; j++) {
+      grid[i][j] = {
+        visited: false,
+        walls: {
+          top: true,
+          right: true,
+          bottom: true,
+          left: true
+        }
+      };
+    }
+  }
+}
+
+function drawMaze() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = WALL_COLOR;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  
+  for(let row = 0; row < ROWS; row++) {
+    for(let col = 0; col < COLS; col++) {
+      if (!grid[row] || !grid[row][col]) continue;
+      
+      let x = col * CELL_SIZE;
+      let y = row * CELL_SIZE;
+      
+      if(grid[row][col].visited) {
+        ctx.fillStyle = PATH_COLOR;
+        ctx.fillRect(x, y, CELL_SIZE, CELL_SIZE);
+      }
+      
+      ctx.strokeStyle = WALL_COLOR;
+      ctx.lineWidth = 2;
+      
+      if(grid[row][col].walls.top) {
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.lineTo(x + CELL_SIZE, y);
+        ctx.stroke();
+      }
+      if(grid[row][col].walls.right) {
+        ctx.beginPath();
+        ctx.moveTo(x + CELL_SIZE, y);
+        ctx.lineTo(x + CELL_SIZE, y + CELL_SIZE);
+        ctx.stroke();
+      }
+      if(grid[row][col].walls.bottom) {
+        ctx.beginPath();
+        ctx.moveTo(x, y + CELL_SIZE);
+        ctx.lineTo(x + CELL_SIZE, y + CELL_SIZE);
+        ctx.stroke();
+      }
+      if(grid[row][col].walls.left) {
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.lineTo(x, y + CELL_SIZE);
+        ctx.stroke();
+      }
+    }
+  }
+}
+
+function addWall(row1, col1, row2, col2) {
+  walls.push({
+    cell1: {row: row1, col: col1},
+    cell2: {row: row2, col: col2}
+  });
+}
+
+function removeWall(cell1, cell2) {
+  let dx = cell2.col - cell1.col;
+  let dy = cell2.row - cell1.row;
+  
+  if(dx === 1) {
+    grid[cell1.row][cell1.col].walls.right = false;
+    grid[cell2.row][cell2.col].walls.left = false;
+  } else if(dx === -1) {
+    grid[cell1.row][cell1.col].walls.left = false;
+    grid[cell2.row][cell2.col].walls.right = false;
+  } else if(dy === 1) {
+    grid[cell1.row][cell1.col].walls.bottom = false;
+    grid[cell2.row][cell2.col].walls.top = false;
+  } else if(dy === -1) {
+    grid[cell1.row][cell1.col].walls.top = false;
+    grid[cell2.row][cell2.col].walls.bottom = false;
+  }
+}
+
+function addNeighborWalls(row, col) {
+  if(row > 0) addWall(row, col, row-1, col);
+  if(col < COLS-1) addWall(row, col, row, col+1);
+  if(row < ROWS-1) addWall(row, col, row+1, col);
+  if(col > 0) addWall(row, col, row, col-1);
+}
+
+function startGeneration() {
+  clearInterval(timerInterval);
+  timeLeft = 60;
+  document.getElementById('timer').textContent = '1:00';
+  
+  initGrid();
+  
+  let startRow = Math.floor(Math.random() * ROWS);
+  let startCol = Math.floor(Math.random() * COLS);
+  grid[startRow][startCol].visited = true;
+  addNeighborWalls(startRow, startCol);
+  
+  timerInterval = setInterval(() => {
+    if(walls.length > 0 && timeLeft > 0) {
+      let wallIndex = Math.floor(Math.random() * walls.length);
+      let wall = walls[wallIndex];
+      walls.splice(wallIndex, 1);
+      
+      let cell1 = wall.cell1;
+      let cell2 = wall.cell2;
+      
+      if(grid[cell1.row][cell1.col].visited !== grid[cell2.row][cell2.col].visited) {
+        let unvisitedCell = grid[cell1.row][cell1.col].visited ? cell2 : cell1;
+        
+        removeWall(cell1, cell2);
+        grid[unvisitedCell.row][unvisitedCell.col].visited = true;
+        addNeighborWalls(unvisitedCell.row, unvisitedCell.col);
+      }
+      
+      drawMaze();
+      
+    } else {
+      timeLeft--;
+      let seconds = timeLeft % 60;
+      let minutes = Math.floor(timeLeft / 60);
+      document.getElementById('timer').textContent = 
+        minutes + ':' + (seconds < 10 ? '0' : '') + seconds;
+        
+      if(timeLeft <= 0 || walls.length === 0) {
+        clearInterval(timerInterval);
+      }
+    }
+  }, 1000/60);
+}
+
+// Initialize grid and draw initial maze
+initGrid();
+drawMaze();
+</script>
+</body></html>
