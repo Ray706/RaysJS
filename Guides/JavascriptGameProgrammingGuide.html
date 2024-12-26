@@ -1,0 +1,1830 @@
+<html><head><base href="https://game-dev-guide.com">
+    <title>Ultimate JavaScript Game Programming Guide</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #1a1a2e;
+            color: #e0e0e0;
+        }
+        .code-block {
+            background-color: #16213e;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 10px 0;
+            overflow-x: auto;
+        }
+        pre {
+            color: #0f3460;
+            background-color: #e0e0e0;
+            padding: 10px;
+        }
+        .section-intro {
+            background-color: #162447;
+            border-left: 4px solid #e94560;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        .implementation-notes {
+            background-color: #1f4068;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+        .best-practices {
+            background-color: #1a1a2e;
+            border: 1px solid #e94560;
+            padding: 15px;
+            margin: 15px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="text-center my-5">
+            <h1 class="display-3">🎮 JavaScript Game Programming Guide</h1>
+            <p class="lead">A comprehensive tutorial for aspiring game developers</p>
+        </header>
+
+        <section id="intro">
+            <h2>1. Game Programming Fundamentals</h2>
+            <p>Game development in JavaScript involves understanding core concepts like game loops, rendering, and user interaction.</p>
+        </section>
+
+        <section id="game-loop" class="my-5">
+            <h2>2. The Game Loop</h2>
+            <div class="section-intro">
+                <p>The game loop is the heart of every game. It's responsible for:</p>
+                <ul>
+                    <li>Maintaining consistent game speed across different devices</li>
+                    <li>Processing player input</li>
+                    <li>Updating game state</li>
+                    <li>Rendering graphics</li>
+                    <li>Managing frame timing and synchronization</li>
+                </ul>
+            </div>
+
+            <div class="implementation-notes">
+                <h4>Key Components:</h4>
+                <ul>
+                    <li><strong>Delta Time:</strong> Time elapsed since last frame, crucial for smooth movement</li>
+                    <li><strong>Fixed Time Step:</strong> Updates game logic at consistent intervals</li>
+                    <li><strong>Frame Rate Independence:</strong> Ensures consistent game speed regardless of FPS</li>
+                </ul>
+                <h4>Advanced Implementation Details:</h4>
+                <ul>
+                    <li><strong>Frame Time Statistics:</strong> Track min/max/average frame times</li>
+                    <li><strong>Performance Monitoring:</strong> FPS counter and performance warnings</li>
+                    <li><strong>State Management:</strong> Game state transitions and state stack</li>
+                    <li><strong>Debug Mode:</strong> Visual debugging aids and statistics display</li>
+                </ul>
+                <h4>Performance Optimization:</h4>
+                <ul>
+                    <li><strong>Frame Skipping:</strong> Handle slow devices gracefully</li>
+                    <li><strong>Time Step Smoothing:</strong> Reduce temporal aliasing</li>
+                    <li><strong>State Interpolation:</strong> Smooth rendering between updates</li>
+                </ul>
+            </div>
+
+            <div class="code-block">
+                <pre><code>
+class AdvancedGameLoop {
+    constructor(fps = 60) {
+        this.fps = fps;
+        this.frameDelay = 1000 / fps;
+        this.frameTime = 0;
+        this.lastTime = 0;
+        this.accumulator = 0;
+        
+        // Stats tracking
+        this.frames = 0;
+        this.updates = 0;
+        this.lastFpsUpdate = 0;
+        this.currentFps = 0;
+        
+        // Game state
+        this.paused = false;
+        this.running = false;
+        this.state = null; // Game state
+    }
+
+    start() {
+        this.running = true;
+        this.lastTime = performance.now();
+        requestAnimationFrame(this.loop.bind(this));
+    }
+
+    pause() {
+        this.paused = true;
+    }
+
+    resume() {
+        this.paused = false;
+        this.lastTime = performance.now();
+    }
+
+    loop(currentTime) {
+        if (!this.running) return;
+
+        const deltaTime = currentTime - this.lastTime;
+        this.lastTime = currentTime;
+        
+        // FPS calculation
+        this.frames++;
+        if (currentTime > this.lastFpsUpdate + 1000) {
+            this.currentFps = Math.round((this.frames * 1000) / (currentTime - this.lastFpsUpdate));
+            this.lastFpsUpdate = currentTime;
+            this.frames = 0;
+        }
+
+        if (!this.paused) {
+            // Handle slow frames
+            const adjustedDeltaTime = this.handleSlowFrames(deltaTime);
+            this.accumulator += adjustedDeltaTime;
+            
+            // Update game logic at fixed intervals
+            while (this.accumulator >= this.frameDelay) {
+                this.update(this.frameDelay / 1000);
+                this.accumulator -= this.frameDelay;
+                this.updates++;
+            }
+
+            // Interpolate render state
+            const alpha = this.accumulator / this.frameDelay;
+            this.render(alpha);
+        }
+
+        requestAnimationFrame(this.loop.bind(this));
+    }
+
+    handleSlowFrames(deltaTime) {
+        const MAX_FRAME_TIME = 250; // ms
+        if (deltaTime > MAX_FRAME_TIME) {
+            console.warn(`Long frame detected: ${deltaTime}ms`);
+            return MAX_FRAME_TIME;
+        }
+        return deltaTime;
+    }
+
+    update(deltaTime) {
+        // Override with game logic
+        this.processInput();
+        this.updateGameLogic(deltaTime);
+        this.updatePhysics(deltaTime);
+    }
+
+    render(interpolationAlpha) {
+        // Override with rendering logic
+        this.clearScreen();
+        this.drawGameObjects(interpolationAlpha);
+        this.drawUI();
+    }
+
+    getDebugInfo() {
+        return {
+            fps: this.currentFps,
+            frameTime: this.frameTime,
+            updates: this.updates,
+            state: this.state,
+            memory: performance.memory || {},
+            timing: {
+                update: this._lastUpdateTime,
+                render: this._lastRenderTime
+            }
+        };
+    }
+
+    setGameState(newState) {
+        if (this.state?.onExit) {
+            this.state.onExit();
+        }
+        this.state = newState;
+        if (this.state?.onEnter) {
+            this.state.onEnter();
+        }
+    }
+
+    // Debug information
+    getPerformanceStats() {
+        return {
+            fps: this.currentFps,
+            frameTime: this.frameTime,
+            updates: this.updates
+        };
+    }
+}
+                </code></pre>
+            </div>
+
+            <div class="best-practices">
+                <h4>Best Practices:</h4>
+                <ul>
+                    <li>Always use requestAnimationFrame instead of setInterval/setTimeout</li>
+                    <li>Implement frame rate independence using delta time</li>
+                    <li>Separate update logic from render logic</li>
+                    <li>Handle game pause/resume states properly</li>
+                    <li>Monitor performance with FPS tracking</li>
+                </ul>
+            </div>
+        </section>
+
+        <section id="canvas-rendering" class="my-5">
+            <h2>3. Canvas Rendering</h2>
+            <p>Use the HTML5 canvas for 2D game graphics:</p>
+            <div class="code-block">
+                <pre><code>
+class Sprite {
+    constructor(ctx, x, y, width, height) {
+        this.ctx = ctx;
+        this.x = x;
+        this.y = y;
+        this.width = width;
+        this.height = height;
+    }
+
+    draw() {
+        this.ctx.fillRect(this.x, this.y, this.width, this.height);
+    }
+
+    move(dx, dy) {
+        this.x += dx;
+        this.y += dy;
+    }
+}
+
+// Usage
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+const player = new Sprite(ctx, 50, 50, 30, 30);
+                </code></pre>
+            </div>
+        </section>
+
+        <section id="collision-detection" class="my-5">
+            <h2>4. Collision Detection</h2>
+            <div class="code-block">
+                <pre><code>
+function checkCollision(obj1, obj2) {
+    return !(
+        obj1.x > obj2.x + obj2.width ||
+        obj1.x + obj1.width < obj2.x ||
+        obj1.y > obj2.y + obj2.height ||
+        obj1.y + obj1.height < obj2.y
+    );
+}
+
+// Example usage
+const enemy = new Sprite(ctx, 100, 100, 40, 40);
+if (checkCollision(player, enemy)) {
+    console.log('Collision detected!');
+}
+                </code></pre>
+            </div>
+        </section>
+
+        <section id="simple-game-example" class="my-5">
+            <h2>5. Simple Game Example</h2>
+            <div class="code-block">
+                <pre><code>
+class SimpleGame {
+    constructor() {
+        this.canvas = document.getElementById('gameCanvas');
+        this.ctx = this.canvas.getContext('2d');
+        this.player = new Sprite(this.ctx, 50, 50, 30, 30);
+        this.setupControls();
+    }
+
+    setupControls() {
+        document.addEventListener('keydown', (e) => {
+            switch(e.key) {
+                case 'ArrowLeft': this.player.move(-5, 0); break;
+                case 'ArrowRight': this.player.move(5, 0); break;
+                case 'ArrowUp': this.player.move(0, -5); break;
+                case 'ArrowDown': this.player.move(0, 5); break;
+            }
+        });
+    }
+
+    start() {
+        const gameLoop = new GameLoop();
+        gameLoop.update = () => {
+            this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+            this.player.draw();
+        };
+        gameLoop.start();
+    }
+}
+
+const game = new SimpleGame();
+game.start();
+                </code></pre>
+            </div>
+        </section>
+
+        <section id="physics-engines" class="my-5">
+            <h2>7. Physics Engines</h2>
+            <p>Simulating realistic physical interactions in games requires a robust physics engine. Here's a simple 2D physics implementation:</p>
+            <div class="code-block">
+                <pre><code>
+class PhysicsBody {
+    constructor(x, y, mass = 1) {
+        this.position = { x, y };
+        this.velocity = { x: 0, y: 0 };
+        this.acceleration = { x: 0, y: 0 };
+        this.mass = mass;
+        this.gravity = 9.8;
+    }
+
+    applyForce(force) {
+        const acceleration = {
+            x: force.x / this.mass,
+            y: force.y / this.mass
+        };
+        this.acceleration.x += acceleration.x;
+        this.acceleration.y += acceleration.y;
+    }
+
+    update(deltaTime) {
+        // Apply gravity
+        this.velocity.y += this.gravity * deltaTime;
+
+        // Update velocity
+        this.velocity.x += this.acceleration.x * deltaTime;
+        this.velocity.y += this.acceleration.y * deltaTime;
+
+        // Update position
+        this.position.x += this.velocity.x * deltaTime;
+        this.position.y += this.velocity.y * deltaTime;
+
+        // Reset acceleration
+        this.acceleration = { x: 0, y: 0 };
+    }
+}
+
+// Example usage
+const ball = new PhysicsBody(100, 50);
+ball.applyForce({ x: 10, y: -5 });
+                </code></pre>
+            </div>
+        </section>
+
+        <section id="sprite-animation" class="my-5">
+            <h2>8. Sprite Animation</h2>
+            <p>Create dynamic character animations using sprite sheets:</p>
+            <div class="code-block">
+                <pre><code>
+class SpriteAnimation {
+    constructor(spriteSheet, frameWidth, frameHeight) {
+        this.spriteSheet = spriteSheet;
+        this.frameWidth = frameWidth;
+        this.frameHeight = frameHeight;
+        this.currentFrame = 0;
+        this.frameCount = Math.floor(spriteSheet.width / frameWidth);
+        this.animationSpeed = 5; // frames per second
+        this.frameTimer = 0;
+    }
+
+    update(deltaTime) {
+        this.frameTimer += deltaTime;
+        if (this.frameTimer >= 1 / this.animationSpeed) {
+            this.currentFrame = (this.currentFrame + 1) % this.frameCount;
+            this.frameTimer = 0;
+        }
+    }
+
+    render(ctx, x, y) {
+        ctx.drawImage(
+            this.spriteSheet,
+            this.currentFrame * this.frameWidth, 0,
+            this.frameWidth, this.frameHeight,
+            x, y,
+            this.frameWidth, this.frameHeight
+        );
+    }
+}
+
+// Create sprite sheet
+const playerSheet = new Image();
+playerSheet.src = 'player_spritesheet.png';
+const playerAnimation = new SpriteAnimation(playerSheet, 64, 64);
+                </code></pre>
+            </div>
+        </section>
+
+        <section id="tile-based-mechanics" class="my-5">
+            <h2>9. Tile-based Game Mechanics</h2>
+            <p>Create grid-based games with tile mapping:</p>
+            <div class="code-block">
+                <pre><code>
+class TileMap {
+    constructor(width, height, tileSize) {
+        this.width = width;
+        this.height = height;
+        this.tileSize = tileSize;
+        this.tiles = new Array(width * height).fill(0);
+    }
+
+    getTile(x, y) {
+        return this.tiles[y * this.width + x];
+    }
+
+    setTile(x, y, tileType) {
+        this.tiles[y * this.width + x] = tileType;
+    }
+
+    render(ctx) {
+        for (let y = 0; y < this.height; y++) {
+            for (let x = 0; x < this.width; x++) {
+                const tileType = this.getTile(x, y);
+                ctx.fillStyle = this.getTileColor(tileType);
+                ctx.fillRect(
+                    x * this.tileSize, 
+                    y * this.tileSize, 
+                    this.tileSize, 
+                    this.tileSize
+                );
+            }
+        }
+    }
+
+    getTileColor(tileType) {
+        const tileColors = {
+            0: '#2c3e50', // empty/ground
+            1: '#34495e', // wall
+            2: '#2ecc71'  // path
+        };
+        return tileColors[tileType] || '#000';
+    }
+}
+
+// Create a 20x20 tile map
+const gameMap = new TileMap(20, 20, 32);
+                </code></pre>
+            </div>
+        </section>
+
+        <section id="pathfinding" class="my-5">
+            <h2>10. Pathfinding Algorithms</h2>
+            <p>Implement A* pathfinding for intelligent NPC movement:</p>
+            <div class="code-block">
+                <pre><code>
+class AStarPathfinder {
+    constructor(tileMap) {
+        this.tileMap = tileMap;
+    }
+
+    findPath(start, end) {
+        const openSet = [start];
+        const closedSet = new Set();
+        const gScore = new Map();
+        const fScore = new Map();
+        const cameFrom = new Map();
+
+        gScore.set(this.getKey(start), 0);
+        fScore.set(this.getKey(start), this.heuristic(start, end));
+
+        while (openSet.length > 0) {
+            const current = this.getLowestFScore(openSet, fScore);
+
+            if (this.isEqual(current, end)) {
+                return this.reconstructPath(cameFrom, current);
+            }
+
+            openSet.splice(openSet.indexOf(current), 1);
+            closedSet.add(this.getKey(current));
+
+            for (const neighbor of this.getNeighbors(current)) {
+                if (closedSet.has(this.getKey(neighbor))) continue;
+
+                const tentativeGScore = 
+                    (gScore.get(this.getKey(current)) || 0) + 1;
+
+                if (!openSet.some(n => this.isEqual(n, neighbor))) {
+                    openSet.push(neighbor);
+                }
+
+                if (tentativeGScore < (gScore.get(this.getKey(neighbor)) || Infinity)) {
+                    cameFrom.set(this.getKey(neighbor), current);
+                    gScore.set(this.getKey(neighbor), tentativeGScore);
+                    fScore.set(
+                        this.getKey(neighbor), 
+                        tentativeGScore + this.heuristic(neighbor, end)
+                    );
+                }
+            }
+        }
+
+        return []; // No path found
+    }
+
+    heuristic(a, b) {
+        return Math.abs(a.x - b.x) + Math.abs(a.y - b.y);
+    }
+
+    getNeighbors(point) {
+        const neighbors = [
+            {x: point.x+1, y: point.y},
+            {x: point.x-1, y: point.y},
+            {x: point.x, y: point.y+1},
+            {x: point.x, y: point.y-1}
+        ];
+        return neighbors.filter(n => 
+            n.x >= 0 && n.x < this.tileMap.width &&
+            n.y >= 0 && n.y < this.tileMap.height &&
+            this.tileMap.getTile(n.x, n.y) !== 1 // Not a wall
+        );
+    }
+
+    getLowestFScore(openSet, fScore) {
+        return openSet.reduce((lowest, node) => 
+            (fScore.get(this.getKey(node)) || Infinity) < 
+            (fScore.get(this.getKey(lowest)) || Infinity) ? node : lowest
+        );
+    }
+
+    getKey(point) {
+        return `${point.x},${point.y}`;
+    }
+
+    isEqual(a, b) {
+        return a.x === b.x && a.y === b.y;
+    }
+
+    reconstructPath(cameFrom, current) {
+        const path = [current];
+        while (cameFrom.has(this.getKey(current))) {
+            current = cameFrom.get(this.getKey(current));
+            path.unshift(current);
+        }
+        return path;
+    }
+}
+
+// Example usage
+const pathfinder = new AStarPathfinder(gameMap);
+const path = pathfinder.findPath({x:0, y:0}, {x:10, y:10});
+                </code></pre>
+            </div>
+        </section>
+
+        <section id="additional-examples" class="my-5">
+            <h2>Additional Working Examples</h2>
+            
+            <h3>1. Platformer Physics Example</h3>
+            <div class="code-block">
+                <pre><code>
+class PlatformerPhysics {
+    constructor(canvas) {
+        this.canvas = canvas;
+        this.ctx = canvas.getContext('2d');
+        this.player = {
+            x: 50,
+            y: 50,
+            width: 30,
+            height: 50,
+            velocityX: 0,
+            velocityY: 0,
+            jumping: false,
+            speed: 5,
+            jumpForce: -12,
+            gravity: 0.5
+        };
+        this.platforms = [
+            { x: 0, y: canvas.height - 20, width: canvas.width, height: 20 },
+            { x: 300, y: 300, width: 200, height: 20 },
+            { x: 100, y: 200, width: 200, height: 20 }
+        ];
+        this.keys = {};
+        this.setupControls();
+    }
+
+    setupControls() {
+        window.addEventListener('keydown', (e) => this.keys[e.code] = true);
+        window.addEventListener('keyup', (e) => this.keys[e.code] = false);
+    }
+
+    update() {
+        // Horizontal movement
+        if (this.keys['ArrowLeft']) this.player.velocityX = -this.player.speed;
+        else if (this.keys['ArrowRight']) this.player.velocityX = this.player.speed;
+        else this.player.velocityX *= 0.8; // Friction
+
+        // Jumping
+        if (this.keys['Space'] && !this.player.jumping) {
+            this.player.velocityY = this.player.jumpForce;
+            this.player.jumping = true;
+        }
+
+        // Apply gravity
+        this.player.velocityY += this.player.gravity;
+
+        // Update position
+        this.player.x += this.player.velocityX;
+        this.player.y += this.player.velocityY;
+
+        // Platform collision
+        this.platforms.forEach(platform => {
+            if (this.checkCollision(this.player, platform)) {
+                if (this.player.velocityY > 0) {
+                    this.player.y = platform.y - this.player.height;
+                    this.player.velocityY = 0;
+                    this.player.jumping = false;
+                } else if (this.player.velocityY < 0) {
+                    this.player.y = platform.y + platform.height;
+                    this.player.velocityY = 0;
+                }
+            }
+        });
+
+        // Screen bounds
+        if (this.player.x < 0) this.player.x = 0;
+        if (this.player.x + this.player.width > this.canvas.width) {
+            this.player.x = this.canvas.width - this.player.width;
+        }
+    }
+
+    checkCollision(rect1, rect2) {
+        return rect1.x < rect2.x + rect2.width &&
+               rect1.x + rect1.width > rect2.x &&
+               rect1.y < rect2.y + rect2.height &&
+               rect1.y + rect1.height > rect2.y;
+    }
+
+    render() {
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        
+        // Draw player
+        this.ctx.fillStyle = '#00ff00';
+        this.ctx.fillRect(
+            this.player.x, 
+            this.player.y, 
+            this.player.width, 
+            this.player.height
+        );
+
+        // Draw platforms
+        this.ctx.fillStyle = '#666666';
+        this.platforms.forEach(platform => {
+            this.ctx.fillRect(
+                platform.x, 
+                platform.y, 
+                platform.width, 
+                platform.height
+            );
+        });
+    }
+
+    gameLoop() {
+        this.update();
+        this.render();
+        requestAnimationFrame(() => this.gameLoop());
+    }
+
+    start() {
+        this.gameLoop();
+    }
+}
+
+// Usage:
+// const canvas = document.getElementById('gameCanvas');
+// const platformer = new PlatformerPhysics(canvas);
+// platformer.start();
+                </code></pre>
+            </div>
+
+            <h3>2. Particle Effect Generator</h3>
+            <div class="code-block">
+                <pre><code>
+class ParticleEffect {
+    constructor(canvas) {
+        this.canvas = canvas;
+        this.ctx = canvas.getContext('2d');
+        this.particles = [];
+        this.effects = {
+            explosion: {
+                count: 50,
+                speed: { min: 2, max: 8 },
+                size: { min: 2, max: 6 },
+                colors: ['#ff0000', '#ff7700', '#ffff00'],
+                lifetime: { min: 30, max: 60 },
+                spread: Math.PI * 2
+            },
+            fountain: {
+                count: 20,
+                speed: { min: 3, max: 7 },
+                size: { min: 2, max: 4 },
+                colors: ['#00ff00', '#0077ff', '#ffffff'],
+                lifetime: { min: 40, max: 80 },
+                spread: Math.PI / 4
+            }
+        };
+    }
+
+    createParticle(x, y, effect) {
+        const angle = Math.random() * effect.spread;
+        const speed = Math.random() * (effect.speed.max - effect.speed.min) + effect.speed.min;
+        const size = Math.random() * (effect.size.max - effect.size.min) + effect.size.min;
+        const lifetime = Math.random() * (effect.lifetime.max - effect.lifetime.min) + effect.lifetime.min;
+        
+        return {
+            x,
+            y,
+            size,
+            color: effect.colors[Math.floor(Math.random() * effect.colors.length)],
+            velocityX: Math.cos(angle) * speed,
+            velocityY: Math.sin(angle) * speed,
+            lifetime,
+            maxLifetime: lifetime
+        };
+    }
+
+    emit(x, y, effectName) {
+        const effect = this.effects[effectName];
+        for (let i = 0; i < effect.count; i++) {
+            this.particles.push(this.createParticle(x, y, effect));
+        }
+    }
+
+    update() {
+        for (let i = this.particles.length - 1; i >= 0; i--) {
+            const p = this.particles[i];
+            p.x += p.velocityX;
+            p.y += p.velocityY;
+            p.velocityY += 0.1; // gravity
+            p.lifetime--;
+
+            if (p.lifetime <= 0) {
+                this.particles.splice(i, 1);
+            }
+        }
+    }
+
+    render() {
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        
+        this.particles.forEach(p => {
+            this.ctx.globalAlpha = p.lifetime / p.maxLifetime;
+            this.ctx.fillStyle = p.color;
+            this.ctx.beginPath();
+            this.ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+            this.ctx.fill();
+        });
+        
+        this.ctx.globalAlpha = 1;
+    }
+
+    animate() {
+        this.update();
+        this.render();
+        requestAnimationFrame(() => this.animate());
+    }
+
+    start() {
+        this.animate();
+    }
+}
+
+// Usage:
+// const canvas = document.getElementById('effectCanvas');
+// const effects = new ParticleEffect(canvas);
+// effects.start();
+// canvas.addEventListener('click', (e) => {
+//     const rect = canvas.getBoundingClientRect();
+//     const x = e.clientX - rect.left;
+//     const y = e.clientY - rect.top;
+//     effects.emit(x, y, 'explosion');
+// });
+                </code></pre>
+            </div>
+        </section>
+
+        <section id="multiplayer-networking" class="my-5">
+            <h2>11. Multiplayer Networking</h2>
+            <p>Create real-time multiplayer experiences using WebSockets:</p>
+            <div class="code-block">
+                <pre><code>
+class MultiplayerGame {
+    constructor() {
+        this.room = new WebsimSocket();
+        this.players = {};
+        this.setupEventHandlers();
+    }
+
+    setupEventHandlers() {
+        this.room.onmessage = (event) => {
+            const data = event.data;
+            switch(data.type) {
+                case 'player_move':
+                    this.updatePlayerPosition(data);
+                    break;
+                case 'player_join':
+                    this.addPlayer(data);
+                    break;
+                case 'player_leave':
+                    this.removePlayer(data);
+                    break;
+            }
+        };
+    }
+
+    movePlayer(dx, dy) {
+        const playerMove = {
+            type: 'player_move',
+            clientId: this.room.party.client.id,
+            dx,
+            dy
+        };
+        this.room.send(playerMove);
+    }
+
+    updatePlayerPosition(moveData) {
+        const player = this.players[moveData.clientId];
+        if (player) {
+            player.x += moveData.dx;
+            player.y += moveData.dy;
+            this.renderPlayers();
+        }
+    }
+
+    addPlayer(playerData) {
+        this.players[playerData.clientId] = {
+            id: playerData.clientId,
+            x: 0,
+            y: 0,
+            username: playerData.username,
+            avatarUrl: playerData.avatarUrl
+        };
+        this.renderPlayers();
+    }
+
+    removePlayer(playerData) {
+        delete this.players[playerData.clientId];
+        this.renderPlayers();
+    }
+
+    renderPlayers() {
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        for (const playerId in this.players) {
+            const player = this.players[playerId];
+            ctx.fillStyle = 'blue';
+            ctx.fillRect(player.x, player.y, 50, 50);
+            
+            // Render username
+            ctx.fillStyle = 'white';
+            ctx.font = '12px Arial';
+            ctx.fillText(player.username, player.x, player.y - 10);
+        }
+    }
+
+    start() {
+        // Notify other players that we've joined
+        this.room.send({
+            type: 'player_join',
+            username: this.room.party.client.username,
+            avatarUrl: this.room.party.client.avatarUrl
+        });
+    }
+}
+
+const multiplayerGame = new MultiplayerGame();
+multiplayerGame.start();
+                </code></pre>
+            </div>
+        </section>
+
+        <section id="procedural-generation" class="my-5">
+            <h2>12. Procedural Level Generation</h2>
+            <p>Common techniques for generating game levels programmatically:</p>
+            <div class="code-block">
+                <pre><code>
+class DungeonGenerator {
+    constructor(width, height) {
+        this.width = width;
+        this.height = height;
+        this.map = Array(height).fill().map(() => Array(width).fill(1)); // 1 = wall
+    }
+
+    generateRooms(attempts = 50) {
+        for (let i = 0; i < attempts; i++) {
+            const roomWidth = 3 + Math.floor(Math.random() * 5);
+            const roomHeight = 3 + Math.floor(Math.random() * 5);
+            const x = 1 + Math.floor(Math.random() * (this.width - roomWidth - 2));
+            const y = 1 + Math.floor(Math.random() * (this.height - roomHeight - 2));
+
+            // Check if room overlaps
+            let canPlace = true;
+            for (let dy = -1; dy < roomHeight + 1; dy++) {
+                for (let dx = -1; dx < roomWidth + 1; dx++) {
+                    if (this.map[y + dy]?.[x + dx] === 0) {
+                        canPlace = false;
+                    }
+                }
+            }
+
+            if (canPlace) {
+                this.placeRoom(x, y, roomWidth, roomHeight);
+            }
+        }
+    }
+
+    placeRoom(x, y, width, height) {
+        for (let dy = 0; dy < height; dy++) {
+            for (let dx = 0; dx < width; dx++) {
+                this.map[y + dy][x + dx] = 0; // 0 = floor
+            }
+        }
+    }
+
+    connectRooms() {
+        // Simple maze-like corridor generation
+        for (let y = 1; y < this.height - 1; y += 2) {
+            for (let x = 1; x < this.width - 1; x += 2) {
+                if (Math.random() < 0.5) {
+                    this.map[y][x] = 0;
+                    if (x + 1 < this.width - 1) this.map[y][x + 1] = 0;
+                } else {
+                    this.map[y][x] = 0;
+                    if (y + 1 < this.height - 1) this.map[y + 1][x] = 0;
+                }
+            }
+        }
+    }
+}
+                </code></pre>
+            </div>
+        </section>
+
+        <section id="viewport-camera" class="my-5">
+            <h2>13. Viewport and Camera Systems</h2>
+            <p>Implement scrolling and camera movement in 2D games:</p>
+            <div class="code-block">
+                <pre><code>
+class Camera {
+    constructor(width, height, worldWidth, worldHeight) {
+        this.x = 0;
+        this.y = 0;
+        this.width = width;
+        this.height = height;
+        this.worldWidth = worldWidth;
+        this.worldHeight = worldHeight;
+    }
+
+    follow(target, lerp = 0.1) {
+        // Center camera on target with smooth movement
+        const targetX = target.x - this.width / 2;
+        const targetY = target.y - this.height / 2;
+        
+        this.x += (targetX - this.x) * lerp;
+        this.y += (targetY - this.y) * lerp;
+        
+        // Clamp to world bounds
+        this.x = Math.max(0, Math.min(this.x, this.worldWidth - this.width));
+        this.y = Math.max(0, Math.min(this.y, this.worldHeight - this.height));
+    }
+
+    apply(ctx) {
+        ctx.save();
+        ctx.translate(-this.x, -this.y);
+    }
+
+    restore(ctx) {
+        ctx.restore();
+    }
+}
+                </code></pre>
+            </div>
+        </section>
+
+        <section id="3d-implementation" class="my-5">
+            <h2>14. 3D Game Implementation</h2>
+            <p>Basic 3D game setup using Three.js:</p>
+            <div class="code-block">
+                <pre><code>
+class Game3D {
+    constructor() {
+        this.scene = new THREE.Scene();
+        this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        this.renderer = new THREE.WebGLRenderer();
+        
+        this.init();
+    }
+
+    init() {
+        this.renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(this.renderer.domElement);
+
+        // Add basic lighting
+        const ambientLight = new THREE.AmbientLight(0x404040);
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+        directionalLight.position.set(1, 1, 1);
+        this.scene.add(ambientLight);
+        this.scene.add(directionalLight);
+
+        // Add a simple cube
+        const geometry = new THREE.BoxGeometry();
+        const material = new THREE.MeshPhongMaterial({ color: 0x00ff00 });
+        this.cube = new THREE.Mesh(geometry, material);
+        this.scene.add(this.cube);
+
+        this.camera.position.z = 5;
+    }
+
+    animate() {
+        requestAnimationFrame(this.animate.bind(this));
+        
+        this.cube.rotation.x += 0.01;
+        this.cube.rotation.y += 0.01;
+        
+        this.renderer.render(this.scene, this.camera);
+    }
+}
+                </code></pre>
+            </div>
+        </section>
+
+        <section id="isometric-games" class="my-5">
+            <h2>15. Isometric Game Development</h2>
+            <p>Create isometric perspective games:</p>
+            <div class="code-block">
+                <pre><code>
+class IsometricMap {
+    constructor(tileWidth, tileHeight) {
+        this.tileWidth = tileWidth;
+        this.tileHeight = tileHeight;
+    }
+
+    toIsometric(x, y) {
+        return {
+            x: (x - y) * this.tileWidth / 2,
+            y: (x + y) * this.tileHeight / 4
+        };
+    }
+
+    fromIsometric(screenX, screenY) {
+        const x = (screenX / this.tileWidth + screenY / this.tileHeight) / 2;
+        const y = (screenY / this.tileHeight - screenX / this.tileWidth) / 2;
+        return { x, y };
+    }
+
+    drawTile(ctx, x, y, height, color) {
+        const iso = this.toIsometric(x, y);
+        
+        // Draw tile faces
+        ctx.beginPath();
+        ctx.moveTo(iso.x, iso.y);
+        ctx.lineTo(iso.x + this.tileWidth / 2, iso.y + this.tileHeight / 2);
+        ctx.lineTo(iso.x, iso.y + this.tileHeight);
+        ctx.lineTo(iso.x - this.tileWidth / 2, iso.y + this.tileHeight / 2);
+        ctx.closePath();
+        ctx.fillStyle = color;
+        ctx.fill();
+        ctx.stroke();
+
+        // Draw height if > 0
+        if (height > 0) {
+            ctx.beginPath();
+            ctx.moveTo(iso.x - this.tileWidth / 2, iso.y + this.tileHeight / 2);
+            ctx.lineTo(iso.x - this.tileWidth / 2, iso.y + this.tileHeight / 2 - height);
+            ctx.lineTo(iso.x, iso.y + this.tileHeight - height);
+            ctx.lineTo(iso.x, iso.y + this.tileHeight);
+            ctx.closePath();
+            ctx.fillStyle = this.shadeDarker(color, 20);
+            ctx.fill();
+            ctx.stroke();
+        }
+    }
+
+    shadeDarker(color, percent) {
+        const num = parseInt(color.replace('#', ''), 16);
+        const amt = Math.round(2.55 * percent);
+        const R = Math.max((num >> 16) - amt, 0);
+        const G = Math.max((num >> 8 & 0x00FF) - amt, 0);
+        const B = Math.max((num & 0x0000FF) - amt, 0);
+        return '#' + (0x1000000 + (R << 16) + (G << 8) + B).toString(16).slice(1);
+    }
+}
+                </code></pre>
+            </div>
+        </section>
+
+        <section id="particle-systems" class="my-5">
+            <h2>16. Particle Systems</h2>
+            <p>Create dynamic particle effects for games:</p>
+            <div class="code-block">
+                <pre><code>
+class ParticleSystem {
+    constructor(x, y) {
+        this.x = x;
+        this.y = y;
+        this.particles = [];
+    }
+
+    emit(count, options = {}) {
+        const defaults = {
+            speed: 5,
+            spread: Math.PI * 2,
+            size: 5,
+            life: 60,
+            color: '#ff0000',
+            gravity: 0.1,
+            fade: true
+        };
+        const settings = { ...defaults, ...options };
+
+        for (let i = 0; i < count; i++) {
+            const angle = Math.random() * settings.spread;
+            const speed = Math.random() * settings.speed;
+            
+            this.particles.push({
+                x: this.x,
+                y: this.y,
+                vx: Math.cos(angle) * speed,
+                vy: Math.sin(angle) * speed,
+                size: settings.size,
+                life: settings.life,
+                maxLife: settings.life,
+                color: settings.color,
+                gravity: settings.gravity,
+                fade: settings.fade
+            });
+        }
+    }
+
+    update() {
+        for (let i = this.particles.length - 1; i >= 0; i--) {
+            const p = this.particles[i];
+            
+            p.x += p.vx;
+            p.y += p.vy;
+            p.vy += p.gravity;
+            p.life--;
+
+            if (p.life <= 0) {
+                this.particles.splice(i, 1);
+            }
+        }
+    }
+
+    render(ctx) {
+        ctx.save();
+        for (const p of this.particles) {
+            ctx.globalAlpha = p.fade ? p.life / p.maxLife : 1;
+            ctx.fillStyle = p.color;
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        ctx.restore();
+    }
+}
+
+class AdvancedParticleSystem extends ParticleSystem {
+    constructor(x, y) {
+        super(x, y);
+        this.emitters = new Map();
+        this.effects = new Map();
+    }
+
+    createEmitter(config) {
+        return {
+            position: { x: 0, y: 0 },
+            velocity: { min: -2, max: 2 },
+            acceleration: { x: 0, y: 0.1 },
+            scale: { start: 1, end: 0 },
+            color: { start: '#ff0000', end: '#00ff00' },
+            alpha: { start: 1, end: 0 },
+            lifetime: { min: 1, max: 3 },
+            frequency: 0.1,
+            ...config
+        };
+    }
+
+    addEffect(name, effect) {
+        this.effects.set(name, effect);
+    }
+
+    emit(emitter) {
+        // Create particles based on emitter config
+        const particle = this.createParticle(emitter);
+        this.particles.push(particle);
+    }
+
+    update(dt) {
+        // Update all active particles
+        this.particles.forEach(particle => {
+            particle.velocity.x += particle.acceleration.x * dt;
+            particle.velocity.y += particle.acceleration.y * dt;
+            particle.x += particle.velocity.x * dt;
+            particle.y += particle.velocity.y * dt;
+            particle.life -= dt;
+            
+            // Apply effects
+            this.effects.forEach(effect => effect(particle, dt));
+        });
+
+        // Remove dead particles
+        this.particles = this.particles.filter(p => p.life > 0);
+    }
+}
+                </code></pre>
+            </div>
+        </section>
+
+        <section id="audio-systems" class="my-5">
+            <h2>17. Game Audio Systems</h2>
+            <div class="section-intro">
+                <p>Implementing audio in games requires careful management of sound effects and background music:</p>
+            </div>
+            
+            <div class="code-block">
+                <pre><code>
+class AudioManager {
+    constructor() {
+        this.music = new Map();
+        this.sfx = new Map();
+        this.currentMusic = null;
+        this.musicVolume = 0.5;
+        this.sfxVolume = 1.0;
+    }
+
+    loadMusic(key, url) {
+        const audio = new Audio(url);
+        audio.loop = true;
+        this.music.set(key, audio);
+    }
+
+    loadSfx(key, url) {
+        const audio = new Audio(url);
+        audio.loop = false;
+        this.sfx.set(key, audio);
+    }
+
+    playMusic(key) {
+        if (this.currentMusic) {
+            this.fadeOutMusic(() => {
+                this.startNewMusic(key);
+            });
+        } else {
+            this.startNewMusic(key);
+        }
+    }
+
+    startNewMusic(key) {
+        const music = this.music.get(key);
+        if (music) {
+            music.volume = this.musicVolume;
+            music.play();
+            this.currentMusic = music;
+        }
+    }
+
+    fadeOutMusic(callback) {
+        if (!this.currentMusic) return;
+        
+        const fadeInterval = setInterval(() => {
+            if (this.currentMusic.volume > 0.1) {
+                this.currentMusic.volume -= 0.1;
+            } else {
+                this.currentMusic.pause();
+                this.currentMusic.currentTime = 0;
+                clearInterval(fadeInterval);
+                if (callback) callback();
+            }
+        }, 100);
+    }
+
+    playSfx(key) {
+        const sfx = this.sfx.get(key);
+        if (sfx) {
+            // Clone the audio to allow overlapping sounds
+            const sfxClone = sfx.cloneNode();
+            sfxClone.volume = this.sfxVolume;
+            sfxClone.play();
+        }
+    }
+
+    setMusicVolume(volume) {
+        this.musicVolume = Math.max(0, Math.min(1, volume));
+        if (this.currentMusic) {
+            this.currentMusic.volume = this.musicVolume;
+        }
+    }
+
+    setSfxVolume(volume) {
+        this.sfxVolume = Math.max(0, Math.min(1, volume));
+    }
+}
+
+// Usage example
+const audio = new AudioManager();
+audio.loadMusic('background', 'assets/music/background.mp3');
+audio.loadSfx('jump', 'assets/sfx/jump.wav');
+audio.loadSfx('collect', 'assets/sfx/collect.wav');
+
+// Play background music
+audio.playMusic('background');
+
+// Play sound effect
+audio.playSfx('jump');
+                </code></pre>
+            </div>
+        </section>
+
+        <section id="midi-integration" class="my-5">
+            <h2>17a. MIDI Integration in Games</h2>
+            <div class="section-intro">
+                <p>Implementing MIDI support allows for dynamic music generation and interactive musical gameplay:</p>
+            </div>
+            
+            <div class="code-block">
+                <pre><code>
+class MIDIController {
+    constructor() {
+        this.midiAccess = null;
+        this.inputs = new Map();
+        this.outputs = new Map();
+        this.noteCallbacks = new Set();
+        this.init();
+    }
+
+    async init() {
+        try {
+            this.midiAccess = await navigator.requestMIDIAccess();
+            this.setupPorts();
+            this.midiAccess.onstatechange = (e) => this.handleStateChange(e);
+        } catch (error) {
+            console.error('MIDI Access Failed:', error);
+        }
+    }
+
+    setupPorts() {
+        this.inputs.clear();
+        this.outputs.clear();
+        
+        for (const input of this.midiAccess.inputs.values()) {
+            this.inputs.set(input.id, input);
+            input.onmidimessage = (msg) => this.handleMIDIMessage(msg);
+        }
+        
+        for (const output of this.midiAccess.outputs.values()) {
+            this.outputs.set(output.id, output);
+        }
+    }
+
+    handleStateChange(event) {
+        console.log(`MIDI port ${event.port.name} ${event.port.state}`);
+        this.setupPorts();
+    }
+
+    handleMIDIMessage(message) {
+        const [status, note, velocity] = message.data;
+        
+        // Note on event
+        if ((status & 0xf0) === 0x90 && velocity > 0) {
+            this.noteCallbacks.forEach(callback => 
+                callback('noteOn', note, velocity, message.target.id)
+            );
+        }
+        // Note off event
+        else if ((status & 0xf0) === 0x80 || ((status & 0xf0) === 0x90 && velocity === 0)) {
+            this.noteCallbacks.forEach(callback => 
+                callback('noteOff', note, velocity, message.target.id)
+            );
+        }
+    }
+
+    onNote(callback) {
+        this.noteCallbacks.add(callback);
+        return () => this.noteCallbacks.delete(callback);
+    }
+
+    sendNoteOn(note, velocity = 64, channel = 0) {
+        this.outputs.forEach(output => {
+            output.send([0x90 | channel, note, velocity]);
+        });
+    }
+
+    sendNoteOff(note, channel = 0) {
+        this.outputs.forEach(output => {
+            output.send([0x80 | channel, note, 0]);
+        });
+    }
+}
+
+class MusicGameController {
+    constructor() {
+        this.midi = new MIDIController();
+        this.activeNotes = new Set();
+        this.score = 0;
+        this.setupGameEvents();
+    }
+
+    setupGameEvents() {
+        this.midi.onNote((type, note, velocity, inputId) => {
+            if (type === 'noteOn') {
+                this.handleNoteOn(note, velocity);
+            } else {
+                this.handleNoteOff(note);
+            }
+        });
+    }
+
+    handleNoteOn(note, velocity) {
+        this.activeNotes.add(note);
+        this.checkMusicalPattern();
+        
+        // Example game mechanics
+        if (this.isCorrectNote(note)) {
+            this.score += velocity; // Higher velocity = more points
+            this.triggerVisualEffect(note, velocity);
+        }
+    }
+
+    handleNoteOff(note) {
+        this.activeNotes.delete(note);
+    }
+
+    isCorrectNote(note) {
+        // Example pattern matching
+        const targetPattern = [60, 64, 67]; // C major triad
+        return targetPattern.includes(note);
+    }
+
+    checkMusicalPattern() {
+        // Example chord detection
+        const notes = Array.from(this.activeNotes);
+        if (notes.length === 3) {
+            const sorted = notes.sort((a, b) => a - b);
+            if (this.isTriad(sorted)) {
+                this.score += 100;
+                this.triggerChordEffect();
+            }
+        }
+    }
+
+    isTriad(notes) {
+        // Simple major triad detection
+        return (
+            notes[1] - notes[0] === 4 && 
+            notes[2] - notes[1] === 3
+        );
+    }
+
+    triggerVisualEffect(note, velocity) {
+        // Map MIDI note to game visuals
+        const hue = (note % 12) * 30; // Map 12 notes to color wheel
+        const saturation = Math.min(velocity / 127 * 100, 100);
+        
+        // Example visual effect code here
+        console.log(`Visual effect: hue=${hue}, saturation=${saturation}`);
+    }
+
+    triggerChordEffect() {
+        // Example chord completion effect
+        console.log('Chord completed! Special effect triggered');
+    }
+}
+
+// Track and synthesize MIDI sequences
+class MIDISequencer {
+    constructor(tempo = 120) {
+        this.tempo = tempo;
+        this.sequence = [];
+        this.isPlaying = false;
+        this.currentStep = 0;
+        this.stepTime = (60 / tempo) / 4; // Sixteenth notes
+    }
+
+    addEvent(time, note, duration, velocity = 64) {
+        this.sequence.push({ time, note, duration, velocity });
+        this.sequence.sort((a, b) => a.time - b.time);
+    }
+
+    start() {
+        if (this.isPlaying) return;
+        this.isPlaying = true;
+        this.currentStep = 0;
+        this.playStep();
+    }
+
+    stop() {
+        this.isPlaying = false;
+        this.currentStep = 0;
+    }
+
+    playStep() {
+        if (!this.isPlaying) return;
+
+        const currentTime = this.currentStep * this.stepTime;
+        const events = this.sequence.filter(e => 
+            e.time >= currentTime && 
+            e.time < currentTime + this.stepTime
+        );
+
+        events.forEach(event => {
+            // Trigger note
+            this.midi.sendNoteOn(event.note, event.velocity);
+            
+            // Schedule note off
+            setTimeout(() => {
+                this.midi.sendNoteOff(event.note);
+            }, event.duration * 1000);
+        });
+
+        this.currentStep++;
+        setTimeout(() => this.playStep(), this.stepTime * 1000);
+    }
+
+    changeSpeed(percentage) {
+        this.stepTime = (60 / this.tempo) / 4 * (100 / percentage);
+    }
+}
+
+// Usage example:
+const musicGame = new MusicGameController();
+
+// Create a simple sequence
+const sequencer = new MIDISequencer(120);
+sequencer.addEvent(0, 60, 0.5);    // C4
+sequencer.addEvent(0.5, 64, 0.5);  // E4
+sequencer.addEvent(1, 67, 1);      // G4
+                </code></pre>
+            </div>
+            
+            <div class="best-practices">
+                <h4>Best Practices for MIDI Integration:</h4>
+                <ul>
+                    <li>Always check for MIDI support before attempting to access MIDI devices</li>
+                    <li>Handle connection/disconnection events gracefully</li>
+                    <li>Provide fallback audio options when MIDI is not available</li>
+                    <li>Consider latency when designing MIDI-based gameplay mechanics</li>
+                    <li>Use velocity information for more dynamic gameplay</li>
+                    <li>Implement proper cleanup of MIDI resources when not in use</li>
+                </ul>
+            </div>
+        </section>
+
+        <section id="retro-audio" class="my-5">
+            <h2>17b. Retro Sound Effects & Music</h2>
+            <div class="section-intro">
+                <p>Create authentic retro-style sound effects and music using the Web Audio API:</p>
+            </div>
+            
+            <div class="code-block">
+                <pre><code>
+class RetroSoundEngine {
+    constructor() {
+        this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        this.masterGain = this.audioContext.createGain();
+        this.masterGain.connect(this.audioContext.destination);
+    }
+
+    createOscillator(type = 'square') {
+        const oscillator = this.audioContext.createOscillator();
+        oscillator.type = type;
+        return oscillator;
+    }
+
+    jumpSound() {
+        const osc = this.createOscillator();
+        const gainNode = this.audioContext.createGain();
+        
+        osc.frequency.setValueAtTime(150, this.audioContext.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(
+            500, 
+            this.audioContext.currentTime + 0.15
+        );
+
+        gainNode.gain.setValueAtTime(1, this.audioContext.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(
+            0.01, 
+            this.audioContext.currentTime + 0.15
+        );
+
+        osc.connect(gainNode);
+        gainNode.connect(this.masterGain);
+        
+        osc.start();
+        osc.stop(this.audioContext.currentTime + 0.15);
+    }
+
+    coinSound() {
+        const osc = this.createOscillator('sine');
+        const gainNode = this.audioContext.createGain();
+
+        osc.frequency.setValueAtTime(600, this.audioContext.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(
+            1200, 
+            this.audioContext.currentTime + 0.1
+        );
+
+        gainNode.gain.setValueAtTime(1, this.audioContext.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(
+            0.01, 
+            this.audioContext.currentTime + 0.1
+        );
+
+        osc.connect(gainNode);
+        gainNode.connect(this.masterGain);
+
+        osc.start();
+        osc.stop(this.audioContext.currentTime + 0.1);
+    }
+
+    createArpeggio(notes, interval = 0.1) {
+        notes.forEach((note, index) => {
+            const osc = this.createOscillator();
+            const gainNode = this.audioContext.createGain();
+
+            osc.frequency.setValueAtTime(note, this.audioContext.currentTime + interval * index);
+            
+            gainNode.gain.setValueAtTime(0, this.audioContext.currentTime + interval * index);
+            gainNode.gain.linearRampToValueAtTime(
+                0.5, 
+                this.audioContext.currentTime + interval * index + 0.05
+            );
+            gainNode.gain.exponentialRampToValueAtTime(
+                0.01,
+                this.audioContext.currentTime + interval * index + interval
+            );
+
+            osc.connect(gainNode);
+            gainNode.connect(this.masterGain);
+
+            osc.start(this.audioContext.currentTime + interval * index);
+            osc.stop(this.audioContext.currentTime + interval * index + interval);
+        });
+    }
+
+    powerUpSound() {
+        const notes = [220, 330, 440, 880];
+        this.createArpeggio(notes, 0.05);
+    }
+
+    createChiptuneLead() {
+        const osc = this.createOscillator('square');
+        const gainNode = this.audioContext.createGain();
+        const filter = this.audioContext.createBiquadFilter();
+
+        filter.type = 'lowpass';
+        filter.frequency.value = 1000;
+        filter.Q.value = 5;
+
+        osc.connect(filter);
+        filter.connect(gainNode);
+        gainNode.connect(this.masterGain);
+
+        return { oscillator: osc, gain: gainNode, filter };
+    }
+}
+
+// Usage example:
+const retroSound = new RetroSoundEngine();
+retroSound.jumpSound();
+retroSound.powerUpSound();
+                </code></pre>
+            </div>
+        </section>
+
+        <section id="puzzle-projects" class="my-5">
+            <h2>21. Puzzle Game Projects</h2>
+            <div class="section-intro">
+                <h4>Beginner Projects:</h4>
+                <ul>
+                    <li>Memory Card Matching Game</li>
+                    <li>Sliding Puzzle</li>
+                    <li>Simple Match-3 Game</li>
+                    <li>Number Sorting Puzzle</li>
+                </ul>
+
+                <h4>Intermediate Projects:</h4>
+                <ul>
+                    <li>Tetris Clone</li>
+                    <li>Path Finding Puzzle</li>
+                    <li>Physics-based Ball Puzzle</li>
+                    <li>Color Mixing Puzzle</li>
+                </ul>
+
+                <h4>Advanced Projects:</h4>
+                <ul>
+                    <li>3D Puzzle Cube Simulator</li>
+                    <li>Multiplayer Puzzle Arena</li>
+                    <li>Procedurally Generated Puzzles</li>
+                    <li>Physics-based Construction Puzzle</li>
+                </ul>
+            </div>
+            
+            <div class="section-intro">
+                <h4>Additional Beginner Projects:</h4>
+                <ul>
+                    <li>2048 Clone</li>
+                    <li>Simon Says Memory Game</li>
+                    <li>Word Search Generator</li>
+                    <li>Basic Sudoku</li>
+                    <li>Color Flood Fill Game</li>
+                    <li>Pattern Matching Game</li>
+                    <li>Jigsaw Puzzle (with preset pieces)</li>
+                </ul>
+
+                <h4>Additional Intermediate Projects:</h4>
+                <ul>
+                    <li>Sokoban Clone</li>
+                    <li>Pipe Connection Puzzle</li>
+                    <li>Tower of Hanoi with Animation</li>
+                    <li>Picross/Nonogram Creator</li>
+                    <li>Match-3 with Special Pieces</li>
+                    <li>Puzzle Bobble Clone</li>
+                    <li>Laser Mirror Puzzle</li>
+                    <li>Block Sliding Puzzle with Physics</li>
+                </ul>
+
+                <h4>Additional Advanced Projects:</h4>
+                <ul>
+                    <li>Portal-style Physics Puzzles</li>
+                    <li>Chemistry Element Mixing Game</li>
+                    <li>Rube Goldberg Machine Builder</li>
+                    <li>4D Puzzle Cube</li>
+                    <li>Multiplayer Competitive Puzzle Racing</li>
+                    <li>Neural Network-based Puzzle Generator</li>
+                    <li>Recursive Fractal Puzzle Game</li>
+                    <li>Time-manipulation Puzzle Game</li>
+                </ul>
+            </div>
+        </section>
+
+        <section id="resources" class="my-5">
+            <h2>22. Recommended Resources</h2>
+            <ul>
+                <li><a href="https://developer.mozilla.org/en-US/docs/Games">MDN Game Development</a></li>
+                <li><a href="https://phaser.io/">Phaser Game Framework</a></li>
+                <li><a href="https://threejs.org/">Three.js for 3D Games</a></li>
+                <li><a href="https://matter.js.org/">Matter.js Physics Engine</a></li>
+                <li><a href="https://github.com/photonstorm/phaser">Phaser GitHub</a></li>
+            </ul>
+        </section>
+
+        <section id="licensing" class="my-5">
+            <h2>23. Licensing and Attribution</h2>
+            <div class="section-intro">
+                <p>The code examples in this guide are released under the MIT License unless otherwise specified:</p>
+                
+                <div class="code-block">
+                    <pre>
+MIT License
+
+Copyright (c) 2023-2024 Game Development Guide Contributors
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+                    </pre>
+                </div>
+
+                <h4>Third-Party Libraries and Resources Used:</h4>
+                <ul>
+                    <li>Bootstrap 5.3.0 - MIT License (<a href="https://github.com/twbs/bootstrap/blob/main/LICENSE">View License</a>)</li>
+                    <li>Three.js - MIT License (<a href="https://github.com/mrdoob/three.js/blob/dev/LICENSE">View License</a>)</li>
+                    <li>Matter.js - MIT License (<a href="https://github.com/liabru/matter-js/blob/master/LICENSE">View License</a>)</li>
+                    <li>Howler.js - MIT License (<a href="https://github.com/goldfire/howler.js/blob/master/LICENSE.md">View License</a>)</li>
+                    <li>Web Audio API - W3C Software Notice and License</li>
+                    <li>WebGL - Khronos Group</li>
+                    <li>WebMIDI API - W3C Software Notice and License</li>
+                </ul>
+
+                <h4>Additional Attributions:</h4>
+                <ul>
+                    <li>Game design patterns and algorithms referenced from various open source projects and academic sources</li>
+                    <li>Audio synthesis techniques adapted from Web Audio API examples and documentation</li>
+                    <li>Particle system implementations inspired by various open source game engines</li>
+                    <li>Physics implementations referenced from matter.js documentation and examples</li>
+                    <li>Pathfinding algorithms adapted from academic computer science resources</li>
+                </ul>
+
+                <h4>Usage Rights:</h4>
+                <p>All code examples provided in this guide may be freely used in both personal and commercial projects, subject to the terms of the MIT License. Attribution is appreciated but not required.</p>
+
+                <h4>Contributing:</h4>
+                <p>Contributions to this guide are welcome. All contributed code must be original or properly licensed and attributed.</p>
+            </div>
+        </section>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

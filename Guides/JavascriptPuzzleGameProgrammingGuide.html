@@ -1,0 +1,2085 @@
+<html><head><base href="." /><style>
+body { 
+    font-family: system-ui;
+    line-height: 1.6;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+    background: #f0f5ff;
+    color: #2c3e50;
+}
+
+.section {
+    background: white;
+    padding: 20px;
+    margin: 40px 0; /* Increase vertical spacing between sections */
+    border-left: 4px solid #3498db; /* Add left border for visual hierarchy */
+    border-radius: 8px;
+    box-shadow: 0 2px 15px rgba(0,0,0,0.1);
+}
+
+.code-block {
+    background: #1e1e1e;
+    color: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    overflow-x: auto;
+}
+
+.demo {
+    border: 2px solid #3498db;
+    padding: 20px;
+    margin: 20px 0;
+    border-radius: 8px;
+}
+
+.interactive {
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+
+.interactive:hover {
+    transform: scale(1.02);
+}
+
+h1, h2, h3 {
+    color: #2c3e50;
+}
+
+h2 {
+    margin-top: 0;
+    padding-left: 15px;
+    border-bottom: 2px solid #3498db;
+    padding-bottom: 10px;
+}
+
+h3 {
+    padding-left: 15px;
+    color: #34495e;
+    margin-top: 30px;
+}
+
+.toc {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: white;
+    padding: 15px;
+    border-radius: 8px;
+    max-width: 250px;
+    max-height: 80vh;
+    overflow-y: auto;
+    border-left: 4px solid #3498db;
+    box-shadow: 0 2px 15px rgba(0,0,0,0.1);
+}
+
+.toc ul {
+    padding-left: 20px;
+    list-style-type: none;
+}
+
+.toc li {
+    margin: 8px 0;
+}
+
+.toc a {
+    text-decoration: none;
+    color: #2c3e50;
+    transition: color 0.2s;
+}
+
+.toc a:hover {
+    color: #3498db;
+}
+
+@media (max-width: 1500px) {
+    .toc {
+        position: static;
+        margin: 20px 0;
+    }
+}
+
+.example-game {
+    width: 400px;
+    height: 400px;
+    background: #000;
+    margin: 20px auto;
+    position: relative;
+}
+
+html {
+    scroll-behavior: smooth;
+}
+
+.explanation {
+    background: #f8f9fa;
+    padding: 20px;
+    margin: 20px 0;
+    border-radius: 8px;
+    border-left: 4px solid #6c757d;
+}
+
+.explanation h4 {
+    color: #2c3e50;
+    margin-top: 0;
+    margin-bottom: 15px;
+}
+
+.explanation ul {
+    margin-bottom: 20px;
+}
+
+.explanation li {
+    margin-bottom: 8px;
+    line-height: 1.6;
+}
+
+#game-grid {
+    display: grid;
+    gap: 2px;
+    padding: 20px;
+    background: #f0f0f0;
+    border-radius: 8px;
+    margin: 20px auto;
+    width: fit-content;
+}
+
+#game-grid div {
+    background: white;
+    border-radius: 4px;
+    transition: background-color 0.2s;
+}
+
+#game-grid div:hover {
+    background: #e8e8e8;
+}
+
+.experience-tabs {
+    display: flex;
+    margin: 20px 0;
+    border-bottom: 2px solid #3498db;
+}
+
+.experience-tab {
+    padding: 10px 20px;
+    cursor: pointer;
+    border: none;
+    background: #f0f0f0;
+    margin-right: 5px;
+}
+
+.experience-tab.active {
+    background: #3498db;
+    color: white;
+}
+
+.experience-content {
+    display: none;
+}
+
+.experience-content.active {
+    display: block;
+}
+
+.role-section {
+    background: #f8f9fa;
+    padding: 20px;
+    margin: 15px 0;
+    border-radius: 8px;
+    border-left: 4px solid #3498db;
+}
+
+.code-example {
+    background: #1e1e1e;
+    color: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    margin: 15px 0;
+    overflow-x: auto;
+}
+
+.implementation-notes {
+    background: #f8f9fa;
+    padding: 15px;
+    border-left: 4px solid #28a745;
+    margin: 15px 0;
+    border-radius: 4px;
+}
+
+.placeholder-content {
+    background: #f8f9fa;
+    padding: 20px;
+    border-radius: 8px;
+    border-left: 4px solid #ffc107;
+}
+
+.role-section h5 {
+    color: #2c3e50;
+    margin-top: 0;
+    border-bottom: 2px solid #3498db;
+    padding-bottom: 10px;
+}
+
+.role-section h6 {
+    color: #34495e;
+    margin: 10px 0;
+}
+
+/* Add styling for new content sections */
+.detailed-content {
+    background: #f9f9f9;
+    padding: 20px;
+    margin: 15px 0;
+    border-radius: 8px;
+    border-left: 4px solid #3498db;
+}
+
+.code-notes {
+    background: #2c3e50;
+    color: #ecf0f1;
+    padding: 15px;
+    margin: 10px 0;
+    border-radius: 4px;
+    font-size: 0.9em;
+}
+
+.implementation-detail {
+    background: #e8f4f8;
+    padding: 12px;
+    margin: 8px 0;
+    border-radius: 4px;
+}
+
+.best-practices {
+    background: #f0f9f0;
+    border-left: 4px solid #2ecc71;
+    padding: 15px;
+    margin: 10px 0;
+}
+</style></head><body>
+
+<h1>🎮 The Ultimate Guide to JavaScript Puzzle Game Programming</h1>
+
+<div class="toc">
+    <h3>Table of Contents</h3>
+    <ul>
+        <li><a href="#fundamentals">1. Core Fundamentals</a>
+            <ul>
+                <li><a href="#game-loop">1.1 Game Loop</a></li>
+                <li><a href="#state-management">1.2 State Management</a></li>
+                <li><a href="#input-handling">1.3 Input Handling</a></li>
+                <li><a href="#collision">1.4 Collision Detection</a></li>
+            </ul>
+        </li>
+        <li><a href="#mechanics">2. Puzzle Game Mechanics</a>
+            <ul>
+                <li><a href="#match3">2.1 Match-3 Mechanics</a></li>
+                <li><a href="#sliding">2.2 Sliding Puzzles</a></li>
+                <li><a href="#physics">2.3 Physics-Based Puzzles</a></li>
+                <li><a href="#tetris">2.4 Tetris-Style Games</a></li>
+            </ul>
+        </li>
+        <li><a href="#algorithms">3. Essential Algorithms</a>
+            <ul>
+                <li><a href="#flood-fill">3.1 Flood Fill</a></li>
+                <li><a href="#pathfinding">3.2 Pathfinding</a></li>
+                <li><a href="#pattern">3.3 Pattern Recognition</a></li>
+                <li><a href="#gravity">3.4 Gravity Systems</a></li>
+            </ul>
+        </li>
+        <li><a href="#advanced">4. Advanced Concepts</a>
+            <ul>
+                <li><a href="#optimization">4.1 Performance Optimization</a></li>
+                <li><a href="#procedural">4.2 Procedural Generation</a></li>
+                <li><a href="#ai">4.3 Puzzle AI & Solvers</a></li>
+                <li><a href="#multiplayer">4.4 Multiplayer Architecture</a></li>
+            </ul>
+        </li>
+        <li><a href="#polish">5. Game Polish</a>
+            <ul>
+                <li><a href="#animations">5.1 Animation Systems</a></li>
+                <li><a href="#particles">5.2 Particle Effects</a></li>
+                <li><a href="#sound">5.3 Sound Management</a></li>
+                <li><a href="#ux">5.4 User Experience</a></li>
+            </ul>
+        </li>
+    </ul>
+</div>
+
+<div class="section" id="fundamentals">
+    <h2>1. Core Fundamentals</h2>
+    
+    <div class="section" id="game-loop-section">
+        <h3 id="game-loop">1.1 Game Loop</h3>
+        
+        <div class="experience-tabs">
+            <button class="experience-tab active" 
+                    onclick="switchTab(event, 'beginner', 'game-loop-section')" 
+                    data-level="beginner">Beginner</button>
+            <button class="experience-tab" 
+                    onclick="switchTab(event, 'intermediate', 'game-loop-section')" 
+                    data-level="intermediate">Intermediate</button>
+            <button class="experience-tab" 
+                    onclick="switchTab(event, 'advanced', 'game-loop-section')" 
+                    data-level="advanced">Advanced</button>
+        </div>
+        
+        <div id="game-loop-section-beginner" class="experience-content active">
+            <div class="role-section">
+                <h4>For Programmers</h4>
+                <h5>Game Loop Fundamentals for New Developers</h5>
+                <div class="explanation">
+                    <p>Understanding the game loop is crucial for creating interactive experiences. At its core, a game loop manages the continuous update and rendering of game states.</p>
+                    <ul>
+                        <li><strong>Core Concepts:</strong>
+                            <ul>
+                                <li>Frame-based rendering</li>
+                                <li>Input processing</li>
+                                <li>State management</li>
+                            </ul>
+                        </li>
+                        <li><strong>Key Techniques:</strong>
+                            <ul>
+                                <li>Using requestAnimationFrame()</li>
+                                <li>Delta time calculations</li>
+                                <li>Basic state tracking</li>
+                            </ul>
+                        </li>
+                    </ul>
+                </div>
+                <div class="code-example">
+                    <h6>Simple Game Loop Template</h6>
+                    <pre><code>
+class GameLoop {
+    constructor() {
+        this.lastFrameTime = 0;
+        this.gameState = {
+            running: true,
+            score: 0,
+            entities: []
+        };
+    }
+
+    start() {
+        requestAnimationFrame(this.update.bind(this));
+    }
+
+    update(timestamp) {
+        const deltaTime = timestamp - this.lastFrameTime;
+        this.lastFrameTime = timestamp;
+
+        // Process input
+        this.processInput();
+        
+        // Update game state
+        this.updateGameState(deltaTime);
+        
+        // Render game
+        this.render();
+
+        // Continue the game loop if running
+        if (this.gameState.running) {
+            requestAnimationFrame(this.update.bind(this));
+        }
+    }
+
+    processInput() {
+        // Handle user inputs
+    }
+
+    updateGameState(deltaTime) {
+        // Update game entities and logic
+    }
+
+    render() {
+        // Render current game state
+    }
+}
+                    </code></pre>
+                </div>
+                <div class="best-practices">
+                    <h6>Best Practices for Beginners</h6>
+                    <ul>
+                        <li>Keep update and render functions simple and focused</li>
+                        <li>Use delta time for frame-independent movement</li>
+                        <li>Separate concerns: input, update, render</li>
+                        <li>Start with a basic loop, then incrementally add complexity</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="role-section">
+                <h4>For Puzzle Designers</h4>
+                <h5>Puzzle Design and Game Loop Principles</h5>
+                <div class="explanation">
+                    <p>As a puzzle designer, understanding the game loop helps you create more engaging and responsive game experiences.</p>
+                    <ul>
+                        <li><strong>Design Considerations:</strong>
+                            <ul>
+                                <li>Smooth state transitions</li>
+                                <li>Responsive user interactions</li>
+                                <li>Clear game progression</li>
+                            </ul>
+                        </li>
+                        <li><strong>Puzzle Mechanics Design:</strong>
+                            <ul>
+                                <li>Define clear game states</li>
+                                <li>Create intuitive input handling</li>
+                                <li>Design balanced difficulty progression</li>
+                            </ul>
+                        </li>
+                    </ul>
+                </div>
+                <div class="implementation-notes">
+                    <h6>Puzzle Design Workflow</h6>
+                    <ol>
+                        <li>Conceptualize core game mechanics</li>
+                        <li>Map out possible game states</li>
+                        <li>Design input interaction flows</li>
+                        <li>Create progression and challenge systems</li>
+                        <li>Playtest and iterate</li>
+                    </ol>
+                </div>
+            </div>
+            
+            <div class="role-section">
+                <h4>For Game Makers</h4>
+                <h5>Game Production and the Game Loop</h5>
+                <div class="explanation">
+                    <p>For game makers, the game loop is the heartbeat of your interactive experience, connecting design, programming, and player engagement.</p>
+                    <ul>
+                        <li><strong>Production Insights:</strong>
+                            <ul>
+                                <li>Performance optimization</li>
+                                <li>Cross-platform considerations</li>
+                                <li>Resource management</li>
+                            </ul>
+                        </li>
+                        <li><strong>Development Strategies:</strong>
+                            <ul>
+                                <li>Modular loop design</li>
+                                <li>Performance profiling</li>
+                                <li>Scalable architecture</li>
+                            </ul>
+                        </li>
+                    </ul>
+                </div>
+                <div class="best-practices">
+                    <h6>Game Production Best Practices</h6>
+                    <ul>
+                        <li>Use performance monitoring tools</li>
+                        <li>Design for flexibility and extension</li>
+                        <li>Plan for different device capabilities</li>
+                        <li>Create clear documentation of loop architecture</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <div id="game-loop-section-intermediate" class="experience-content">
+            <div class="role-section">
+                <h4>For Programmers</h4>
+                <h5>Advanced Game Loop Techniques</h5>
+                <div class="detailed-content">
+                    <h5>Performance Optimization Strategies</h5>
+                    <ul>
+                        <li><strong>Frame Timing Techniques</strong>
+                            <ul>
+                                <li>Fixed timestep vs variable timestep rendering</li>
+                                <li>Interpolation and extrapolation for smooth animations</li>
+                                <li>Managing frame budget</li>
+                            </ul>
+                        </li>
+                        <li><strong>Performance Profiling</strong>
+                            <ul>
+                                <li>Using browser dev tools for performance monitoring</li>
+                                <li>Identifying and resolving bottlenecks</li>
+                                <li>Memory leak detection</li>
+                            </ul>
+                        </li>
+                    </ul>
+
+                    <div class="code-example">
+                        <h6>Advanced Game Loop with Performance Optimization</h6>
+                        <pre><code>
+class OptimizedGameLoop {
+    constructor(targetFPS = 60) {
+        this.targetFrameTime = 1000 / targetFPS;
+        this.lastFrameTime = 0;
+        this.frameAccumulator = 0;
+        this.performanceMetrics = {
+            fps: 0,
+            frameTime: 0,
+            updateTime: 0,
+            renderTime: 0
+        };
+    }
+
+    start() {
+        requestAnimationFrame(this.update.bind(this));
+    }
+
+    update(timestamp) {
+        const deltaTime = timestamp - this.lastFrameTime;
+        this.lastFrameTime = timestamp;
+
+        // Performance tracking
+        const startUpdateTime = performance.now();
+        this.processInput();
+        this.updateGameState(deltaTime);
+        const endUpdateTime = performance.now();
+
+        const startRenderTime = performance.now();
+        this.render();
+        const endRenderTime = performance.now();
+
+        // Update performance metrics
+        this.performanceMetrics = {
+            fps: 1000 / deltaTime,
+            frameTime: deltaTime,
+            updateTime: endUpdateTime - startUpdateTime,
+            renderTime: endRenderTime - startRenderTime
+        };
+
+        // Continue the game loop
+        requestAnimationFrame(this.update.bind(this));
+    }
+}
+                        </code></pre>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="role-section">
+                <h4>For Puzzle Designers</h4>
+                <h5>Designing Engaging Game Loops</h5>
+                <div class="detailed-content">
+                    <h5>Game State Design Principles</h5>
+                    <ul>
+                        <li><strong>State Management Strategies</strong>
+                            <ul>
+                                <li>Finite state machines (FSM)</li>
+                                <li>Hierarchical state machines</li>
+                                <li>Event-driven state transitions</li>
+                            </ul>
+                        </li>
+                        <li><strong>User Experience Considerations</strong>
+                            <ul>
+                                <li>Smooth transitions between game states</li>
+                                <li>Clear visual and interaction feedback</li>
+                                <li>Designing intuitive game flow</li>
+                            </ul>
+                        </li>
+                    </ul>
+
+                    <div class="implementation-detail">
+                        <h6>Example: State Transition Design</h6>
+                        <pre><code>
+// State machine for puzzle game progression
+const PuzzleStateMachine = {
+    MENU: 'menu',
+    TUTORIAL: 'tutorial',
+    PLAYING: 'playing',
+    PAUSED: 'paused',
+    LEVEL_COMPLETE: 'levelComplete',
+    GAME_OVER: 'gameOver',
+
+    transitions: {
+        [this.MENU]: [this.TUTORIAL, this.PLAYING],
+        [this.TUTORIAL]: [this.PLAYING],
+        [this.PLAYING]: [this.PAUSED, this.LEVEL_COMPLETE, this.GAME_OVER],
+        // More transition rules...
+    }
+};
+                        </code></pre>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="role-section">
+                <h4>For Game Makers</h4>
+                <h5>Game Production and Loop Architecture</h5>
+                <div class="detailed-content">
+                    <h5>Cross-Platform Game Loop Considerations</h5>
+                    <ul>
+                        <li><strong>Performance Adaptability</strong>
+                            <ul>
+                                <li>Detecting and handling different device capabilities</li>
+                                <li>Dynamic performance scaling</li>
+                                <li>Graceful degradation</li>
+                            </ul>
+                        </li>
+                        <li><strong>Development Workflow</strong>
+                            <ul>
+                                <li>Modular game loop architecture</li>
+                                <li>Component-based game design</li>
+                                <li>Continuous performance testing</li>
+                            </ul>
+                        </li>
+                    </ul>
+
+                    <div class="implementation-notes">
+                        <h6>Performance Detection Example</h6>
+                        <pre><code>
+class DevicePerformanceManager {
+    constructor() {
+        this.deviceCapabilities = this.detectDeviceCapabilities();
+    }
+
+    detectDeviceCapabilities() {
+        return {
+            cpu: navigator.hardwareConcurrency || 2,
+            memory: navigator.deviceMemory || 4,
+            screenResolution: {
+                width: window.screen.width,
+                height: window.screen.height
+            },
+            touchSupport: 'ontouchstart' in window
+        };
+    }
+
+    adjustGameSettings() {
+        const settings = {
+            renderQuality: this.calculateRenderQuality(),
+            particleCount: this.calculateParticleCount(),
+            updateFrequency: this.calculateUpdateFrequency()
+        };
+        return settings;
+    }
+}
+                        </code></pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div id="game-loop-section-advanced" class="experience-content">
+            <div class="role-section">
+                <h4>For Programmers</h4>
+                <p>Advanced game loop techniques and optimizations...</p>
+                <div class="code-example">
+                    <pre><code>
+function advancedLoop() {
+    // Implementation...
+}
+                    </code></pre>
+                </div>
+            </div>
+            
+            <div class="role-section">
+                <h4>For Puzzle Designers</h4>
+                <p>Complex state management within the loop...</p>
+            </div>
+            
+            <div class="role-section">
+                <h4>For Game Makers</h4>
+                <p>Best practices for performance and stability...</p>
+            </div>
+        </div>
+    </div>
+
+    <h3 id="state-management">1.2 State Management</h3>
+    <div class="code-block">
+        <pre>
+class GameState {
+    constructor() {
+        this.states = {
+            MENU: 'menu',
+            PLAYING: 'playing',
+            PAUSED: 'paused',
+            GAME_OVER: 'gameOver'
+        };
+        this.currentState = this.states.MENU;
+    }
+
+    transition(newState) {
+        if (this.states[newState]) {
+            this.currentState = this.states[newState];
+            this.onStateChange(newState);
+        }
+    }
+
+    onStateChange(state) {
+        // Handle state transition logic
+        console.log(\`Game state changed to: \${state}\`);
+    }
+}
+        </pre>
+    </div>
+    <div class="explanation">
+        <h4>State Management Deep Dive</h4>
+        <p>The GameState class implements a robust state management system using:</p>
+        <ul>
+            <li><strong>Enumerated States:</strong> Clearly defined game states prevent invalid state transitions</li>
+            <li><strong>State Transitions:</strong> Controlled state changes with validation</li>
+            <li><strong>Event Handling:</strong> Hooks for state change events</li>
+        </ul>
+        
+        <h4>Implementation Details:</h4>
+        <ul>
+            <li>States are immutable and defined in constructor</li>
+            <li>State transitions are validated before execution</li>
+            <li>Event system allows for decoupled state change reactions</li>
+        </ul>
+    </div>
+
+    <h3 id="input-handling">1.3 Input Handling</h3>
+    <div class="code-block">
+        <pre>
+class InputManager {
+    constructor() {
+        this.keys = new Map();
+        this.mousePosition = { x: 0, y: 0 };
+        this.clicks = [];
+        this.touchEvents = [];
+        
+        window.addEventListener('keydown', (e) => this.handleKey(e, true));
+        window.addEventListener('keyup', (e) => this.handleKey(e, false));
+        window.addEventListener('mousemove', (e) => this.handleMouseMove(e));
+        window.addEventListener('mousedown', (e) => this.handleMouseDown(e));
+        window.addEventListener('touchstart', (e) => this.handleTouch(e));
+    }
+
+    handleKey(event, pressed) {
+        this.keys.set(event.code, pressed);
+    }
+
+    handleMouseMove(event) {
+        this.mousePosition.x = event.clientX;
+        this.mousePosition.y = event.clientY;
+    }
+
+    isPressed(keyCode) {
+        return this.keys.get(keyCode) || false;
+    }
+
+    // Add touch support for mobile
+    handleTouch(event) {
+        event.preventDefault();
+        const touch = event.touches[0];
+        this.touchEvents.push({
+            x: touch.clientX,
+            y: touch.clientY,
+            timestamp: Date.now()
+        });
+    }
+}
+        </pre>
+    </div>
+    <div class="explanation">
+        <h4>Input System Architecture</h4>
+        <ul>
+            <li>Handles keyboard, mouse, and touch inputs</li>
+            <li>Maintains input state for continuous checking</li>
+            <li>Implements event queue for complex gestures</li>
+            <li>Supports multi-touch and gesture recognition</li>
+        </ul>
+    </div>
+
+    <h3 id="collision">1.4 Collision Detection</h3>
+    <div class="explanation">
+        <h4>Collision Detection Overview</h4>
+        <p>This section will cover basic collision detection techniques suitable for puzzle games.</p>
+        <ul>
+            <li><strong>AABB (Axis-Aligned Bounding Box):</strong> A simple method to check if two rectangles overlap.</li>
+            <li><strong>Circle Collision:</strong> A technique to check if two circles intersect.</li>
+            <li><strong>Pixel Perfect Collision:</strong> Checking for collisions based on the actual pixels of the objects.</li>
+        </ul>
+    </div>
+</div>
+
+<div class="section" id="mechanics">
+    <h2>2. Puzzle Game Mechanics</h2>
+    
+    <h3 id="match3">2.1 Match-3 Mechanics</h3>
+    <div class="code-block">
+        <pre>
+class MatchThree {
+    constructor(width, height) {
+        this.width = width;
+        this.height = height;
+        this.grid = [];
+        this.pieces = ['🔴', '🔵', '🟢', '🟡', '🟣'];
+        this.selected = null;
+        this.initializeGrid();
+    }
+
+    initializeGrid() {
+        for (let y = 0; y < this.height; y++) {
+            this.grid[y] = [];
+            for (let x = 0; x < this.width; x++) {
+                this.grid[y][x] = this.getRandomPiece();
+            }
+        }
+    }
+
+    getRandomPiece() {
+        return this.pieces[Math.floor(Math.random() * this.pieces.length)];
+    }
+
+    checkMatches() {
+        let matches = [];
+        
+        // Check horizontal matches
+        for (let y = 0; y < this.height; y++) {
+            let count = 1;
+            let type = this.grid[y][0];
+            
+            for (let x = 1; x < this.width; x++) {
+                if (this.grid[y][x] === type) {
+                    count++;
+                    if (count >= 3) {
+                        matches.push({
+                            type: 'horizontal',
+                            y: y,
+                            startX: x - count + 1,
+                            length: count
+                        });
+                    }
+                } else {
+                    count = 1;
+                    type = this.grid[y][x];
+                }
+            }
+        }
+
+        // Check vertical matches
+        for (let x = 0; x < this.width; x++) {
+            let count = 1;
+            let type = this.grid[0][x];
+            
+            for (let y = 1; y < this.height; y++) {
+                if (this.grid[y][x] === type) {
+                    count++;
+                    if (count >= 3) {
+                        matches.push({
+                            type: 'vertical',
+                            x: x,
+                            startY: y - count + 1,
+                            length: count
+                        });
+                    }
+                } else {
+                    count = 1;
+                    type = this.grid[y][x];
+                }
+            }
+        }
+
+        return matches;
+    }
+
+    swap(x1, y1, x2, y2) {
+        const temp = this.grid[y1][x1];
+        this.grid[y1][x1] = this.grid[y2][x2];
+        this.grid[y2][x2] = temp;
+    }
+}
+        </pre>
+    </div>
+    <div class="explanation">
+        <h4>Match-3 Game Architecture</h4>
+        <p>This implementation showcases core Match-3 game mechanics:</p>
+        <ul>
+            <li><strong>Grid Management:</strong> 2D array structure for piece tracking</li>
+            <li><strong>Matching Logic:</strong> Horizontal and vertical match detection</li>
+            <li><strong>Piece Management:</strong> Random piece generation and swapping</li>
+        </ul>
+        
+        <h4>Technical Deep-Dive:</h4>
+        <ul>
+            <li>Grid initialization ensures no pre-existing matches</li>
+            <li>Match detection uses linear scanning with counters</li>
+            <li>Swap mechanics include validation and match checking</li>
+            <li>Piece types are managed through emoji arrays for simplicity</li>
+        </ul>
+        
+        <h4>Performance Considerations:</h4>
+        <ul>
+            <li>O(n²) complexity for grid operations</li>
+            <li>Efficient match detection without redundant checks</li>
+            <li>Minimal memory footprint using simple data structures</li>
+        </ul>
+    </div>
+
+    <div class="section" id="match3-details">
+        <div class="explanation">
+            <h4>Match-3 Core Concepts</h4>
+            <p>Match-3 games are built on several fundamental mechanics:</p>
+            <ul>
+                <li><strong>Grid Management:</strong> Handling 2D arrays efficiently</li>
+                <li><strong>Match Detection:</strong> Algorithms for finding connected pieces</li>
+                <li><strong>Cascade Systems:</strong> Managing piece falling and refilling</li>
+                <li><strong>Scoring Systems:</strong> Point calculation and multipliers</li>
+            </ul>
+        </div>
+        
+        <div class="code-example">
+            <h4>Basic Match Detection Algorithm</h4>
+            <pre><code>
+function findMatches(grid) {
+  const matches = [];
+  // Horizontal matches
+  for(let y = 0; y < grid.length; y++) {
+    let count = 1;
+    let current = grid[y][0];
+    
+    for(let x = 1; x < grid[0].length; x++) {
+      if(grid[y][x] === current) {
+        count++;
+      } else {
+        if(count >= 3) {
+          matches.push({
+            type: 'horizontal',
+            start: {x: x - count, y},
+            length: count
+          });
+        }
+        count = 1;
+        current = grid[y][x];
+      }
+    }
+  }
+  return matches;
+}
+            </code></pre>
+        </div>
+    </div>
+
+    <h3 id="sliding">2.2 Sliding Puzzles</h3>
+    <div class="section" id="examples">
+        <h2>3. Sliding Puzzle Implementation</h2>
+        
+        <div class="code-block">
+            <pre>
+class SlidingPuzzle {
+    constructor(size) {
+        this.size = size;
+        this.grid = [];
+        this.emptyCell = { x: size-1, y: size-1 };
+        this.initialize();
+    }
+
+    initialize() {
+        let counter = 1;
+        for (let y = 0; y < this.size; y++) {
+            this.grid[y] = [];
+            for (let x = 0; x < this.size; x++) {
+                this.grid[y][x] = counter++;
+            }
+        }
+        this.grid[this.size-1][this.size-1] = 0; // Empty cell
+    }
+
+    shuffle() {
+        for (let i = 0; i < 1000; i++) {
+            const moves = this.getValidMoves();
+            const randomMove = moves[Math.floor(Math.random() * moves.length)];
+            this.move(randomMove.x, randomMove.y);
+        }
+    }
+
+    getValidMoves() {
+        const moves = [];
+        const { x, y } = this.emptyCell;
+        
+        if (x > 0) moves.push({x: x-1, y});
+        if (x < this.size-1) moves.push({x: x+1, y});
+        if (y > 0) moves.push({x, y: y-1});
+        if (y < this.size-1) moves.push({x, y: y+1});
+        
+        return moves;
+    }
+
+    move(x, y) {
+        const validMoves = this.getValidMoves();
+        const isValid = validMoves.some(move => move.x === x && move.y === y);
+        
+        if (isValid) {
+            this.grid[this.emptyCell.y][this.emptyCell.x] = 
+                this.grid[y][x];
+            this.grid[y][x] = 0;
+            this.emptyCell = {x, y};
+            return true;
+        }
+        return false;
+    }
+
+    isSolved() {
+        let counter = 1;
+        for (let y = 0; y < this.size; y++) {
+            for (let x = 0; x < this.size; x++) {
+                if (y === this.size-1 && x === this.size-1) {
+                    if (this.grid[y][x] !== 0) return false;
+                } else if (this.grid[y][x] !== counter++) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+}
+            </pre>
+        </div>
+        <div class="explanation">
+            <h4>Sliding Puzzle Technical Analysis</h4>
+            <p>The sliding puzzle implementation demonstrates:</p>
+            <ul>
+                <li><strong>Grid Mathematics:</strong> 2D array manipulation for puzzle state</li>
+                <li><strong>Move Validation:</strong> Complex rule checking for legal moves</li>
+                <li><strong>Shuffle Algorithm:</strong> Random but solvable puzzle generation</li>
+            </ul>
+            
+            <h4>Algorithm Analysis:</h4>
+            <ul>
+                <li>Move validation ensures puzzle integrity</li>
+                <li>Shuffle implementation guarantees solvable puzzles</li>
+                <li>Victory condition checking uses linear scanning</li>
+            </ul>
+        </div>
+    </div>
+
+    <h3 id="physics">2.3 Physics-Based Puzzles</h3>
+    <div class="code-block">
+        <pre>
+class PhysicsBody {
+    constructor(x, y, mass) {
+        this.position = { x, y };
+        this.velocity = { x: 0, y: 0 };
+        this.acceleration = { x: 0, y: 0 };
+        this.mass = mass;
+        this.forces = [];
+    }
+
+    applyForce(force) {
+        this.forces.push(force);
+    }
+
+    update(dt) {
+        // Calculate net force
+        let netForce = this.forces.reduce((acc, force) => ({
+            x: acc.x + force.x,
+            y: acc.y + force.y
+        }), { x: 0, y: 0 });
+
+        // F = ma
+        this.acceleration.x = netForce.x / this.mass;
+        this.acceleration.y = netForce.y / this.mass;
+
+        // Update velocity (v = v0 + at)
+        this.velocity.x += this.acceleration.x * dt;
+        this.velocity.y += this.acceleration.y * dt;
+
+        // Update position (p = p0 + vt)
+        this.position.x += this.velocity.x * dt;
+        this.position.y += this.velocity.y * dt;
+
+        // Clear forces for next frame
+        this.forces = [];
+    }
+}
+
+class PhysicsPuzzle {
+    constructor() {
+        this.bodies = [];
+        this.gravity = { x: 0, y: 9.81 };
+        this.lastTime = 0;
+    }
+
+    update(timestamp) {
+        const dt = (timestamp - this.lastTime) / 1000; // Convert to seconds
+        this.lastTime = timestamp;
+
+        for (let body of this.bodies) {
+            // Apply gravity
+            body.applyForce({
+                x: this.gravity.x * body.mass,
+                y: this.gravity.y * body.mass
+            });
+
+            body.update(dt);
+            this.checkCollisions(body);
+        }
+    }
+
+    checkCollisions(body) {
+        // Implement collision detection and response
+    }
+}
+        </pre>
+    </div>
+    <div class="explanation">
+        <h4>Physics Engine Components</h4>
+        <ul>
+            <li>Newtonian physics simulation</li>
+            <li>Force accumulation system</li>
+            <li>Verlet integration for stability</li>
+            <li>Collision detection framework</li>
+        </ul>
+    </div>
+
+    <div class="section" id="physics-details">
+      <h3>Advanced Physics Implementation</h3>
+      
+      <div class="experience-tabs">
+        <button class="experience-tab active" 
+                onclick="switchTab(event, 'beginner', 'physics-section')" 
+                data-level="beginner">Beginner</button>
+        <button class="experience-tab" 
+                onclick="switchTab(event, 'intermediate', 'physics-section')" 
+                data-level="intermediate">Intermediate</button>
+        <button class="experience-tab" 
+                onclick="switchTab(event, 'advanced', 'physics-section')" 
+                data-level="advanced">Advanced</button>
+      </div>
+
+      <div id="physics-section-beginner" class="experience-content active">
+        <div class="role-section">
+          <h4>For Programmers</h4>
+          <h5>Basic Physics Elements</h5>
+          <ul>
+            <li>Simple velocity and acceleration</li>
+            <li>Basic collision detection</li>
+            <li>Gravity implementation</li>
+          </ul>
+          <div class="code-example">
+            <pre><code>
+class BasicPhysicsBody {
+  constructor(x, y) {
+    this.pos = {x, y};
+    this.vel = {x: 0, y: 0};
+    this.acc = {x: 0, y: 0};
+  }
+
+  update(dt) {
+    // Update position based on velocity
+    this.pos.x += this.vel.x * dt;
+    this.pos.y += this.vel.y * dt;
+    
+    // Update velocity based on acceleration
+    this.vel.x += this.acc.x * dt;
+    this.vel.y += this.acc.y * dt;
+  }
+}
+            </code></pre>
+          </div>
+        </div>
+        
+        <div class="role-section">
+          <h4>For Puzzle Designers</h4>
+          <h5>Physics Design Elements</h5>
+          <ul>
+            <li>Understanding basic forces</li>
+            <li>Creating engaging physics puzzles</li>
+            <li>Balancing difficulty with physics</li>
+          </ul>
+        </div>
+      </div>
+
+      <div id="physics-section-intermediate" class="experience-content">
+        <div class="role-section">
+          <h4>For Programmers</h4>
+          <h5>Advanced Physics Systems</h5>
+          <div class="detailed-content">
+              <h6>Physics Engine Components</h6>
+              <ul>
+                  <li>Collision Detection
+                      <div class="implementation-detail">
+                          <p>Advanced techniques:</p>
+                          <ul>
+                              <li>Broad-phase collision detection</li>
+                              <li>Narrow-phase collision resolution</li>
+                              <li>Continuous collision detection</li>
+                          </ul>
+                      </div>
+                  </li>
+                  <li>Force Systems
+                      <div class="implementation-detail">
+                          <p>Implementation details:</p>
+                          <ul>
+                              <li>Force accumulation</li>
+                              <li>Impulse resolution</li>
+                              <li>Constraint solving</li>
+                          </ul>
+                      </div>
+                  </li>
+              </ul>
+
+              <div class="code-example">
+                  <h6>Physics System Implementation</h6>
+                  <pre><code>
+class PhysicsSystem {
+    constructor() {
+        this.bodies = [];
+        this.constraints = [];
+        this.collisionPairs = [];
+    }
+
+    update(deltaTime) {
+        this.updateForces();
+        this.detectCollisions();
+        this.resolveCollisions();
+        this.updatePositions(deltaTime);
+        this.satisfyConstraints();
+    }
+
+    detectCollisions() {
+        // Broad phase
+        this.collisionPairs = this.broadPhase();
+        
+        // Narrow phase
+        this.collisionPairs.forEach(pair => {
+            this.narrowPhase(pair);
+        });
+    }
+
+    resolveCollisions() {
+        this.collisionPairs.forEach(pair => {
+            this.resolveCollision(pair);
+        });
+    }
+}
+                  </code></pre>
+              </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="physics-section-advanced" class="experience-content">
+        <div class="role-section">
+            <h4>For Advanced Programmers</h4>
+            <div class="detailed-content">
+                <h5>Advanced Physics Engine Implementation</h5>
+                
+                <div class="implementation-detail">
+                    <h6>Advanced Collision Systems</h6>
+                    <pre><code>
+class SpatialHashGrid {
+    constructor(cellSize) {
+        this.cellSize = cellSize;
+        this.grid = new Map();
+        this.bodies = new Set();
+    }
+
+    insertBody(body) {
+        const cells = this.getCellsForBody(body);
+        cells.forEach(cell => {
+            if (!this.grid.has(cell)) {
+                this.grid.set(cell, new Set());
+            }
+            this.grid.get(cell).add(body);
+        });
+        this.bodies.add(body);
+    }
+
+    getPotentialCollisions(body) {
+        const cells = this.getCellsForBody(body);
+        const potentialCollisions = new Set();
+
+        cells.forEach(cell => {
+            if (this.grid.has(cell)) {
+                this.grid.get(cell).forEach(other => {
+                    if (body !== other) {
+                        potentialCollisions.add(other);
+                    }
+                });
+            }
+        });
+
+        return Array.from(potentialCollisions);
+    }
+
+    getCellsForBody(body) {
+        // Calculate grid cells that body occupies
+        const minX = Math.floor(body.bounds.min.x / this.cellSize);
+        const maxX = Math.floor(body.bounds.max.x / this.cellSize);
+        const minY = Math.floor(body.bounds.min.y / this.cellSize);
+        const maxY = Math.floor(body.bounds.max.y / this.cellSize);
+        
+        const cells = [];
+        for (let x = minX; x <= maxX; x++) {
+            for (let y = minY; y <= maxY; y++) {
+                cells.push(\`\${x},\${y}\`);
+            }
+        }
+        return cells;
+    }
+}
+                    </code></pre>
+                </div>
+
+                <div class="implementation-detail">
+                    <h6>Constraint Solver Implementation</h6>
+                    <pre><code>
+class ConstraintSolver {
+    constructor(iterations = 10) {
+        this.iterations = iterations;
+    }
+
+    solve(constraints, dt) {
+        for (let i = 0; i < this.iterations; i++) {
+            constraints.forEach(constraint => {
+                const { bodyA, bodyB, length, stiffness } = constraint;
+                
+                // Calculate current distance
+                const delta = {
+                    x: bodyB.position.x - bodyA.position.x,
+                    y: bodyB.position.y - bodyA.position.y
+                };
+                const distance = Math.sqrt(delta.x * delta.x + delta.y * delta.y);
+                
+                // Skip if bodies are at the correct distance
+                if (Math.abs(distance - length) < 0.0001) return;
+                
+                // Calculate correction factor
+                const diff = (distance - length) / distance;
+                const correction = {
+                    x: delta.x * diff * 0.5 * stiffness,
+                    y: delta.y * diff * 0.5 * stiffness
+                };
+                
+                // Apply correction
+                if (!bodyA.isStatic) {
+                    bodyA.position.x += correction.x;
+                    bodyA.position.y += correction.y;
+                }
+                if (!bodyB.isStatic) {
+                    bodyB.position.x -= correction.x;
+                    bodyB.position.y -= correction.y;
+                }
+            });
+        }
+    }
+}
+                    </code></pre>
+                </div>
+            </div>
+        </div>
+    </div>
+    </div>
+</div>
+
+<div class="section" id="algorithms">
+    <h2>3. Essential Algorithms</h2>
+
+    <h3 id="flood-fill">3.1 Flood Fill</h3>
+    <div class="code-block">
+        <pre>
+function floodFill(grid, x, y, targetColor, replacementColor) {
+    if (x < 0 || x >= grid[0].length || y < 0 || y >= grid.length) return;
+    if (grid[y][x] !== targetColor) return;
+    
+    grid[y][x] = replacementColor;
+
+    floodFill(grid, x + 1, y, targetColor, replacementColor);
+    floodFill(grid, x - 1, y, targetColor, replacementColor);
+    floodFill(grid, x, y + 1, targetColor, replacementColor);
+    floodFill(grid, x, y - 1, targetColor, replacementColor);
+}
+        </pre>
+    </div>
+    <div class="explanation">
+        <h4>Flood Fill Algorithm Overview</h4>
+        <p>The flood fill algorithm is commonly used for:</p>
+        <ul>
+            <li>Filling an area with a specific color in graphics applications.</li>
+            <li>Finding connected regions in grid-based games.</li>
+        </ul>
+    </div>
+</div>
+
+<div class="section" id="advanced">
+    <h2>4. Advanced Concepts</h2>
+
+    <h3 id="optimization">4.1 Performance Optimization</h3>
+    <div class="explanation">
+        <h4>Performance Optimization Techniques</h4>
+        <p>Optimization is crucial for ensuring games run smoothly. Key techniques include:</p>
+        <ul>
+            <li>Reducing draw calls by batching.</li>
+            <li>Implementing object pooling to minimize garbage collection.</li>
+            <li>Using efficient data structures for game state management.</li>
+        </ul>
+    </div>
+
+    <h3 id="procedural">4.2 Procedural Generation</h3>
+    <div class="section" id="puzzle-generation">
+        <h2>Puzzle Generation Algorithms</h2>
+        
+        <h3>Constraint-Based Generation</h3>
+        <div class="code-block">
+            <pre>
+class PuzzleGenerator {
+    constructor(constraints) {
+        this.constraints = constraints;
+        this.solution = null;
+    }
+
+    generate() {
+        this.solution = this.buildInitialState();
+        while (!this.meetsAllConstraints()) {
+            this.adjustSolution();
+        }
+        return this.createPuzzleFromSolution();
+    }
+
+    meetsAllConstraints() {
+        return this.constraints.every(c => c.check(this.solution));
+    }
+}
+            </pre>
+        </div>
+        <div class="explanation">
+            <h4>Constraint Types</h4>
+            <ul>
+                <li>Logical constraints (rule-based)</li>
+                <li>Spatial constraints (geometry/layout)</li>
+                <li>Difficulty constraints (complexity measures)</li>
+                <li>Theme constraints (aesthetic/narrative)</li>
+            </ul>
+        </div>
+    </div>
+
+    <h3 id="ai">4.3 Puzzle AI & Solvers</h3>
+    <div class="section" id="puzzle-solving">
+        <h2>Puzzle Solving Algorithms</h2>
+        
+        <h3>Search Algorithms</h3>
+        <div class="code-block">
+            <pre>
+class PuzzleSolver {
+    constructor(initialState) {
+        this.initialState = initialState;
+        this.visited = new Set();
+    }
+
+    async solve() {
+        const queue = [this.initialState];
+        while (queue.length > 0) {
+            const current = queue.shift();
+            if (this.isGoalState(current)) {
+                return this.reconstructPath(current);
+            }
+            
+            for (const next of this.getNextStates(current)) {
+                if (!this.visited.has(this.stateToString(next))) {
+                    queue.push(next);
+                    this.visited.add(this.stateToString(next));
+                }
+            }
+        }
+        return null;
+    }
+}
+            </pre>
+        </div>
+        <div class="explanation">
+            <h4>Solving Strategies</h4>
+            <ul>
+                <li>Breadth-first search for optimal solutions</li>
+                <li>A* search for efficiency</li>
+                <li>IDA* for memory-constrained environments</li>
+                <li>Pattern databases for complex puzzles</li>
+            </ul>
+        </div>
+    </div>
+
+    <h3 id="multiplayer">4.4 Multiplayer Architecture</h3>
+    <div class="explanation">
+        <h4>Multiplayer Game Design</h4>
+        <p>Creating engaging multiplayer experiences requires:</p>
+        <ul>
+            <li>Efficient networking code.</li>
+            <li>State synchronization techniques.</li>
+            <li>Handling latency and player interactions.</li>
+        </ul>
+    </div>
+</div>
+
+<div class="section" id="polish">
+    <h2>5. Game Polish</h2>
+
+    <h3 id="animations">5.1 Animation Systems</h3>
+    <div class="experience-tabs">
+        <button class="experience-tab active" 
+                onclick="switchTab(event, 'beginner', 'animations-section')" 
+                data-level="beginner">Beginner</button>
+        <button class="experience-tab" 
+                onclick="switchTab(event, 'intermediate', 'animations-section')" 
+                data-level="intermediate">Intermediate</button>
+        <button class="experience-tab" 
+                onclick="switchTab(event, 'advanced', 'animations-section')" 
+                data-level="advanced">Advanced</button>
+    </div>
+
+    <div id="animations-section-beginner" class="experience-content active">
+        <div class="role-section">
+            <h4>For Programmers</h4>
+            <div class="explanation">
+                <h5>Introduction to Game Animation</h5>
+                <p>Animation brings life and dynamism to game interfaces and characters. At its core, animation is about creating the illusion of movement through sequential images or transformations.</p>
+                
+                <div class="code-example">
+                    <h6>Basic CSS Animation Example</h6>
+                    <pre><code>
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.puzzle-piece {
+    animation: fadeIn 0.5s ease-in;
+}
+                    </code></pre>
+                </div>
+
+                <h6>Core Animation Concepts</h6>
+                <ul>
+                    <li>Keyframe animations</li>
+                    <li>Transition timing functions</li>
+                    <li>CSS and JavaScript animation techniques</li>
+                </ul>
+            </div>
+        </div>
+        
+        <div class="role-section">
+            <h4>For Puzzle Designers</h4>
+            <div class="explanation">
+                <h5>Animation in Puzzle Design</h5>
+                <p>Animations serve multiple purposes in puzzle games:</p>
+                <ul>
+                    <li>Provide visual feedback for user actions</li>
+                    <li>Indicate game state changes</li>
+                    <li>Enhance user engagement</li>
+                </ul>
+
+                <div class="implementation-notes">
+                    <h6>Designing Meaningful Animations</h6>
+                    <ol>
+                        <li>Keep animations short (300-500ms)</li>
+                        <li>Ensure animations clarify game mechanics</li>
+                        <li>Use consistent animation styles</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="animations-section-intermediate" class="experience-content">
+        <div class="role-section">
+            <h4>For Programmers</h4>
+            <div class="detailed-content">
+                <h5>Advanced Animation Techniques</h5>
+                <div class="code-example">
+                    <h6>JavaScript Animation with Web Animations API</h6>
+                    <pre><code>
+class PuzzleAnimator {
+    constructor(element) {
+        this.element = element;
+    }
+
+    slideIn(direction = 'right') {
+        const keyframes = {
+            transform: [
+                direction === 'right' 
+                    ? 'translateX(-100%)' 
+                    : 'translateX(100%)',
+                'translateX(0)'
+            ]
+        };
+
+        const options = {
+            duration: 500,
+            easing: 'cubic-bezier(0.25, 0.1, 0.25, 1)',
+            fill: 'forwards'
+        };
+
+        return this.element.animate(keyframes, options);
+    }
+}
+                    </code></pre>
+                </div>
+
+                <h6>Performance Optimization Techniques</h6>
+                <ul>
+                    <li>Use transform and opacity for GPU acceleration</li>
+                    <li>Implement requestAnimationFrame()</li>
+                    <li>Minimize DOM manipulations</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <div id="animations-section-advanced" class="experience-content">
+        <div class="role-section">
+            <h4>For Programmers</h4>
+            <div class="detailed-content">
+                <h5>Complex Animation Systems</h5>
+                <div class="code-example">
+                    <h6>State-Based Animation Engine</h6>
+                    <pre><code>
+class AnimationEngine {
+    constructor() {
+        this.animations = new Map();
+        this.globalTimeline = gsap.timeline();
+    }
+
+    registerAnimation(name, targets, keyframes, options) {
+        const animation = gsap.to(targets, {
+            ...keyframes,
+            ...options,
+            paused: true
+        });
+        this.animations.set(name, animation);
+    }
+
+    playSequence(sequenceName, animations) {
+        const timeline = gsap.timeline();
+        animations.forEach(animName => {
+            timeline.add(this.animations.get(animName));
+        });
+        return timeline;
+    }
+}
+                    </code></pre>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <h3 id="particles">5.2 Particle Effects</h3>
+    <div class="experience-tabs">
+        <button class="experience-tab active" 
+                onclick="switchTab(event, 'beginner', 'particles-section')" 
+                data-level="beginner">Beginner</button>
+        <button class="experience-tab" 
+                onclick="switchTab(event, 'intermediate', 'particles-section')" 
+                data-level="intermediate">Intermediate</button>
+        <button class="experience-tab" 
+                onclick="switchTab(event, 'advanced', 'particles-section')" 
+                data-level="advanced">Advanced</button>
+    </div>
+
+    <div id="particles-section-beginner" class="experience-content active">
+        <div class="role-section">
+            <h4>For Programmers</h4>
+            <div class="explanation">
+                <h5>Introduction to Particle Systems</h5>
+                <p>Particle systems simulate complex natural phenomena through multiple small, independently moving elements.</p>
+                
+                <div class="code-example">
+                    <h6>Basic Particle Class</h6>
+                    <pre><code>
+class Particle {
+    constructor(x, y) {
+        this.x = x;
+        this.y = y;
+        this.velocity = { 
+            x: Math.random() * 2 - 1, 
+            y: Math.random() * 2 - 1 
+        };
+        this.life = 100;
+    }
+
+    update() {
+        this.x += this.velocity.x;
+        this.y += this.velocity.y;
+        this.life--;
+    }
+}
+                    </code></pre>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <h3 id="sound">5.3 Sound Management</h3>
+    <div class="experience-tabs">
+        <button class="experience-tab active" 
+                onclick="switchTab(event, 'beginner', 'sound-section')" 
+                data-level="beginner">Beginner</button>
+        <button class="experience-tab" 
+                onclick="switchTab(event, 'intermediate', 'sound-section')" 
+                data-level="intermediate">Intermediate</button>
+        <button class="experience-tab" 
+                onclick="switchTab(event, 'advanced', 'sound-section')" 
+                data-level="advanced">Advanced</button>
+    </div>
+
+    <div id="sound-section-beginner" class="experience-content active">
+        <div class="role-section">
+            <h4>For Game Makers</h4>
+            <div class="explanation">
+                <h5>Sound Design Fundamentals</h5>
+                <p>Sound creates emotional engagement and provides critical gameplay feedback.</p>
+                
+                <div class="code-example">
+                    <h6>Basic Web Audio API Implementation</h6>
+                    <pre><code>
+class SoundManager {
+    constructor() {
+        this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        this.sounds = new Map();
+    }
+
+    async loadSound(name, url) {
+        const response = await fetch(url);
+        const arrayBuffer = await this.audioContext.decodeAudioData(arrayBuffer);
+        this.sounds.set(name, audioBuffer);
+    }
+
+    playSound(name) {
+        const source = this.audioContext.createBufferSource();
+        source.buffer = this.sounds.get(name);
+        source.connect(this.audioContext.destination);
+        source.start(0);
+    }
+}
+                    </code></pre>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <h3 id="ux">5.4 User Experience</h3>
+    <div class="experience-tabs">
+        <button class="experience-tab active" 
+                onclick="switchTab(event, 'beginner', 'ux-section')" 
+                data-level="beginner">Beginner</button>
+        <button class="experience-tab" 
+                onclick="switchTab(event, 'intermediate', 'ux-section')" 
+                data-level="intermediate">Intermediate</button>
+        <button class="experience-tab" 
+                onclick="switchTab(event, 'advanced', 'ux-section')" 
+                data-level="advanced">Advanced</button>
+    </div>
+
+    <div id="ux-section-beginner" class="experience-content active">
+        <div class="role-section">
+            <h4>For Puzzle Designers</h4>
+            <div class="explanation">
+                <h5>UX Principles in Puzzle Games</h5>
+                <p>Great UX transforms a good puzzle game into an exceptional experience.</p>
+                
+                <ul>
+                    <li><strong>Clarity:</strong> Intuitive interface design</li>
+                    <li><strong>Feedback:</strong> Clear response to player actions</li>
+                    <li><strong>Progression:</strong> Smooth learning curve</li>
+                </ul>
+
+                <div class="implementation-notes">
+                    <h6>UX Design Checklist</h6>
+                    <ol>
+                        <li>Create clear, visible game objectives</li>
+                        <li>Design intuitive control schemes</li>
+                        <li>Implement contextual tutorials</li>
+                        <li>Provide immediate action feedback</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="section" id="match3-demo">
+    <h3>Match-3 Interactive Demo</h3>
+    <div id="game-grid" class="demo"></div>
+</div>
+
+<script>
+// Game class implementation
+class Game {
+  constructor() {
+    this.states = {
+      MENU: 'menu',
+      PLAYING: 'playing',
+      PAUSED: 'paused',
+      GAME_OVER: 'gameOver'
+    };
+    this.currentState = this.states.MENU;
+    this.lastFrameTime = 0;
+    this.init();
+  }
+
+  init() {
+    // Initialize game components
+    this.gameLoop = new GameLoop();
+    this.inputManager = new InputManager();
+    this.renderer = new Renderer();
+  }
+
+  update(timestamp) {
+    const deltaTime = timestamp - this.lastFrameTime;
+    this.lastFrameTime = timestamp;
+
+    switch(this.currentState) {
+      case this.states.PLAYING:
+        this.gameLoop.update(deltaTime);
+        break;
+      case this.states.PAUSED:
+        // Handle paused state
+        break;
+      case this.states.MENU:
+        // Handle menu state
+        break;
+      case this.states.GAME_OVER:
+        // Handle game over state
+        break;
+    }
+
+    this.renderer.render();
+    requestAnimationFrame(this.update.bind(this));
+  }
+
+  start() {
+    this.currentState = this.states.PLAYING;
+    requestAnimationFrame(this.update.bind(this));
+  }
+}
+
+// Supporting classes
+class GameLoop {
+  constructor() {
+    this.entities = [];
+  }
+
+  update(deltaTime) {
+    // Update game logic
+    this.entities.forEach(entity => entity.update(deltaTime));
+  }
+}
+
+class InputManager {
+  constructor() {
+    this.keys = new Map();
+    this.setupEventListeners();
+  }
+
+  setupEventListeners() {
+    window.addEventListener('keydown', (e) => this.handleKey(e, true));
+    window.addEventListener('keyup', (e) => this.handleKey(e, false));
+  }
+
+  handleKey(event, pressed) {
+    this.keys.set(event.code, pressed);
+  }
+}
+
+class Renderer {
+  constructor() {
+    this.canvas = document.createElement('canvas');
+    this.context = this.canvas.getContext('2d');
+  }
+
+  render() {
+    // Implement rendering logic
+  }
+}
+
+// Match-3 Implementation
+class MatchThree {
+    constructor(width, height) {
+        this.width = width;
+        this.height = height;
+        this.grid = [];
+        this.selected = null;
+        this.pieces = ['🔴', '🔵', '🟢', '🟡', '🟣'];
+        this.initializeGrid();
+    }
+
+    initializeGrid() {
+        for (let y = 0; y < this.height; y++) {
+            this.grid[y] = [];
+            for (let x = 0; x < this.width; x++) {
+                this.grid[y][x] = this.getRandomPiece();
+            }
+        }
+    }
+
+    getRandomPiece() {
+        return this.pieces[Math.floor(Math.random() * this.pieces.length)];
+    }
+
+    swap(x1, y1, x2, y2) {
+        const temp = this.grid[y1][x1];
+        this.grid[y1][x1] = this.grid[y2][x2];
+        this.grid[y2][x2] = temp;
+    }
+
+    checkMatches() {
+        let matches = [];
+        
+        // Check horizontal matches
+        for (let y = 0; y < this.height; y++) {
+            let count = 1;
+            let type = this.grid[y][0];
+            
+            for (let x = 1; x < this.width; x++) {
+                if (this.grid[y][x] === type) {
+                    count++;
+                    if (count >= 3) {
+                        matches.push({
+                            type: 'horizontal',
+                            y: y,
+                            startX: x - count + 1,
+                            length: count
+                        });
+                    }
+                } else {
+                    count = 1;
+                    type = this.grid[y][x];
+                }
+            }
+        }
+
+        // Check vertical matches
+        for (let x = 0; x < this.width; x++) {
+            let count = 1;
+            let type = this.grid[0][x];
+            
+            for (let y = 1; y < this.height; y++) {
+                if (this.grid[y][x] === type) {
+                    count++;
+                    if (count >= 3) {
+                        matches.push({
+                            type: 'vertical',
+                            x: x,
+                            startY: y - count + 1,
+                            length: count
+                        });
+                    }
+                } else {
+                    count = 1;
+                    type = this.grid[y][x];
+                }
+            }
+        }
+
+        return matches;
+    }
+}
+
+// New switchTab function
+function switchTab(event, level, sectionId) {
+    if (!event || !event.target) return;
+    
+    // Find the section container
+    const section = event.target.closest('.section');
+    if (!section) return;
+    
+    // Find the parent tab container 
+    const tabContainer = event.target.closest('.experience-tabs');
+    if (!tabContainer) return;
+
+    // Get all tabs and content within this section
+    const tabs = tabContainer.querySelectorAll('.experience-tab');
+    const contents = section.querySelectorAll('.experience-content');
+
+    // Remove active class from all tabs and content
+    tabs.forEach(tab => tab.classList.remove('active'));
+    contents.forEach(content => content.classList.remove('active'));
+
+    // Add active class to clicked tab
+    event.target.classList.add('active');
+
+    // Find and show the corresponding content
+    const targetContent = section.querySelector(`#${sectionId}-${level}`);
+    if (targetContent) {
+        targetContent.classList.add('active');
+    }
+}
+
+// Add this code to ensure the tabs are initialized when the page loads
+document.addEventListener('DOMContentLoaded', function() {
+    // Find all tab containers
+    const tabContainers = document.querySelectorAll('.experience-tabs');
+    
+    // Initialize each container
+    tabContainers.forEach(container => {
+        const firstTab = container.querySelector('.experience-tab');
+        if (firstTab) {
+            // Simulate click on first tab
+            firstTab.click();
+        }
+    });
+});
+
+// Initialize Match-3 Demo
+document.addEventListener('DOMContentLoaded', function() {
+    const gameGridEl = document.getElementById('game-grid');
+    if (gameGridEl) {
+        const match3Demo = new class {
+            constructor() {
+                this.game = new MatchThree(6, 6);
+                this.render();
+            }
+
+            render() {
+                const grid = document.getElementById('game-grid');
+                if (!grid) {
+                    console.error('Game grid element not found');
+                    return;
+                }
+                grid.style.display = 'grid';
+                grid.style.gridTemplateColumns = `repeat(${this.game.width}, 50px)`;
+                grid.style.gap = '2px';
+                grid.innerHTML = '';
+
+                for (let y = 0; y < this.game.height; y++) {
+                    for (let x = 0; x < this.game.width; x++) {
+                        const cell = document.createElement('div');
+                        cell.style.width = '50px';
+                        cell.style.height = '50px';
+                        cell.style.background = '#fff';
+                        cell.style.display = 'flex';
+                        cell.style.alignItems = 'center';
+                        cell.style.justifyContent = 'center';
+                        cell.style.fontSize = '2em';
+                        cell.textContent = this.game.grid[y][x];
+                        
+                        cell.onclick = () => this.handleClick(x, y);
+                        
+                        grid.appendChild(cell);
+                    }
+                }
+            }
+
+            handleClick(x, y) {
+                if (!this.game.selected) {
+                    this.game.selected = {x, y};
+                    this.highlightCell(x, y);
+                } else {
+                    const {x: prevX, y: prevY} = this.game.selected;
+                    if (this.isAdjacent(prevX, prevY, x, y)) {
+                        this.game.swap(prevX, prevY, x, y);
+                        this.game.selected = null;
+                        this.render();
+                        
+                        const matches = this.game.checkMatches();
+                        if (matches.length > 0) {
+                            console.log('Match found!', matches);
+                        } else {
+                            this.game.swap(prevX, prevY, x, y); // Swap back
+                            this.render();
+                        }
+                    } else {
+                        this.game.selected = {x, y};
+                        this.render();
+                        this.highlightCell(x, y);
+                    }
+                }
+            }
+
+            highlightCell(x, y) {
+                const cells = document.getElementById('game-grid').children;
+                const index = y * this.game.width + x;
+                cells[index].style.background = '#e0e0e0';
+            }
+
+            isAdjacent(x1, y1, x2, y2) {
+                return Math.abs(x1 - x2) + Math.abs(y1 - y2) === 1;
+            }
+        }();
+    }
+});
+</script>
+</body></html>

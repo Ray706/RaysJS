@@ -1,0 +1,610 @@
+<html><head><base href="." target="_blank">
+<style>
+  body {
+    font-family: 'Inter', system-ui, sans-serif;
+    line-height: 1.6;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+    background: #f0f2f5;
+    color: #2c3e50;
+  }
+  
+  .nav-menu {
+    position: fixed;
+    top: 20px;
+    left: 20px;
+    width: 250px;
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  }
+  
+  .content {
+    margin-left: 300px;
+  }
+  
+  .example-container {
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    margin: 20px 0;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  }
+  
+  .game-canvas {
+    border: 2px solid #34495e;
+    border-radius: 5px;
+  }
+  
+  code {
+    background: #f8f9fa;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: 'Fira Code', monospace;
+  }
+  
+  pre {
+    background: #2c3e50;
+    color: #ecf0f1;
+    padding: 15px;
+    border-radius: 8px;
+    overflow-x: auto;
+  }
+  
+  button {
+    background: #3498db;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background 0.3s;
+  }
+  
+  button:hover {
+    background: #2980b9;
+  }
+  
+  h1, h2, h3 {
+    color: #2c3e50;
+  }
+  
+  .section {
+    margin-bottom: 40px;
+  }
+</style>
+</head><body>
+
+<div class="nav-menu">
+  <h3>Contents</h3>
+  <ul>
+    <li><a href="#basics">Basic Concepts</a></li>
+    <li><a href="#game-loop">Game Loop</a></li>
+    <li><a href="#sprites">Sprite Movement</a></li>
+    <li><a href="#collision">Collision Detection</a></li>
+    <li><a href="#input">Input Handling</a></li>
+    <li><a href="#advanced">Advanced Topics</a></li>
+  </ul>
+</div>
+
+<div class="content">
+  <h1>JavaScript Game Programming Guide</h1>
+  
+  <div class="section" id="basics">
+    <h2>Basic Concepts</h2>
+    <p>Game programming in JavaScript typically involves these core concepts:</p>
+    <ul>
+      <li>Canvas rendering</li>
+      <li>Game loop</li>
+      <li>Sprite management</li>
+      <li>Input handling</li>
+      <li>Collision detection</li>
+    </ul>
+  </div>
+
+  <div class="section" id="game-loop">
+    <h2>Game Loop Example</h2>
+    <div class="example-container">
+      <canvas id="gameLoopDemo" class="game-canvas" width="400" height="200"></canvas>
+      <button onclick="toggleGameLoop()">Start/Stop</button>
+      <pre>
+const canvas = document.getElementById('gameLoopDemo');
+const ctx = canvas.getContext('2d');
+
+let isRunning = false;
+let position = 0;
+
+function gameLoop() {
+    if (!isRunning) return;
+    
+    // Clear canvas
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    // Update
+    position = (position + 2) % canvas.width;
+    
+    // Draw
+    ctx.fillStyle = '#3498db';
+    ctx.beginPath();
+    ctx.arc(position, canvas.height/2, 20, 0, Math.PI * 2);
+    ctx.fill();
+    
+    requestAnimationFrame(gameLoop);
+}
+
+function toggleGameLoop() {
+    isRunning = !isRunning;
+    if (isRunning) gameLoop();
+      </pre>
+    </div>
+  </div>
+
+  <div class="section" id="sprites">
+    <h2>Sprite Movement</h2>
+    <div class="example-container">
+      <canvas id="spriteDemo" class="game-canvas" width="400" height="200"></canvas>
+      <pre>
+class Sprite {
+    constructor(x, y, color) {
+        this.x = x;
+        this.y = y;
+        this.color = color;
+        this.speed = 2;
+        this.size = 30;
+    }
+
+    update() {
+        this.x += this.speed;
+        if (this.x > 400 || this.x < 0) this.speed *= -1;
+    }
+
+    draw(ctx) {
+        ctx.fillStyle = this.color;
+        ctx.fillRect(this.x, this.y, this.size, this.size);
+    }
+}
+      </pre>
+    </div>
+  </div>
+
+  <div class="section" id="collision">
+    <h2>Collision Detection</h2>
+    <div class="example-container">
+      <canvas id="collisionDemo" class="game-canvas" width="400" height="200"></canvas>
+      <pre>
+function checkCollision(rect1, rect2) {
+    return rect1.x < rect2.x + rect2.width &&
+           rect1.x + rect1.width > rect2.x &&
+           rect1.y < rect2.y + rect2.height &&
+           rect1.y + rect1.height > rect2.y;
+}
+      </pre>
+    </div>
+  </div>
+
+  <div class="section" id="input">
+    <h2>Input Handling</h2>
+    <div class="example-container">
+      <canvas id="inputDemo" class="game-canvas" width="400" height="200"></canvas>
+      <pre>
+const keys = {};
+
+window.addEventListener('keydown', (e) => {
+    keys[e.key] = true;
+});
+
+window.addEventListener('keyup', (e) => {
+    keys[e.key] = false;
+});
+
+function handleInput(player) {
+    if (keys['ArrowLeft']) player.x -= player.speed;
+    if (keys['ArrowRight']) player.x += player.speed;
+    if (keys['ArrowUp']) player.y -= player.speed;
+    if (keys['ArrowDown']) player.y += player.speed;
+}
+      </pre>
+    </div>
+  </div>
+
+  <div class="section" id="advanced">
+    <h2>Advanced Topics</h2>
+    
+    <div class="example-container">
+      <h3>Particle Systems</h3>
+      <canvas id="particleDemo" class="game-canvas" width="400" height="200"></canvas>
+      <button onclick="toggleParticles()">Toggle Particles</button>
+      <pre>
+class Particle {
+    constructor(x, y) {
+        this.x = x;
+        this.y = y;
+        this.vx = (Math.random() - 0.5) * 4;
+        this.vy = (Math.random() - 0.5) * 4;
+        this.life = 1.0;
+    }
+
+    update() {
+        this.x += this.vx;
+        this.y += this.vy;
+        this.life -= 0.01;
+    }
+
+    draw(ctx) {
+        ctx.fillStyle = \`rgba(52, 152, 219, \${this.life})\`;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, 5 * this.life, 0, Math.PI * 2);
+        ctx.fill();
+    }
+}
+      </pre>
+    </div>
+
+    <div class="example-container">
+      <h3>State Management</h3>
+      <canvas id="stateDemo" class="game-canvas" width="400" height="200"></canvas>
+      <button onclick="toggleGameState()">Toggle State</button>
+      <pre>
+class GameState {
+    constructor() {
+        this.state = 'MENU';
+        this.states = {
+            MENU: {
+                update: () => {},
+                draw: (ctx) => {
+                    ctx.fillStyle = '#2c3e50';
+                    ctx.font = '24px Arial';
+                    ctx.fillText('MENU STATE', 150, 100);
+                }
+            },
+            PLAYING: {
+                update: () => {},
+                draw: (ctx) => {
+                    ctx.fillStyle = '#27ae60';
+                    ctx.font = '24px Arial';
+                    ctx.fillText('PLAYING STATE', 150, 100);
+                }
+            }
+        };
+    }
+
+    setState(newState) {
+        this.state = newState;
+    }
+
+    update() {
+        this.states[this.state].update();
+    }
+
+    draw(ctx) {
+        this.states[this.state].draw(ctx);
+    }
+}
+      </pre>
+    </div>
+
+    <div class="example-container">
+      <h3>Scene Graph & Transform Hierarchies</h3>
+      <canvas id="sceneDemo" class="game-canvas" width="400" height="200"></canvas>
+      <pre>
+class GameObject {
+    constructor(x, y, rotation = 0) {
+        this.x = x;
+        this.y = y;
+        this.rotation = rotation;
+        this.children = [];
+    }
+
+    addChild(child) {
+        this.children.push(child);
+    }
+
+    update() {
+        this.rotation += 0.02;
+        this.children.forEach(child => child.update());
+    }
+
+    draw(ctx, parentX = 0, parentY = 0, parentRotation = 0) {
+        const worldX = parentX + this.x * Math.cos(parentRotation) - 
+                      this.y * Math.sin(parentRotation);
+        const worldY = parentY + this.x * Math.sin(parentRotation) + 
+                      this.y * Math.cos(parentRotation);
+        
+        ctx.fillStyle = '#e74c3c';
+        ctx.beginPath();
+        ctx.arc(worldX, worldY, 10, 0, Math.PI * 2);
+        ctx.fill();
+
+        this.children.forEach(child => 
+            child.draw(ctx, worldX, worldY, parentRotation + this.rotation));
+    }
+}
+      </pre>
+    </div>
+  </div>
+</div>
+
+<script>
+// Game State Class Definition
+class GameState {
+    constructor() {
+        this.state = 'MENU';
+        this.states = {
+            MENU: {
+                update: () => {},
+                draw: (ctx) => {
+                    ctx.fillStyle = '#2c3e50';
+                    ctx.font = '24px Arial';
+                    ctx.fillText('MENU STATE', 150, 100);
+                }
+            },
+            PLAYING: {
+                update: () => {},
+                draw: (ctx) => {
+                    ctx.fillStyle = '#27ae60';
+                    ctx.font = '24px Arial';
+                    ctx.fillText('PLAYING STATE', 150, 100);
+                }
+            }
+        };
+    }
+
+    setState(newState) {
+        this.state = newState;
+    }
+
+    update() {
+        this.states[this.state].update();
+    }
+
+    draw(ctx) {
+        this.states[this.state].draw(ctx);
+    }
+}
+
+// Game Loop Demo
+const canvas = document.getElementById('gameLoopDemo');
+const ctx = canvas.getContext('2d');
+
+let isRunning = false;
+let position = 0;
+
+function gameLoop() {
+    if (!isRunning) return;
+    
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    position = (position + 2) % canvas.width;
+    
+    ctx.fillStyle = '#3498db';
+    ctx.beginPath();
+    ctx.arc(position, canvas.height/2, 20, 0, Math.PI * 2);
+    ctx.fill();
+    
+    requestAnimationFrame(gameLoop);
+}
+
+function toggleGameLoop() {
+    isRunning = !isRunning;
+    if (isRunning) gameLoop();
+}
+
+// Sprite Demo
+const spriteCanvas = document.getElementById('spriteDemo');
+const spriteCtx = spriteCanvas.getContext('2d');
+
+class Sprite {
+    constructor(x, y, color) {
+        this.x = x;
+        this.y = y;
+        this.color = color;
+        this.speed = 2;
+        this.size = 30;
+    }
+
+    update() {
+        this.x += this.speed;
+        if (this.x > 400 - this.size || this.x < 0) this.speed *= -1;
+    }
+
+    draw(ctx) {
+        ctx.fillStyle = this.color;
+        ctx.fillRect(this.x, this.y, this.size, this.size);
+    }
+}
+
+const sprite = new Sprite(0, 85, '#e74c3c');
+
+function spriteLoop() {
+    spriteCtx.clearRect(0, 0, spriteCanvas.width, spriteCanvas.height);
+    sprite.update();
+    sprite.draw(spriteCtx);
+    requestAnimationFrame(spriteLoop);
+}
+spriteLoop();
+
+// Collision Demo
+const collisionCanvas = document.getElementById('collisionDemo');
+const collisionCtx = collisionCanvas.getContext('2d');
+
+const rect1 = { x: 50, y: 50, width: 50, height: 50, color: '#2ecc71', speedX: 2 };
+const rect2 = { x: 250, y: 75, width: 50, height: 50, color: '#e74c3c' };
+
+function checkCollision(rect1, rect2) {
+    return rect1.x < rect2.x + rect2.width &&
+           rect1.x + rect1.width > rect2.x &&
+           rect1.y < rect2.y + rect2.height &&
+           rect1.y + rect1.height > rect2.y;
+}
+
+function collisionLoop() {
+    collisionCtx.clearRect(0, 0, collisionCanvas.width, collisionCanvas.height);
+    
+    rect1.x += rect1.speedX;
+    if (rect1.x > collisionCanvas.width - rect1.width || rect1.x < 0) {
+        rect1.speedX *= -1;
+    }
+    
+    if (checkCollision(rect1, rect2)) {
+        rect1.color = '#f1c40f';
+        rect2.color = '#f1c40f';
+    } else {
+        rect1.color = '#2ecc71';
+        rect2.color = '#e74c3c';
+    }
+    
+    collisionCtx.fillStyle = rect1.color;
+    collisionCtx.fillRect(rect1.x, rect1.y, rect1.width, rect1.height);
+    
+    collisionCtx.fillStyle = rect2.color;
+    collisionCtx.fillRect(rect2.x, rect2.y, rect2.width, rect2.height);
+    
+    requestAnimationFrame(collisionLoop);
+}
+collisionLoop();
+
+// Input Demo
+const inputCanvas = document.getElementById('inputDemo');
+const inputCtx = inputCanvas.getContext('2d');
+
+const player = {
+    x: 185,
+    y: 85,
+    size: 30,
+    speed: 3,
+    color: '#9b59b6'
+};
+
+const keys = {};
+
+window.addEventListener('keydown', (e) => {
+    keys[e.key] = true;
+});
+
+window.addEventListener('keyup', (e) => {
+    keys[e.key] = false;
+});
+
+function handleInput() {
+    if (keys['ArrowLeft']) player.x -= player.speed;
+    if (keys['ArrowRight']) player.x += player.speed;
+    if (keys['ArrowUp']) player.y -= player.speed;
+    if (keys['ArrowDown']) player.y += player.speed;
+    
+    player.x = Math.max(0, Math.min(inputCanvas.width - player.size, player.x));
+    player.y = Math.max(0, Math.min(inputCanvas.height - player.size, player.y));
+}
+
+function inputLoop() {
+    handleInput();
+    
+    inputCtx.clearRect(0, 0, inputCanvas.width, inputCanvas.height);
+    inputCtx.fillStyle = player.color;
+    inputCtx.fillRect(player.x, player.y, player.size, player.size);
+    
+    inputCtx.fillStyle = '#2c3e50';
+    inputCtx.font = '14px Arial';
+    inputCtx.fillText('Use arrow keys to move', 10, 20);
+    
+    requestAnimationFrame(inputLoop);
+}
+inputLoop();
+
+// Particle System Demo
+const particleCanvas = document.getElementById('particleDemo');
+const particleCtx = particleCanvas.getContext('2d');
+let particles = [];
+let particlesEnabled = false;
+
+function toggleParticles() {
+    particlesEnabled = !particlesEnabled;
+}
+
+function particleLoop() {
+    particleCtx.clearRect(0, 0, particleCanvas.width, particleCanvas.height);
+    
+    if (particlesEnabled && particles.length < 100) {
+        particles.push(new Particle(particleCanvas.width/2, particleCanvas.height/2));
+    }
+    
+    particles = particles.filter(p => p.life > 0);
+    particles.forEach(p => {
+        p.update();
+        p.draw(particleCtx);
+    });
+    
+    requestAnimationFrame(particleLoop);
+}
+particleLoop();
+
+// State Management Demo
+const stateCanvas = document.getElementById('stateDemo');
+const stateCtx = stateCanvas.getContext('2d');
+const gameState = new GameState();
+
+function toggleGameState() {
+    gameState.setState(gameState.state === 'MENU' ? 'PLAYING' : 'MENU');
+}
+
+function stateLoop() {
+    stateCtx.clearRect(0, 0, stateCanvas.width, stateCanvas.height);
+    gameState.update();
+    gameState.draw(stateCtx);
+    requestAnimationFrame(stateLoop);
+}
+stateLoop();
+
+// Scene Graph Demo
+class GameObject {
+    constructor(x, y, rotation = 0) {
+        this.x = x;
+        this.y = y;
+        this.rotation = rotation;
+        this.children = [];
+    }
+
+    addChild(child) {
+        this.children.push(child);
+    }
+
+    update() {
+        this.rotation += 0.02;
+        this.children.forEach(child => child.update());
+    }
+
+    draw(ctx, parentX = 0, parentY = 0, parentRotation = 0) {
+        const worldX = parentX + this.x * Math.cos(parentRotation) - 
+                      this.y * Math.sin(parentRotation);
+        const worldY = parentY + this.x * Math.sin(parentRotation) + 
+                      this.y * Math.cos(parentRotation);
+        
+        ctx.fillStyle = '#e74c3c';
+        ctx.beginPath();
+        ctx.arc(worldX, worldY, 10, 0, Math.PI * 2);
+        ctx.fill();
+
+        this.children.forEach(child => 
+            child.draw(ctx, worldX, worldY, parentRotation + this.rotation));
+    }
+}
+
+const sceneCanvas = document.getElementById('sceneDemo');
+const sceneCtx = sceneCanvas.getContext('2d');
+
+const root = new GameObject(200, 100);
+const child1 = new GameObject(30, 0);
+const child2 = new GameObject(-30, 0);
+root.addChild(child1);
+root.addChild(child2);
+
+function sceneLoop() {
+    sceneCtx.clearRect(0, 0, sceneCanvas.width, sceneCanvas.height);
+    root.update();
+    root.draw(sceneCtx);
+    requestAnimationFrame(sceneLoop);
+}
+sceneLoop();
+</script>
+
+</body></html>
