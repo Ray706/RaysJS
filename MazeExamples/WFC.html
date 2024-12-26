@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wave Function Collapse Maze</title>
+    <style>
+        canvas {
+            border: 1px solid black;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="mazeCanvas" width="500" height="500"></canvas>
+    <script>
+        class Tile {
+            constructor(value) {
+                this.value = value;
+                this.collapsed = false;
+            }
+        }
+
+        const canvas = document.getElementById('mazeCanvas');
+        const ctx = canvas.getContext('2d');
+        const tileSize = 20;
+        const cols = canvas.width / tileSize;
+        const rows = canvas.height / tileSize;
+        let grid = [];
+
+        function setup() {
+            for (let i = 0; i < cols * rows; i++) {
+                grid[i] = new Tile(null);
+            }
+        }
+
+        function draw() {
+            for (let y = 0; y < rows; y++) {
+                for (let x = 0; x < cols; x++) {
+                    const tile = grid[x + y * cols];
+                    if (tile.collapsed) {
+                        ctx.fillStyle = tile.value === 1 ? 'black' : 'white';
+                        ctx.fillRect(x * tileSize, y * tileSize, tileSize, tileSize);
+                    } else {
+                        ctx.fillStyle = 'gray';
+                        ctx.fillRect(x * tileSize, y * tileSize, tileSize, tileSize);
+                    }
+                }
+            }
+        }
+
+        function collapseTile(index) {
+            const tile = grid[index];
+            tile.value = Math.random() < 0.5 ? 1 : 0;
+            tile.collapsed = true;
+        }
+
+        function waveFunctionCollapse() {
+            let uncollapsedTiles = grid.filter(tile => !tile.collapsed);
+            if (uncollapsedTiles.length === 0) return;
+
+            let tile = uncollapsedTiles[Math.floor(Math.random() * uncollapsedTiles.length)];
+            collapseTile(grid.indexOf(tile));
+            draw();
+            requestAnimationFrame(waveFunctionCollapse);
+        }
+
+        setup();
+        waveFunctionCollapse();
+    </script>
+</body>
+</html>

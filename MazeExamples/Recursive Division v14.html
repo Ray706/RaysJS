@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Recursive Division Maze Generator</title>
+    <style>
+        canvas {
+            border: 1px solid black;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="mazeCanvas" width="500" height="500"></canvas>
+    <script>
+        const canvas = document.getElementById('mazeCanvas');
+        const ctx = canvas.getContext('2d');
+        const cellSize = 20;
+        const numRows = Math.floor(canvas.height / cellSize);
+        const numCols = Math.floor(canvas.width / cellSize);
+
+        // Function to draw a wall from (x1, y1) to (x2, y2)
+        function drawWall(x1, y1, x2, y2) {
+            ctx.beginPath();
+            ctx.moveTo(x1 * cellSize, y1 * cellSize);
+            ctx.lineTo(x2 * cellSize, y2 * cellSize);
+            ctx.stroke();
+        }
+
+        // Recursive function to divide the grid and create walls
+        function divide(x, y, width, height, orientation) {
+            // Base case: stop recursion if the area is too small
+            if (width <= 1 || height <= 1) return;
+
+            // Determine the orientation of the wall (horizontal or vertical)
+            const isHorizontal = orientation === 'H';
+
+            // Calculate the position of the wall
+            let wallX = x + (isHorizontal ? 0 : Math.floor(Math.random() * (width - 2)) + 1);
+            let wallY = y + (isHorizontal ? Math.floor(Math.random() * (height - 2)) + 1 : 0);
+
+            // Calculate the position of the passage through the wall
+            const passageX = wallX + (isHorizontal ? Math.floor(Math.random() * width) : 0);
+            const passageY = wallY + (isHorizontal ? 0 : Math.floor(Math.random() * height));
+
+            // Direction of wall drawing
+            const deltaX = isHorizontal ? 1 : 0;
+            const deltaY = isHorizontal ? 0 : 1;
+            const wallLength = isHorizontal ? width : height;
+
+            console.log(`Dividing at (${wallX}, ${wallY}) with passage at (${passageX}, ${passageY})`);
+
+            // Draw the wall with a passage
+            for (let i = 0; i < wallLength; i++) {
+                console.log(`Drawing wall segment at (${wallX}, ${wallY})`);
+                if ((wallX !== passageX || wallY !== passageY) && (wallX < numCols && wallY < numRows)) {
+                    drawWall(wallX, wallY, wallX + deltaX, wallY + deltaY);
+                }
+                wallX += deltaX;
+                wallY += deltaY;
+            }
+
+            console.log(`Finished drawing wall. Recursively dividing sections.`);
+
+            // Recursively divide the sections created by the wall
+            const nextX1 = x;
+            const nextY1 = y;
+            const nextWidth1 = isHorizontal ? width : wallX - x;
+            const nextHeight1 = isHorizontal ? wallY - y : height;
+            divide(nextX1, nextY1, nextWidth1, nextHeight1, chooseOrientation(nextWidth1, nextHeight1));
+
+            const nextX2 = isHorizontal ? x : wallX + 1;
+            const nextY2 = isHorizontal ? wallY + 1 : y;
+            const nextWidth2 = isHorizontal ? width : x + width - wallX - 1;
+            const nextHeight2 = isHorizontal ? y + height - wallY - 1 : height;
+            divide(nextX2, nextY2, nextWidth2, nextHeight2, chooseOrientation(nextWidth2, nextHeight2));
+        }
+
+        // Function to choose the orientation of the wall
+        function chooseOrientation(width, height) {
+            if (width < height) {
+                return 'H';
+            } else if (height < width) {
+                return 'V';
+            } else {
+                return Math.random() < 0.5 ? 'H' : 'V';
+            }
+        }
+
+        // Function to generate the maze
+        function generateMaze() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.strokeStyle = 'black';
+            ctx.lineWidth = 2;
+            divide(0, 0, numCols, numRows, chooseOrientation(numCols, numRows));
+        }
+
+        generateMaze();
+    </script>
+</body>
+</html>

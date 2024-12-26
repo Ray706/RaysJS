@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Seamless Tile Pattern</title>
+</head>
+<body>
+    <canvas id="tileCanvas" width="800" height="800"></canvas>
+    <script>
+        // Function to load an image
+        function loadImage(src, callback) {
+            const img = new Image();
+            img.onload = () => {
+                console.log('Image loaded successfully');
+                callback(img);
+            };
+            img.onerror = () => {
+                console.error('Failed to load image');
+            };
+            img.src = src;
+        }
+
+        // Function to create a seamless tile pattern
+        function createSeamlessPattern(image) {
+            const canvas = document.getElementById('tileCanvas');
+            const ctx = canvas.getContext('2d');
+
+            // Set canvas size to match the image
+            canvas.width = image.width;
+            canvas.height = image.height;
+
+            // Draw the image on the canvas
+            ctx.drawImage(image, 0, 0);
+
+            // Create a temporary canvas to manipulate the image
+            const tempCanvas = document.createElement('canvas');
+            const tempCtx = tempCanvas.getContext('2d');
+            tempCanvas.width = image.width;
+            tempCanvas.height = image.height;
+
+            // Draw the image on the temporary canvas
+            tempCtx.drawImage(image, 0, 0);
+
+            // Get the image data
+            const imageData = tempCtx.getImageData(0, 0, image.width, image.height);
+            const data = imageData.data;
+
+            // Blend the edges to make the pattern more seamless
+            for (let y = 0; y < image.height; y++) {
+                for (let x = 0; x < image.width; x++) {
+                    const index = (y * image.width + x) * 4;
+                    if (x < 10 || x > image.width - 10 || y < 10 || y > image.height - 10) {
+                        data[index] = (data[index] + data[((y + 1) % image.height) * image.width * 4 + (x + 1) % image.width * 4]) / 2;
+                        data[index + 1] = (data[index + 1] + data[((y + 1) % image.height) * image.width * 4 + (x + 1) % image.width * 4 + 1]) / 2;
+                        data[index + 2] = (data[index + 2] + data[((y + 1) % image.height) * image.width * 4 + (x + 1) % image.width * 4 + 2]) / 2;
+                    }
+                }
+            }
+
+            // Put the modified image data back to the temporary canvas
+            tempCtx.putImageData(imageData, 0, 0);
+
+            // Create a pattern from the modified image
+            const pattern = ctx.createPattern(tempCanvas, 'repeat');
+
+            // Fill the canvas with the pattern
+            ctx.fillStyle = pattern;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+        }
+
+        // Load the image and create the pattern
+        loadImage('../tile-2.png', createSeamlessPattern);
+    </script>
+</body>
+</html>

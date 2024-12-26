@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aldous-Broder Maze Generator</title>
+    <style>
+        canvas {
+            border: 1px solid black;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="maze" width="500" height="500"></canvas>
+    <script>
+        const canvas = document.getElementById('maze');
+        const ctx = canvas.getContext('2d');
+        const rows = 20;
+        const cols = 20;
+        const cellSize = canvas.width / cols;
+        let grid = [];
+        let unvisitedCells = rows * cols;
+
+        function setup() {
+            for (let row = 0; row < rows; row++) {
+                const rowArray = [];
+                for (let col = 0; col < cols; col++) {
+                    rowArray.push({ row, col, walls: [true, true, true, true], visited: false });
+                }
+                grid.push(rowArray);
+            }
+
+            // Start with a random cell
+            let currentCell = grid[Math.floor(Math.random() * rows)][Math.floor(Math.random() * cols)];
+            currentCell.visited = true;
+            unvisitedCells--;
+
+            generateMaze(currentCell);
+            draw();
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            for (let row = 0; row < rows; row++) {
+                for (let col = 0; col < cols; col++) {
+                    const cell = grid[row][col];
+                    const x = col * cellSize;
+                    const y = row * cellSize;
+                    ctx.strokeStyle = 'black';
+                    if (cell.walls[0]) ctx.strokeRect(x, y, cellSize, 1); // Top
+                    if (cell.walls[1]) ctx.strokeRect(x + cellSize, y, 1, cellSize); // Right
+                    if (cell.walls[2]) ctx.strokeRect(x, y + cellSize, cellSize, 1); // Bottom
+                    if (cell.walls[3]) ctx.strokeRect(x, y, 1, cellSize); // Left
+                }
+            }
+        }
+
+        function generateMaze(currentCell) {
+            while (unvisitedCells > 0) {
+                const neighbors = getNeighbors(currentCell.row, currentCell.col);
+                const nextCell = neighbors[Math.floor(Math.random() * neighbors.length)];
+
+                if (!nextCell.visited) {
+                    removeWall(currentCell, nextCell);
+                    nextCell.visited = true;
+                    unvisitedCells--;
+                }
+
+                currentCell = nextCell;
+            }
+        }
+
+        function getNeighbors(row, col) {
+            const neighbors = [];
+            if (row > 0) neighbors.push(grid[row - 1][col]); // Up
+            if (row < rows - 1) neighbors.push(grid[row + 1][col]); // Down
+            if (col > 0) neighbors.push(grid[row][col - 1]); // Left
+            if (col < cols - 1) neighbors.push(grid[row][col + 1]); // Right
+            return neighbors;
+        }
+
+        function removeWall(cell1, cell2) {
+            const x = cell1.col - cell2.col;
+            const y = cell1.row - cell2.row;
+            if (x === 1) {
+                cell1.walls[3] = false;
+                cell2.walls[1] = false;
+            } else if (x === -1) {
+                cell1.walls[1] = false;
+                cell2.walls[3] = false;
+            }
+            if (y === 1) {
+                cell1.walls[0] = false;
+                cell2.walls[2] = false;
+            } else if (y === -1) {
+                cell1.walls[2] = false;
+                cell2.walls[0] = false;
+            }
+        }
+
+        setup();
+    </script>
+</body>
+</html>

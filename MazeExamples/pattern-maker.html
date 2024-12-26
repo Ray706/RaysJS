@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Seamless Tile Pattern</title>
+</head>
+<body>
+    <canvas id="tileCanvas" width="800" height="800"></canvas>
+    <script>
+        // Function to load an image
+        function loadImage(src, callback) {
+            const img = new Image();
+            img.onload = () => {
+                console.log('Image loaded successfully');
+                callback(img);
+            };
+            img.onerror = () => {
+                console.error('Failed to load image');
+            };
+            img.src = src;
+        }
+
+        // Function to create a seamless tile pattern
+        function createSeamlessPattern(image) {
+            const canvas = document.getElementById('tileCanvas');
+            const ctx = canvas.getContext('2d');
+
+            // Set canvas size to match the image
+            canvas.width = 800; // Set a fixed width for testing
+            canvas.height = 800; // Set a fixed height for testing
+
+            // Draw the image on the canvas
+            ctx.drawImage(image, 0, 0);
+
+            // Create a pattern from the image
+            const pattern = ctx.createPattern(image, 'repeat');
+
+            // Fill the canvas with the pattern
+            ctx.fillStyle = pattern;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+        }
+
+        // Load the image and create the pattern
+        loadImage('../Kitty-Kastle-17.jpg', createSeamlessPattern);
+    </script>
+</body>
+</html>

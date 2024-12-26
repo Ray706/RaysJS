@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Maze of Treachery</title>
+  <style>
+    canvas { border: 1px solid black; }
+  </style>
+</head>
+<body>
+  <canvas id="treacheryMaze" width="1200" height="1200"></canvas>
+  <script>
+    class TreacheryMaze {
+      constructor(size) {
+        this.size = size;
+        this.grid = Array.from({ length: size }, () => Array.from({ length: size }, () => 0));
+      }
+
+      generate() {
+        this.carvePath(0, 0);
+        this.addTraps();
+      }
+
+      carvePath(x, y) {
+        this.grid[y][x] = 1;
+        const directions = [[1, 0], [0, 1], [-1, 0], [0, -1]].sort(() => Math.random() - 0.5);
+
+        for (const [dx, dy] of directions) {
+          const nx = x + dx * 2, ny = y + dy * 2;
+          if (nx >= 0 && ny >= 0 && nx < this.size && ny < this.size && this.grid[ny][nx] === 0) {
+            this.grid[y + dy][x + dx] = 1;
+            this.grid[ny][nx] = 1;
+            this.carvePath(nx, ny);
+          }
+        }
+      }
+
+      addTraps() {
+        for (let y = 1; y < this.size - 1; y++) {
+          for (let x = 1; x < this.size - 1; x++) {
+            if (this.grid[y][x] === 1 && Math.random() < 0.1) {
+              this.grid[y][x] = 0;
+            }
+          }
+        }
+      }
+    }
+
+    function drawMaze(maze, canvasId) {
+      const canvas = document.getElementById(canvasId);
+      const ctx = canvas.getContext('2d');
+      const cellSize = canvas.width / maze.size;
+
+      for (let y = 0; y < maze.size; y++) {
+        for (let x = 0; x < maze.size; x++) {
+          if (maze.grid[y][x] === 1) {
+            ctx.fillRect(x * cellSize, y * cellSize, cellSize, cellSize);
+          }
+        }
+      }
+    }
+
+    const maze = new TreacheryMaze(101);
+    maze.generate();
+    drawMaze(maze, 'treacheryMaze');
+  </script>
+</body>
+</html>

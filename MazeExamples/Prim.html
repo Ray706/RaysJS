@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prim's Algorithm Maze Generator</title>
+    <style>
+        canvas {
+            border: 1px solid black;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="maze" width="500" height="500"></canvas>
+    <script>
+        const canvas = document.getElementById('maze');
+        const ctx = canvas.getContext('2d');
+        const rows = 20;
+        const cols = 20;
+        const cellSize = canvas.width / cols;
+        let grid = [];
+        let walls = [];
+
+        function setup() {
+            for (let row = 0; row < rows; row++) {
+                const rowArray = [];
+                for (let col = 0; col < cols; col++) {
+                    rowArray.push({ row, col, walls: [true, true, true, true], inMaze: false });
+                }
+                grid.push(rowArray);
+            }
+
+            // Start with a random cell
+            const startRow = Math.floor(Math.random() * rows);
+            const startCol = Math.floor(Math.random() * cols);
+            grid[startRow][startCol].inMaze = true;
+            addWalls(startRow, startCol);
+
+            generateMaze();
+            draw();
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            for (let row = 0; row < rows; row++) {
+                for (let col = 0; col < cols; col++) {
+                    const cell = grid[row][col];
+                    const x = col * cellSize;
+                    const y = row * cellSize;
+                    ctx.strokeStyle = 'black';
+                    if (cell.walls[0]) ctx.strokeRect(x, y, cellSize, 1); // Top
+                    if (cell.walls[1]) ctx.strokeRect(x + cellSize, y, 1, cellSize); // Right
+                    if (cell.walls[2]) ctx.strokeRect(x, y + cellSize, cellSize, 1); // Bottom
+                    if (cell.walls[3]) ctx.strokeRect(x, y, 1, cellSize); // Left
+                }
+            }
+        }
+
+        function generateMaze() {
+            while (walls.length > 0) {
+                const randomIndex = Math.floor(Math.random() * walls.length);
+                const { row, col, direction } = walls.splice(randomIndex, 1)[0];
+                let nextRow = row;
+                let nextCol = col;
+
+                if (direction === 'up') nextRow--;
+                if (direction === 'down') nextRow++;
+                if (direction === 'left') nextCol--;
+                if (direction === 'right') nextCol++;
+
+                if (isValidCell(nextRow, nextCol) && !grid[nextRow][nextCol].inMaze) {
+                    grid[nextRow][nextCol].inMaze = true;
+                    removeWall(row, col, direction);
+                    addWalls(nextRow, nextCol);
+                }
+            }
+        }
+
+        function addWalls(row, col) {
+            if (row > 0) walls.push({ row, col, direction: 'up' });
+            if (row < rows - 1) walls.push({ row, col, direction: 'down' });
+            if (col > 0) walls.push({ row, col, direction: 'left' });
+            if (col < cols - 1) walls.push({ row, col, direction: 'right' });
+        }
+
+        function removeWall(row, col, direction) {
+            if (direction === 'up') {
+                grid[row][col].walls[0] = false;
+                grid[row - 1][col].walls[2] = false;
+            } else if (direction === 'down') {
+                grid[row][col].walls[2] = false;
+                grid[row + 1][col].walls[0] = false;
+            } else if (direction === 'left') {
+                grid[row][col].walls[3] = false;
+                grid[row][col - 1].walls[1] = false;
+            } else if (direction === 'right') {
+                grid[row][col].walls[1] = false;
+                grid[row][col + 1].walls[3] = false;
+            }
+        }
+
+        function isValidCell(row, col) {
+            return row >= 0 && row < rows && col >= 0 && col < cols;
+        }
+
+        setup();
+    </script>
+</body>
+</html>

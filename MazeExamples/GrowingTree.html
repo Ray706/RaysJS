@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Growing Tree Maze Generator</title>
+    <style>
+        canvas {
+            border: 1px solid black;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="mazeCanvas" width="500" height="500"></canvas>
+    <script>
+        // Create and set up the canvas
+        const canvas = document.getElementById('mazeCanvas');
+        const ctx = canvas.getContext('2d');
+        const cellSize = 20;
+        const numRows = Math.floor(canvas.height / cellSize);
+        const numCols = Math.floor(canvas.width / cellSize);
+        const grid = [];
+        const stack = [];
+
+        // Initialize the grid with cells marked as unvisited
+        for (let y = 0; y < numRows; y++) {
+            const row = [];
+            for (let x = 0; x < numCols; x++) {
+                row.push({ x, y, visited: false });
+            }
+            grid.push(row);
+        }
+
+        // Function to draw a cell (used for debugging)
+        function drawCell(x, y) {
+            ctx.fillRect(x * cellSize, y * cellSize, cellSize, cellSize);
+        }
+
+        // Function to remove the wall between two cells
+        function removeWall(current, next) {
+            const x = current.x - next.x;
+            const y = current.y - next.y;
+
+            if (x === 1) {
+                // Current cell is to the right of next cell
+                ctx.clearRect(next.x * cellSize, next.y * cellSize, cellSize, cellSize);
+            } else if (x === -1) {
+                // Current cell is to the left of next cell
+                ctx.clearRect(current.x * cellSize, current.y * cellSize, cellSize, cellSize);
+            } else if (y === 1) {
+                // Current cell is below next cell
+                ctx.clearRect(next.x * cellSize, next.y * cellSize, cellSize, cellSize);
+            } else if (y === -1) {
+                // Current cell is above next cell
+                ctx.clearRect(current.x * cellSize, current.y * cellSize, cellSize, cellSize);
+            }
+        }
+
+        // Function to get unvisited neighbors of a cell
+        function getUnvisitedNeighbors(cell) {
+            const neighbors = [];
+            const { x, y } = cell;
+
+            if (x > 0 && !grid[y][x - 1].visited) neighbors.push(grid[y][x - 1]);
+            if (x < numCols - 1 && !grid[y][x + 1].visited) neighbors.push(grid[y][x + 1]);
+            if (y > 0 && !grid[y - 1][x].visited) neighbors.push(grid[y - 1][x]);
+            if (y < numRows - 1 && !grid[y + 1][x].visited) neighbors.push(grid[y + 1][x]);
+
+            return neighbors;
+        }
+
+        // Growing Tree algorithm to generate the maze
+        function generateMaze() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = 'black';
+
+            // Start with a random cell
+            const startCell = grid[Math.floor(Math.random() * numRows)][Math.floor(Math.random() * numCols)];
+            startCell.visited = true;
+            stack.push(startCell);
+            drawCell(startCell.x, startCell.y); // Draw the starting cell
+
+            while (stack.length > 0) {
+                const currentCell = stack[stack.length - 1];
+                const neighbors = getUnvisitedNeighbors(currentCell);
+
+                console.log(`Current cell: (${currentCell.x}, ${currentCell.y})`);
+                console.log(`Unvisited neighbors: ${neighbors.map(n => `(${n.x}, ${n.y})`).join(', ')}`);
+
+                if (neighbors.length > 0) {
+                    // Choose a random neighbor and remove the wall between the current cell and the chosen neighbor
+                    const nextCell = neighbors[Math.floor(Math.random() * neighbors.length)];
+                    nextCell.visited = true;
+                    removeWall(currentCell, nextCell);
+                    stack.push(nextCell);
+                    drawCell(nextCell.x, nextCell.y); // Draw the next cell
+                    console.log(`Moving to next cell: (${nextCell.x}, ${nextCell.y})`);
+                } else {
+                    // Backtrack if there are no unvisited neighbors
+                    stack.pop();
+                    console.log(`Backtracking from cell: (${currentCell.x}, ${currentCell.y})`);
+                }
+            }
+        }
+
+        generateMaze();
+    </script>
+</body>
+</html>

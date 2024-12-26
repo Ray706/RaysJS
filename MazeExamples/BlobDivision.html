@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Blob Division Maze</title>
+  <style>
+    canvas { border: 1px solid black; }
+  </style>
+</head>
+<body>
+  <canvas id="blobMaze" width="1200" height="1200"></canvas>
+  <script>
+    class BlobMaze {
+      constructor(size) {
+        this.size = size;
+        this.grid = Array.from({ length: size }, () => Array.from({ length: size }, () => 0));
+      }
+
+      generate() {
+        this.divide(0, 0, this.size, this.size, 3);
+      }
+
+      divide(x, y, width, height, depth) {
+        if (depth === 0) return;
+        const wx = Math.floor(x + width / 2);
+        const wy = Math.floor(y + height / 2);
+        const px = Math.floor(wx + (Math.random() * 2 - 1));
+        const py = Math.floor(wy + (Math.random() * 2 - 1));
+
+        for (let i = 0; i < width; i++) this.grid[wy][x + i] = 1;
+        for (let i = 0; i < height; i++) this.grid[y + i][wx] = 1;
+
+        this.grid[py][wx] = 0;
+        this.grid[wy][px] = 0;
+
+        this.divide(x, y, wx - x, wy - y, depth - 1);
+        this.divide(wx + 1, y, x + width - wx - 1, wy - y, depth - 1);
+        this.divide(x, wy + 1, wx - x, y + height - wy - 1, depth - 1);
+        this.divide(wx + 1, wy + 1, x + width - wx - 1, y + height - wy - 1, depth - 1);
+      }
+    }
+
+    function drawMaze(maze, canvasId) {
+      const canvas = document.getElementById(canvasId);
+      const ctx = canvas.getContext('2d');
+      const cellSize = canvas.width / maze.size;
+
+      for (let y = 0; y < maze.size; y++) {
+        for (let x = 0; x < maze.size; x++) {
+          if (maze.grid[y][x] === 1) {
+            ctx.fillRect(x * cellSize, y * cellSize, cellSize, cellSize);
+          }
+        }
+      }
+    }
+
+    const maze = new BlobMaze(90);
+    maze.generate();
+    drawMaze(maze, 'blobMaze');
+  </script>
+</body>
+</html>

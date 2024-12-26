@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kruskal's Algorithm Maze Generator</title>
+    <style>
+        canvas {
+            border: 1px solid black;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="maze" width="500" height="500"></canvas>
+    <script>
+        const canvas = document.getElementById('maze');
+        const ctx = canvas.getContext('2d');
+        const rows = 20;
+        const cols = 20;
+        const cellSize = canvas.width / cols;
+        let grid = [];
+        let walls = [];
+        let sets = [];
+
+        function setup() {
+            for (let row = 0; row < rows; row++) {
+                const rowArray = [];
+                for (let col = 0; col < cols; col++) {
+                    rowArray.push({ row, col, walls: [true, true, true, true] });
+                    sets.push([row * cols + col]);
+                }
+                grid.push(rowArray);
+            }
+
+            for (let row = 0; row < rows; row++) {
+                for (let col = 0; col < cols; col++) {
+                    if (row < rows - 1) walls.push({ row, col, direction: 'down' });
+                    if (col < cols - 1) walls.push({ row, col, direction: 'right' });
+                }
+            }
+
+            walls = shuffle(walls);
+            generateMaze();
+            draw();
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            for (let row = 0; row < rows; row++) {
+                for (let col = 0; col < cols; col++) {
+                    const cell = grid[row][col];
+                    const x = col * cellSize;
+                    const y = row * cellSize;
+                    ctx.strokeStyle = 'black';
+                    if (cell.walls[0]) ctx.strokeRect(x, y, cellSize, 1); // Top
+                    if (cell.walls[1]) ctx.strokeRect(x + cellSize, y, 1, cellSize); // Right
+                    if (cell.walls[2]) ctx.strokeRect(x, y + cellSize, cellSize, 1); // Bottom
+                    if (cell.walls[3]) ctx.strokeRect(x, y, 1, cellSize); // Left
+                }
+            }
+        }
+
+        function generateMaze() {
+            while (walls.length > 0) {
+                const wall = walls.pop();
+                const { row, col, direction } = wall;
+                let cell1, cell2;
+
+                if (direction === 'down') {
+                    cell1 = grid[row][col];
+                    cell2 = grid[row + 1][col];
+                } else if (direction === 'right') {
+                    cell1 = grid[row][col];
+                    cell2 = grid[row][col + 1];
+                }
+
+                const set1 = findSet(cell1);
+                const set2 = findSet(cell2);
+
+                if (set1 !== set2) {
+                    removeWall(cell1, cell2, direction);
+                    unionSets(set1, set2);
+                }
+            }
+        }
+
+        function findSet(cell) {
+            for (let set of sets) {
+                if (set.includes(cell.row * cols + cell.col)) {
+                    return set;
+                }
+            }
+            return null;
+        }
+
+        function unionSets(set1, set2) {
+            const newSet = set1.concat(set2);
+            sets = sets.filter(set => set !== set1 && set !== set2);
+            sets.push(newSet);
+        }
+
+        function removeWall(cell1, cell2, direction) {
+            if (direction === 'down') {
+                cell1.walls[2] = false;
+                cell2.walls[0] = false;
+            } else if (direction === 'right') {
+                cell1.walls[1] = false;
+                cell2.walls[3] = false;
+            }
+        }
+
+        function shuffle(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+
+        setup();
+    </script>
+</body>
+</html>

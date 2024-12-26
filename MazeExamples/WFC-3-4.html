@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wave Function Collapse Maze</title>
+    <style>
+        canvas {
+            border: 1px solid black;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="maze" width="500" height="500"></canvas>
+    <script>
+        const canvas = document.getElementById('maze');
+        const ctx = canvas.getContext('2d');
+        const rows = 20;
+        const cols = 20;
+        const cellSize = canvas.width / cols;
+        const patterns = [
+            [[1, 1], [1, 1]], // Block
+            [[1, 0], [1, 1]], // L-shape
+            [[1, 1], [0, 1]], // L-shape mirrored
+            [[1, 1], [1, 0]], // L-shape rotated
+            [[0, 1], [1, 1]], // L-shape rotated and mirrored
+            [[1, 0], [0, 1]], // Diagonal
+            [[0, 1], [1, 0]], // Diagonal mirrored
+            [[1, 1], [1, 1]]  // Full block
+        ];
+        let grid = [];
+
+        function setup() {
+            for (let row = 0; row < rows; row++) {
+                const rowArray = [];
+                for (let col = 0; col < cols; col++) {
+                    rowArray.push({ collapsed: false, options: [...patterns] });
+                }
+                grid.push(rowArray);
+            }
+            collapseCell(grid[0][0]);
+            draw();
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            for (let row = 0; row < rows; row++) {
+                for (let col = 0; col < cols; col++) {
+                    const cell = grid[row][col];
+                    if (cell.collapsed) {
+                        drawPattern(cell.options[0], col, row);
+                    } else {
+                        ctx.fillStyle = 'lightgray';
+                        ctx.fillRect(col * cellSize, row * cellSize, cellSize, cellSize);
+                    }
+                }
+            }
+        }
+
+        function drawPattern(pattern, col, row) {
+            const x = col * cellSize;
+            const y = row * cellSize;
+            for (let i = 0; i < pattern.length; i++) {
+                for (let j = 0; j < pattern[i].length; j++) {
+                    ctx.fillStyle = pattern[i][j] === 1 ? 'black' : 'white';
+                    ctx.fillRect(x + j * (cellSize / 2), y + i * (cellSize / 2), cellSize / 2, cellSize / 2);
+                }
+            }
+        }
+
+        function collapseCell(cell) {
+            cell.collapsed = true;
+            const randomIndex = Math.floor(Math.random() * cell.options.length);
+            cell.options = [cell.options[randomIndex]];
+        }
+
+        function getValidNeighbors(cell, row, col) {
+            const neighbors = [];
+            if (row > 0) neighbors.push(grid[row - 1][col]);
+            if (row < rows - 1) neighbors.push(grid[row + 1][col]);
+            if (col > 0) neighbors.push(grid[row][col - 1]);
+            if (col < cols - 1) neighbors.push(grid[row][col + 1]);
+            return neighbors.filter(neighbor => !neighbor.collapsed);
+        }
+
+        function propagate() {
+            let changed = false;
+            for (let row = 0; row < rows; row++) {
+                for (let col = 0; col < cols; col++) {
+                    const cell = grid[row][col];
+                    if (cell.collapsed) {
+                        const neighbors = getValidNeighbors(cell, row, col);
+                        for (const neighbor of neighbors) {
+                            const validOptions = [];
+                            for (const option of neighbor.options) {
+                                if (isValidNeighbor(cell.options[0], option)) {
+                                    validOptions.push(option);
+                                }
+                            }
+                            if (validOptions.length < neighbor.options.length) {
+                                neighbor.options = validOptions;
+                                changed = true;
+                            }
+                        }
+                    }
+                }
+            }
+            return changed;
+        }
+
+        function isValidNeighbor(pattern1, pattern2) {
+            // Check if the patterns can be adjacent based on their edges
+            return true; // Simplified for this example
+        }
+
+        function step() {
+            if (propagate()) {
+                draw();
+                requestAnimationFrame(step);
+            } else {
+                const uncollapsedCells = [];
+                for (let row = 0; row < rows; row++) {
+                    for (let col = 0; col < cols; col++) {
+                        if (!grid[row][col].collapsed) {
+                            uncollapsedCells.push(grid[row][col]);
+                        }
+                    }
+                }
+                if (uncollapsedCells.length > 0) {
+                    const cell = uncollapsedCells[Math.floor(Math.random() * uncollapsedCells.length)];
+                    collapseCell(cell);
+                    step();
+                }
+            }
+        }
+
+        setup();
+        step();
+    </script>
+</body>
+</html>

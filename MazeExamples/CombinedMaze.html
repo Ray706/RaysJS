@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Combined Maze</title>
+  <style>
+    canvas { border: 1px solid black; }
+  </style>
+</head>
+<body>
+  <canvas id="combinedMaze" width="1200" height="1200"></canvas>
+  <script>
+    class Maze {
+      constructor(size) {
+        this.size = size;
+        this.grid = Array.from({ length: size }, () => Array.from({ length: size }, () => 0));
+      }
+    }
+
+    class BlobMaze extends Maze {
+      generate() {
+        this.divide(0, 0, this.size, this.size, 3);
+      }
+
+      divide(x, y, width, height, depth) {
+        if (depth === 0) return;
+        const wx = Math.floor(x + width / 2);
+        const wy = Math.floor(y + height / 2);
+        const px = Math.floor(wx + (Math.random() * 2 - 1));
+        const py = Math.floor(wy + (Math.random() * 2 - 1));
+
+        for (let i = 0; i < width; i++) this.grid[wy][x + i] = 1;
+        for (let i = 0; i < height; i++) this.grid[y + i][wx] = 1;
+
+        this.grid[py][wx] = 0;
+        this.grid[wy][px] = 0;
+
+        this.divide(x, y, wx - x, wy - y, depth - 1);
+        this.divide(wx + 1, y, x + width - wx - 1, wy - y, depth - 1);
+        this.divide(x, wy + 1, wx - x, y + height - wy - 1, depth - 1);
+        this.divide(wx + 1, wy + 1, x + width - wx - 1, y + height - wy - 1, depth - 1);
+      }
+    }
+
+    class WeaveMaze extends Maze {
+      generate() {
+        this.dfs(0, 0);
+        this.createWeaves();
+      }
+
+      dfs(x, y) {
+        this.grid[y][x] = 1;
+        const directions = [[1, 0], [0, 1], [-1, 0], [0, -1]].sort(() => Math.random() - 0.5);
+
+        for (const [dx, dy] of directions) {
+          const nx = x + dx * 2, ny = y + dy * 2;
+          if (nx >= 0 && ny >= 0 && nx < this.size && ny < this.size && this.grid[ny][nx] === 0) {
+            this.grid[y + dy][x + dx] = 1;
+            this.grid[ny][nx] = 1;
+            this.dfs(nx, ny);
+          }
+        }
+      }
+
+      createWeaves() {
+        for (let y = 1; y < this.size - 1; y += 2) {
+          for (let x = 1; x < this.size - 1; x += 2) {
+            if (Math.random() < 0.2) {
+              if (this.grid[y - 1][x] === 1 && this.grid[y + 1][x] === 1) {
+                this.grid[y][x] = 1;
+              } else if (this.grid[y][x - 1] === 1 && this.grid[y][x + 1] === 1) {
+                this.grid[y][x] = 1;
+              }
+            }
+          }
+        }
+      }
+    }
+
+    class CellularAutomataMaze extends Maze {
+      generate() {
+        for (let i = 0; i < 5; i++) {
+          this.step();
+        }
+      }
+
+      step() {
+        const newGrid = this.grid.map(arr => arr.slice());
+
+        for (let y = 0; y < this.size; y++) {
+          for (let x = 0; x < this.size; x++) {
+            const aliveNeighbors = this.countAliveNeighbors(x, y);
+
+            if (this.grid[y][x] === 1) {
+              newGrid[y][x] = aliveNeighbors < 4 ? 0 : 1;
+            } else {
+              newGrid[y][x] = aliveNeighbors > 4 ? 1 : 0;
+            }
+          }
+        }
+
+        this.grid = newGrid;
+      }
+
+      countAliveNeighbors(x, y) {
+        let count = 0;
+        for (let dy = -1; dy <= 1; dy++) {
+          for (let dx = -1; dx <= 1; dx++) {
+            if (dx === 0 && dy === 0) continue;
+            const nx = x + dx, ny = y + dy;
+            if (nx >= 0 && ny >= 0 && nx < this.size && ny < this.size) {
+              count += this.grid[ny][nx];
+            }
+          }
+        }
+        return count;
+      }
+    }
+
+    class TreacheryMaze extends Maze {
+      generate() {
+        this.carvePath(0, 0);
+        this.addTraps();
+      }
+
+      carvePath(x, y) {
+        this.grid[y][x] = 1;
+        const directions = [[1, 0], [0, 1], [-1, 0], [0, -1]].sort(() => Math.random() - 0.5);
+
+        for (const [dx, dy] of directions) {
+          const nx = x + dx * 2, ny = y + dy * 2;
+          if (nx >= 0 && ny >= 0 && nx < this.size && ny < this.size && this.grid[ny][nx] === 0) {
+            this.grid[y + dy][x + dx] = 1;
+            this.grid[ny][nx] = 1;
+            this.carvePath(nx, ny);
+          }
+        }
+      }
+
+      addTraps() {
+        for (let y = 1; y < this.size - 1; y++) {
+          for (let x = 1; x < this.size - 1; x++) {
+            if (this.grid[y][x] === 1 && Math.random() < 0.1) {
+              this.grid[y][x] = 0;
+            }
+          }
+        }
+      }
+    }
+
+    function drawMaze(ctx, maze, offsetX, offsetY, cellSize) {
+      for (let y = 0; y < maze.size; y++) {
+        for (let x = 0; x < maze.size; x++) {
+          if (maze.grid[y][x] === 1) {
+            ctx.fillRect(offsetX + x * cellSize, offsetY + y * cellSize, cellSize, cellSize);
+          }
+        }
+      }
+    }
+
+    function connectMazes(maze1, maze2, startX, startY, endX, endY) {
+      const midX = Math.floor((startX + endX) / 2);
+      const midY = Math.floor((startY + endY) / 2);
+
+      for (let x = startX; x <= midX; x++) maze1.grid[startY][x] = 1;
+      for (let y = startY; y <= midY; y++) maze1.grid[y][midX] = 1;
+      for (let x = midX; x <= endX; x++) maze2.grid[startY][x] = 1;
+      for (let y = startY; y <= endY; y++) maze2.grid[y][endX] = 1;
+    }
+
+    const size = 101;
+    const blobMaze = new BlobMaze(size);
+    const weaveMaze = new WeaveMaze(size);
+    const cellularAutomataMaze = new CellularAutomataMaze(size);
+    const treacheryMaze = new TreacheryMaze(size);
+
+    blobMaze.generate();
+    weaveMaze.generate();
+    cellularAutomataMaze.generate();
+    treacheryMaze.generate();
+
+    const canvas = document.getElementById('combinedMaze');
+    const ctx = canvas.getContext('2d');
+    const sectionSize = canvas.width / 2;
+    const cellSize = sectionSize / size;
+
+    drawMaze(ctx, blobMaze, 0, 0, cellSize);
+    drawMaze(ctx, weaveMaze, sectionSize, 0, cellSize);
+    drawMaze(ctx, cellularAutomataMaze, 0, sectionSize, cellSize);
+    drawMaze(ctx, treacheryMaze, sectionSize, sectionSize, cellSize);
+
+    connectMazes(blobMaze, weaveMaze, size - 1, Math.floor(size / 2), 0, Math.floor(size / 2));
+    connectMazes(blobMaze, cellularAutomataMaze, Math.floor(size / 2), size - 1, Math.floor(size / 2), 0);
+    connectMazes(weaveMaze, treacheryMaze, Math.floor(size / 2), size - 1, Math.floor(size / 2), 0);
+    connectMazes(cellularAutomataMaze, treacheryMaze, size - 1, Math.floor(size / 2), 0, Math.floor(size / 2));
+
+    drawMaze(ctx, blobMaze, 0, 0, cellSize);
+    drawMaze(ctx, weaveMaze, sectionSize, 0, cellSize);
+    drawMaze(ctx, cellularAutomataMaze, 0, sectionSize, cellSize);
+    drawMaze(ctx, treacheryMaze, sectionSize, sectionSize, cellSize);
+  </script>
+</body>
+</html>
