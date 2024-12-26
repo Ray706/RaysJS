@@ -1,0 +1,699 @@
+<html><head><base href="." />
+<title>3-D ASCII Art Generator</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/dat-gui/0.7.7/dat.gui.min.js"></script>
+<style>
+  body {
+    font-family: monospace;
+    background: #1a1a1a;
+    color: #0f0;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .content-container {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 20px;
+    width: 100%;
+    justify-content: center;
+  }
+
+  .shape-container {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  #canvas3d {
+    position: relative;
+    width: 500px;
+    height: 500px;
+    z-index: 1;
+  }
+
+  #canvas {
+    position: relative;
+    z-index: 1;
+    background: rgba(0, 0, 0, 0.7);
+    padding: 20px;
+    border-radius: 5px;
+    margin: 20px;
+    white-space: pre;
+    font-family: monospace;
+    min-width: 300px;
+  }
+
+  #tonesList {
+    width: 500px;
+    height: 200px;
+    background: #333;
+    color: #0f0;
+    border: 1px solid #0f0;
+    padding: 10px;
+    font-family: monospace;
+    overflow-y: auto;
+    white-space: pre;
+  }
+
+  /* Add scrollbar styling */
+  #tonesList::-webkit-scrollbar {
+    width: 10px;
+  }
+
+  #tonesList::-webkit-scrollbar-track {
+    background: #1a1a1a;
+  }
+
+  #tonesList::-webkit-scrollbar-thumb {
+    background: #0f0;
+    border-radius: 5px;
+  }
+
+  .controls {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin-bottom: 20px;
+  }
+
+  button, select {
+    background: #333;
+    color: #0f0;
+    border: 1px solid #0f0;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: monospace;
+  }
+
+  button:hover {
+    background: #444;
+  }
+
+  input {
+    background: #333;
+    color: #0f0;
+    border: 1px solid #0f0;
+    padding: 8px;
+    border-radius: 4px;
+    width: 60px;
+  }
+
+  label {
+    margin-right: 10px;
+  }
+</style>
+</head>
+<body>
+<h1>3-D ASCII Art Generator</h1>
+
+<div class="controls">
+  <div>
+    <label>Width:</label>
+    <input type="number" id="width" value="20" min="1" max="100">
+  </div>
+  <div>
+    <label>Height:</label>
+    <input type="number" id="height" value="20" min="1" max="100">
+  </div>
+  <div>
+    <label>Characters:</label>
+    <select id="charSet">
+      <option value="basic">Basic (█░)</option>
+      <option value="extended">Extended (█▓▒░)</option>
+      <option value="blocks">Blocks (▀▄█▌▐)</option>
+      <option value="matrix">Matrix (@#$%&)</option>
+      <option value="dots">Dots (●○•·)</option>
+      <option value="stars">Stars (★☆✦✧)</option>
+      <option value="arrows">Arrows (←↑→↓)</option>
+      <option value="faces">Faces (☺☻◕‿◕)</option>
+    </select>
+  </div>
+  <div>
+    <label>Pattern:</label>
+    <select id="patternType">
+      <option value="random">Random</option>
+      <option value="waves">Waves</option>
+      <option value="circles">Circles</option>
+      <option value="diamonds">Diamonds</option>
+      <option value="noise">Noise</option>
+      <option value="spiral">Spiral</option>
+      <option value="checkerboard">Checkerboard</option>
+      <option value="zigzag">Zigzag</option>
+    </select>
+  </div>
+  <div>
+    <label>Density:</label>
+    <input type="range" id="density" min="1" max="10" value="5">
+  </div>
+  <div>
+    <label>Animation Speed:</label>
+    <input type="range" id="speed" min="1" max="20" value="10">
+  </div>
+  <div>
+    <label>Color:</label>
+    <select id="colorScheme">
+      <option value="matrix">Matrix Green</option>
+      <option value="cyan">Cyber Cyan</option>
+      <option value="magenta">Neon Magenta</option>
+      <option value="rainbow">Rainbow</option>
+      <option value="sunset">Sunset</option>
+      <option value="ocean">Ocean</option>
+      <option value="forest">Forest</option>
+      <option value="pastel">Pastel</option>
+    </select>
+  </div>
+  <div>
+    <label>Musical Scale:</label>
+    <select id="musicalScale">
+      <option value="major">Major Scale</option>
+      <option value="minor">Minor Scale</option>
+      <option value="wholeTone">Whole Tone</option>
+      <option value="chromatic">12-Tone</option>
+    </select>
+  </div>
+  <div>
+    <label>3D Shape:</label>
+    <select id="shape3d" onchange="updateShape(this.value)">
+      <option value="none">None (2D)</option>
+      <option value="tetrahedron">Tetrahedron</option>
+      <option value="cube">Cube</option>
+      <option value="octahedron">Octahedron</option>
+      <option value="dodecahedron">Dodecahedron</option>
+      <option value="icosahedron">Icosahedron</option>
+    </select>
+  </div>
+  <button onclick="generate()">Generate</button>
+  <button onclick="saveAsSVG()">Save as SVG</button>
+  <button onclick="saveAsJS()">Save as JS</button>
+  <button onclick="toggleAnimation()" id="animateBtn">Animate</button>
+  <button onclick="toggleSound()" id="soundBtn">Toggle Sound</button>
+</div>
+
+<div class="content-container">
+  <div id="canvas"></div>
+  <div class="shape-container">
+    <div id="canvas3d"></div>
+    <div id="tonesList"></div>
+  </div>
+</div>
+
+<script>
+const charSets = {
+  basic: ['█', '░'],
+  extended: ['█', '▓', '▒', '░'],
+  blocks: ['▀', '▄', '█', '▌', '▐'],
+  matrix: ['@', '#', '$', '%', '&'],
+  dots: ['●', '○', '•', '·'],
+  stars: ['★', '☆', '✦', '✧'],
+  arrows: ['←', '↑', '→', '↓'],
+  faces: ['☺', '☻', '◕', '‿', '◕']
+};
+
+const colorSchemes = {
+  matrix: ['#0f0', '#0f8', '#0c4'],
+  cyan: ['#0ff', '#0cc', '#099'],
+  magenta: ['#f0f', '#c0c', '#909'],
+  rainbow: ['#f00', '#ff0', '#0f0', '#0ff', '#00f', '#f0f'],
+  sunset: ['#ff6b6b', '#ffd93d', '#ff8e3c', '#ff4949'],
+  ocean: ['#48cae4', '#00b4d8', '#0096c7', '#023e8a'],
+  forest: ['#40916c', '#52b788', '#74c69d', '#95d5b2'],
+  pastel: ['#ffd6ff', '#e7c6ff', '#c8b6ff', '#b8c0ff']
+};
+
+const musicalScales = {
+  major: [261.63, 293.66, 329.63, 349.23, 392.00, 440.00, 493.88, 523.25],
+  minor: [261.63, 293.66, 311.13, 349.23, 392.00, 415.30, 466.16, 523.25],
+  wholeTone: [261.63, 293.66, 329.63, 369.99, 415.30, 466.16, 523.25],
+  chromatic: [261.63, 277.18, 293.66, 311.13, 329.63, 349.23, 369.99, 392.00, 415.30, 440.00, 466.16, 493.88]
+};
+
+let currentArt = [];
+let seed = Math.random();
+let animationId = null;
+let isAnimating = false;
+let lastTimestamp = 0;
+let audioContext = null;
+let oscillators = [];
+let isPlayingSound = false;
+let rotationSpeed = { x: 0.01, y: 0.01 };
+let currentToneIndex = 0;
+let toneSequenceInterval = null;
+
+// 3D Variables
+let scene, camera, renderer, geometry, material, mesh;
+let is3DEnabled = true;
+
+function seededRandom() {
+  seed = (seed * 16807) % 2147483647;
+  return (seed - 1) / 2147483646;
+}
+
+const patterns = {
+  waves: (x, y, t = 0) => Math.sin(x * 0.3 + t) + Math.cos(y * 0.3 + t),
+  circles: (x, y, t = 0) => Math.sin(Math.sqrt(x * x + y * y) * 0.3 + t),
+  diamonds: (x, y, t = 0) => Math.sin(Math.abs(x) + Math.abs(y) + t),
+  noise: (x, y) => seededRandom(),
+  spiral: (x, y, t = 0) => Math.sin(Math.atan2(y, x) + Math.sqrt(x * x + y * y) * 0.2 + t),
+  checkerboard: (x, y) => (Math.floor(x) + Math.floor(y)) % 2,
+  zigzag: (x, y, t = 0) => Math.sin(x + y + t) * Math.cos(x - y + t)
+};
+
+function initAudio() {
+  if (!audioContext) {
+    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+  }
+}
+
+function init3D() {
+  const textureCanvas = document.createElement('canvas');
+  const ctx = textureCanvas.getContext('2d');
+  textureCanvas.width = 512;  // Power of 2 for better performance
+  textureCanvas.height = 512;
+
+  // Create initial texture
+  ctx.fillStyle = '#000000';
+  ctx.fillRect(0, 0, textureCanvas.width, textureCanvas.height);
+  ctx.fillStyle = '#00ff00';
+  ctx.font = '16px monospace';
+  ctx.fillText('Loading...', 20, 20);
+
+  const texture = new THREE.CanvasTexture(textureCanvas);
+  material = new THREE.MeshBasicMaterial({ 
+    map: texture,
+    side: THREE.DoubleSide,
+    transparent: true,
+    opacity: 0.9
+  });
+
+  scene = new THREE.Scene();
+  camera = new THREE.PerspectiveCamera(75, 1, 0.1, 1000); // Use aspect ratio of 1 for square viewport
+  renderer = new THREE.WebGLRenderer({ 
+    alpha: true,
+    antialias: true 
+  });
+
+  renderer.setSize(500, 500); // Fixed size instead of window size
+  renderer.setPixelRatio(window.devicePixelRatio);
+  document.getElementById('canvas3d').appendChild(renderer.domElement);
+
+  camera.position.z = 5;
+}
+
+function getFrequencyForChar(char, selectedScale) {
+  const scale = musicalScales[selectedScale];
+  const charSet = charSets[document.getElementById('charSet').value];
+  const index = charSet.indexOf(char);
+  if (index === -1) return scale[0];
+  return scale[index % scale.length];
+}
+
+function updateTonesList() {
+  const tonesList = document.getElementById('tonesList');
+  const selectedScale = document.getElementById('musicalScale').value;
+  let tonesText = 'Tones in sequence:\n\n';
+  
+  currentArt.forEach((row, i) => {
+    row.chars.split('').forEach((char, j) => {
+      if (char !== ' ') {
+        const freq = getFrequencyForChar(char, selectedScale);
+        tonesText += `Tone ${i * row.chars.length + j + 1}: ${freq.toFixed(2)} Hz (${char})\n`;
+      }
+    });
+  });
+  
+  tonesList.textContent = tonesText;
+}
+
+function playSound() {
+  if (!currentArt.length) return;
+  
+  stopSound();
+  
+  const selectedScale = document.getElementById('musicalScale').value;
+  
+  currentArt.forEach((row, i) => {
+    row.chars.split('').forEach((char, j) => {
+      if (char !== ' ') {
+        const osc = audioContext.createOscillator();
+        const gain = audioContext.createGain();
+        
+        const freq = getFrequencyForChar(char, selectedScale);
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, audioContext.currentTime);
+        
+        gain.gain.setValueAtTime(0.02, audioContext.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.5);
+        
+        osc.connect(gain);
+        gain.connect(audioContext.destination);
+        
+        osc.start();
+        osc.stop(audioContext.currentTime + 0.5);
+        oscillators.push(osc);
+      }
+    });
+  });
+}
+
+function playToneSequence() {
+  if (!currentArt.length) return;
+  
+  stopSound();
+  currentToneIndex = 0;
+  
+  const selectedScale = document.getElementById('musicalScale').value;
+  let allTones = [];
+  
+  // Collect all tones
+  currentArt.forEach(row => {
+    row.chars.split('').forEach(char => {
+      if (char !== ' ') {
+        allTones.push({
+          char: char,
+          freq: getFrequencyForChar(char, selectedScale)
+        });
+      }
+    });
+  });
+  
+  function playNextTone() {
+    if (currentToneIndex >= allTones.length) {
+      currentToneIndex = 0;
+      if (!isPlayingSound) {
+        clearInterval(toneSequenceInterval);
+        return;
+      }
+    }
+    
+    const tone = allTones[currentToneIndex];
+    const osc = audioContext.createOscillator();
+    const gain = audioContext.createGain();
+    
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(tone.freq, audioContext.currentTime);
+    
+    gain.gain.setValueAtTime(0.1, audioContext.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.1);
+    
+    osc.connect(gain);
+    gain.connect(audioContext.destination);
+    
+    osc.start();
+    osc.stop(audioContext.currentTime + 0.1);
+    oscillators.push(osc);
+    
+    // Highlight current tone in the list
+    const tonesList = document.getElementById('tonesList');
+    const lines = tonesList.textContent.split('\n');
+    const highlightedLines = lines.map((line, i) => {
+      if (i === currentToneIndex + 2) { // +2 to skip header lines
+        return '> ' + line;
+      }
+      return '  ' + line;
+    });
+    tonesList.textContent = highlightedLines.join('\n');
+    
+    currentToneIndex++;
+  }
+  
+  // Clear existing interval if any
+  if (toneSequenceInterval) {
+    clearInterval(toneSequenceInterval);
+  }
+  
+  // Play tones in sequence
+  toneSequenceInterval = setInterval(playNextTone, 200);
+}
+
+function stopSound() {
+  oscillators.forEach(osc => {
+    osc.stop();
+    osc.disconnect();
+  });
+  oscillators = [];
+}
+
+function toggleSound() {
+  const btn = document.getElementById('soundBtn');
+  if (isPlayingSound) {
+    stopSound();
+    if (toneSequenceInterval) {
+      clearInterval(toneSequenceInterval);
+    }
+    btn.textContent = 'Toggle Sound';
+    isPlayingSound = false;
+  } else {
+    initAudio();
+    playToneSequence();
+    btn.textContent = 'Stop Sound';
+    isPlayingSound = true;
+  }
+}
+
+function updateShape(shapeName) {
+  if (mesh) {
+    scene.remove(mesh);
+  }
+  
+  switch(shapeName) {
+    case 'tetrahedron':
+      geometry = new THREE.TetrahedronGeometry(2);
+      break;
+    case 'cube':
+      geometry = new THREE.BoxGeometry(2, 2, 2);
+      break;
+    case 'octahedron':
+      geometry = new THREE.OctahedronGeometry(2);
+      break;
+    case 'dodecahedron':
+      geometry = new THREE.DodecahedronGeometry(2);
+      break;
+    case 'icosahedron':
+      geometry = new THREE.IcosahedronGeometry(2);
+      break;
+    case 'none':
+      is3DEnabled = false;
+      return;
+  }
+  
+  is3DEnabled = true;
+  mesh = new THREE.Mesh(geometry, material);
+  scene.add(mesh);
+}
+
+function animate3D() {
+  if (!is3DEnabled) return;
+  
+  requestAnimationFrame(animate3D);
+  
+  if (mesh) {
+    mesh.rotation.x += rotationSpeed.x;
+    mesh.rotation.y += rotationSpeed.y;
+    
+    // Add gentle wobble
+    mesh.position.y = Math.sin(Date.now() * 0.001) * 0.1;
+  }
+  
+  renderer.render(scene, camera);
+}
+
+function generate(time = 0) {
+  const width = parseInt(document.getElementById('width').value);
+  const height = parseInt(document.getElementById('height').value);
+  const selectedSet = document.getElementById('charSet').value;
+  const selectedPattern = document.getElementById('patternType').value;
+  const density = document.getElementById('density').value / 5;
+  const colorScheme = document.getElementById('colorScheme').value;
+  const chars = charSets[selectedSet];
+  
+  if (selectedPattern === 'random' && !time) {
+    seed = Math.random();
+  }
+  
+  const pattern = selectedPattern === 'random' 
+    ? patterns[Object.keys(patterns)[Math.floor(seededRandom() * Object.keys(patterns).length)]]
+    : patterns[selectedPattern];
+  
+  currentArt = [];
+  let art = '';
+  
+  for (let y = 0; y < height; y++) {
+    let row = '';
+    let rowColors = [];
+    for (let x = 0; x < width; x++) {
+      const patternValue = pattern(x * density - width/2, y * density - height/2, time * 0.1);
+      const noise = patternValue + seededRandom() * 0.2;
+      const index = Math.floor(Math.abs(noise * chars.length)) % chars.length;
+      const colorIndex = Math.floor(Math.abs(noise * colorSchemes[colorScheme].length)) % colorSchemes[colorScheme].length;
+      row += chars[index];
+      rowColors.push(colorSchemes[colorScheme][colorIndex]);
+    }
+    currentArt.push({chars: row, colors: rowColors});
+    art += row + '\n';
+  }
+  
+  const canvas = document.getElementById('canvas');
+  canvas.innerHTML = currentArt.map(row => 
+    row.chars.split('').map((char, i) => 
+      `<span style="color: ${row.colors[i]}">${char}</span>`
+    ).join('')
+  ).join('\n');
+
+  // Only update 3D if it's enabled and initialized properly
+  if (is3DEnabled && mesh && material && scene) {
+    try {
+      const canvas3D = document.createElement('canvas');
+      const ctx = canvas3D.getContext('2d');
+      canvas3D.width = 512;
+      canvas3D.height = 512;
+      
+      ctx.fillStyle = 'rgba(0,0,0,0.8)';
+      ctx.fillRect(0, 0, canvas3D.width, canvas3D.height);
+      
+      // Ensure currentArt has content before accessing
+      if (currentArt.length > 0 && currentArt[0].chars) {
+        const scale = Math.min(
+          canvas3D.width / (currentArt[0].chars.length * 20),
+          canvas3D.height / (currentArt.length * 20)
+        );
+        
+        const offsetX = (canvas3D.width - currentArt[0].chars.length * 20 * scale) / 2;
+        const offsetY = (canvas3D.height - currentArt.length * 20 * scale) / 2;
+        
+        ctx.save();
+        ctx.translate(offsetX, offsetY);
+        ctx.scale(scale, scale);
+        
+        currentArt.forEach((row, i) => {
+          row.chars.split('').forEach((char, j) => {
+            ctx.fillStyle = row.colors[j];
+            ctx.font = '20px monospace';
+            ctx.fillText(char, j * 20, (i + 1) * 20);
+          });
+        });
+        
+        ctx.restore();
+        
+        if (material.map) {
+          material.map.dispose();
+        }
+        const texture = new THREE.CanvasTexture(canvas3D);
+        material.map = texture;
+        material.needsUpdate = true;
+      }
+    } catch (error) {
+      console.error('Error updating 3D texture:', error);
+    }
+  }
+  
+  if (isPlayingSound) {
+    playSound();
+  }
+
+  // Update the tones list after generating art
+  updateTonesList();
+}
+
+function toggleAnimation() {
+  const btn = document.getElementById('animateBtn');
+  if (isAnimating) {
+    if (animationId) {
+      cancelAnimationFrame(animationId);
+      animationId = null;
+    }
+    isAnimating = false;
+    btn.textContent = 'Animate';
+  } else {
+    isAnimating = true;
+    btn.textContent = 'Stop';
+    let time = 0;
+    lastTimestamp = performance.now();
+    
+    function animate(timestamp) {
+      if (!isAnimating) return;
+      
+      try {
+        const speed = document.getElementById('speed').value;
+        const elapsed = timestamp - lastTimestamp;
+        const frameDelay = 1000 / speed;
+        
+        if (elapsed > frameDelay) {
+          generate(time);
+          time++;
+          lastTimestamp = timestamp;
+        }
+        
+        animationId = requestAnimationFrame(animate);
+      } catch (error) {
+        console.error('Animation error:', error);
+        isAnimating = false;
+        btn.textContent = 'Animate';
+      }
+    }
+    animate(performance.now());
+  }
+}
+
+function saveAsSVG() {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${currentArt[0].chars.length * 10}" height="${currentArt.length * 15}">
+    <style>text { font-family: monospace; font-size: 14px; }</style>
+    ${currentArt.map((row, i) => 
+      `<text x="0" y="${(i + 1) * 15}">${row.chars}</text>`
+    ).join('\n')}
+  </svg>`;
+  
+  const blob = new Blob([svg], {type: 'image/svg+xml'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'ascii-art.svg';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function saveAsJS() {
+  const js = `const asciiArt = \`${currentArt.map(row => row.chars).join('\n')}\`;\n\n` +
+    `function displayArt() {\n` +
+    `  console.log(asciiArt);\n` +
+    `}\n\n` +
+    `// To display the art, call:\n` +
+    `// displayArt();`;
+    
+  const blob = new Blob([js], {type: 'text/javascript'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'ascii-art.js';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function cleanup3D() {
+  if (renderer) {
+    renderer.dispose();
+    if (material) {
+      material.dispose();
+      if (material.map) material.map.dispose();
+    }
+    if (geometry) geometry.dispose();
+    if (mesh) scene.remove(mesh);
+  }
+}
+
+// Add event listener for page unload
+window.addEventListener('beforeunload', cleanup3D);
+
+// Generate initial art
+generate();
+
+// Initialize 3D scene after first generation
+init3D();
+animate3D();
+</script>
+</body></html>
