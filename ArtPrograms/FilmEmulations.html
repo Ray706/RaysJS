@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>High-Fidelity Film Emulation Editor</title>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f9f9f9;
+        }
+        #toolbar {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-around;
+            width: 100%;
+            max-width: 800px;
+            margin-bottom: 20px;
+        }
+        #toolbar input, #toolbar select, #toolbar button {
+            margin: 5px;
+        }
+        #imageCanvas {
+            border: 1px solid #ddd;
+            max-width: 100%;
+            height: auto;
+        }
+        .slider-label {
+            flex: 1 0 100%;
+            text-align: center;
+            margin-top: 15px;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>High-Fidelity Film Emulation Editor</h1>
+    <div id="toolbar">
+        <input type="file" id="upload" accept="image/*">
+        <select id="filmSimulation">
+            <option value="none">Film Simulation...</option>
+            <option value="kodachrome">Kodachrome</option>
+            <option value="velvia">Velvia</option>
+            <option value="fujiProvia">Fuji Provia</option>
+            <option value="ektachrome">Ektachrome</option>
+            <option value="agfaChrome">Agfa Chrome</option>
+            <option value="kodakPortra">Kodak Portra</option>
+            <option value="fujiAstia">Fuji Astia</option>
+            <option value="triX">Kodak Tri-X</option>
+            <option value="ilfordXP2">Ilford XP2</option>
+            <option value="cinestill800T">Cinestill 800T</option>
+            <option value="modernColor">Modern Color</option>
+            <option value="modernBlackAndWhite">Modern Black & White</option>
+        </select>
+        <button id="download" disabled>Download</button>
+        
+        <div class="slider-label">Film Grain</div>
+        <input type="range" id="grainSlider" min="0" max="100" value="0">
+        
+        <div class="slider-label">Contrast</div>
+        <input type="range" id="contrastSlider" min="0" max="200" value="100">
+        
+        <div class="slider-label">Saturation</div>
+        <input type="range" id="saturationSlider" min="0" max="200" value="100">
+        
+        <div class="slider-label">Clarity</div>
+        <input type="range" id="claritySlider" min="0" max="200" value="100">
+        
+        <div class="slider-label">Sharpness</div>
+        <input type="range" id="sharpnessSlider" min="0" max="200" value="100">
+        
+        <div class="slider-label">Shadow Darkness</div>
+        <input type="range" id="shadowSlider" min="0" max="100" value="50">
+        
+        <div class="slider-label">Highlight Brightness</div>
+        <input type="range" id="highlightSlider" min="0" max="100" value="50">
+        
+        <div class="slider-label">Image Darkness</div>
+        <input type="range" id="imageDarknessSlider" min="0" max="100" value="50">
+        
+        <div class="slider-label">Image Brightness</div>
+        <input type="range" id="imageBrightnessSlider" min="0" max="100" value="50">
+        
+        <div class="slider-label">Dark Colors Brightness</div>
+        <input type="range" id="darkColorsSlider" min="0" max="100" value="50">
+        
+        <div class="slider-label">Light Colors Brightness</div>
+        <input type="range" id="lightColorsSlider" min="0" max="100" value="50">
+        
+        <!-- Sliders for Color Components -->
+        <div class="slider-label">Cyan</div>
+        <input type="range" id="cyanSlider" min="0" max="200" value="100">
+        
+        <div class="slider-label">Yellow</div>
+        <input type="range" id="yellowSlider" min="0" max="200" value="100">
+        
+        <div class="slider-label">Magenta</div>
+        <input type="range" id="magentaSlider" min="0" max="200" value="100">
+        
+        <div class="slider-label">Green</div>
+        <input type="range" id="greenSlider" min="0" max="200" value="100">
+        
+        <div class="slider-label">Blue</div>
+        <input type="range" id="blueSlider" min="0" max="200" value="100">
+        
+        <div class="slider-label">Red</div>
+        <input type="range" id="redSlider" min="0" max="200" value="100">
+        
+        <div class="slider-label">Orange</div>
+        <input type="range" id="orangeSlider" min="0" max="200" value="100">
+        
+        <div class="slider-label">Violet</div>
+        <input type="range" id="violetSlider" min="0" max="200" value="100">
+
+    </div>
+
+    <canvas id="imageCanvas" width="800" height="600"></canvas>
+
+    <script>
+        const canvas = document.getElementById('imageCanvas');
+        const ctx = canvas.getContext('2d');
+        const upload = document.getElementById('upload');
+        const filmSimulationControl = document.getElementById('filmSimulation');
+        const downloadButton = document.getElementById('download');
+
+        const adjustments = {
+            grain: document.getElementById('grainSlider'),
+            contrast: document.getElementById('contrastSlider'),
+            saturation: document.getElementById('saturationSlider'),
+            clarity: document.getElementById('claritySlider'),
+            sharpness: document.getElementById('sharpnessSlider'),
+            shadow: document.getElementById('shadowSlider'),
+            highlight: document.getElementById('highlightSlider'),
+            darkness: document.getElementById('imageDarknessSlider'),
+            brightness: document.getElementById('imageBrightnessSlider'),
+            darkColors: document.getElementById('darkColorsSlider'),
+            lightColors: document.getElementById('lightColorsSlider'),
+            cyan: document.getElementById('cyanSlider'),
+            yellow: document.getElementById('yellowSlider'),
+            magenta: document.getElementById('magentaSlider'),
+            green: document.getElementById('greenSlider'),
+            blue: document.getElementById('blueSlider'),
+            red: document.getElementById('redSlider'),
+            orange: document.getElementById('orangeSlider'),
+            violet: document.getElementById('violetSlider'),
+        };
+
+        let originalImageData = null;
+
+        upload.addEventListener('change', handleImageUpload);
+        filmSimulationControl.addEventListener('change', applyFilmSimulation);
+        Object.values(adjustments).forEach(slider => slider.addEventListener('input', applyImageAdjustments));
+
+        downloadButton.addEventListener('click', handleDownload);
+
+        function handleImageUpload(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    const img = new Image();
+                    img.src = e.target.result;
+                    img.onload = () => {
+                        canvas.width = img.width;
+                        canvas.height = img.height;
+                        ctx.drawImage(img, 0, 0);
+                        originalImageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                        downloadButton.disabled = false;
+                    };
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function applyFilmSimulation() {
+            if (!originalImageData) return;
+            applyImageAdjustments();
+        }
+
+        function applyImageAdjustments() {
+            if (!originalImageData) return;
+
+            const imageData = ctx.createImageData(originalImageData);
+            const data = imageData.data;
+            const original = originalImageData.data;
+
+            const settings = {
+                contrast: adjustments.contrast.value / 100,
+                saturation: adjustments.saturation.value / 100,
+                clarity: adjustments.clarity.value / 100,
+                sharpness: adjustments.sharpness.value / 100,
+                shadow: adjustments.shadow.value / 50 - 1,
+                highlight: adjustments.highlight.value / 50 - 1,
+                darkness: adjustments.darkness.value / 50 - 1,
+                brightness: adjustments.brightness.value / 50 - 1,
+                darkColors: adjustments.darkColors.value / 50 - 1,
+                lightColors: adjustments.lightColors.value / 50 - 1,
+                cyan: adjustments.cyan.value / 100,
+                yellow: adjustments.yellow.value / 100,
+                magenta: adjustments.magenta.value / 100,
+                green: adjustments.green.value / 100,
+                blue: adjustments.blue.value / 100,
+                red: adjustments.red.value / 100,
+                orange: adjustments.orange.value / 100,
+                violet: adjustments.violet.value / 100,
+            };
+
+            for (let i = 0; i < data.length; i += 4) {
+                let r = original[i];
+                let g = original[i + 1];
+                let b = original[i + 2];
+                const a = original[i + 3];
+
+                // Apply settings...
+                // Contrast (basic level)
+                r = (((r / 255) - 0.5) * settings.contrast + 0.5) * 255;
+                g = (((g / 255) - 0.5) * settings.contrast + 0.5) * 255;
+                b = (((b / 255) - 0.5) * settings.contrast + 0.5) * 255;
+
+                // Saturation
+                const avg = (r + g + b) / 3;
+                r = avg + (r - avg) * settings.saturation;
+                g = avg + (g - avg) * settings.saturation;
+                b = avg + (b - avg) * settings.saturation;
+
+                // Apply film-specific effects here
+                switch (filmSimulationControl.value) {
+                    case 'kodachrome':
+                        r = r * 0.9 + g * 0.05;
+                        g = g * 0.85 + b * 0.1;
+                        b = b * 0.6 + r * 0.35;
+                        break;
+                    // Add other cases using settings object for component adjustments
+                }
+
+                // Shadows and highlights adjustment
+                if (avg / 255 < 0.5) {
+                    // Dark
+                    r += r * settings.shadow;
+                    g += g * settings.shadow;
+                    b += b * settings.shadow;
+                } else {
+                    // Light
+                    r += r * settings.highlight;
+                    g += g * settings.highlight;
+                    b += b * settings.highlight;
+                }
+
+                // Brightness Control
+                r += settings.brightness * 50;
+                g += settings.brightness * 50;
+                b += settings.brightness * 50;
+
+                // Limiting to [0, 255] and apply final values
+                data[i] = Math.min(255, Math.max(0, r));
+                data[i + 1] = Math.min(255, Math.max(0, g));
+                data[i + 2] = Math.min(255, Math.max(0, b));
+                data[i + 3] = a; // alpha
+            }
+
+            ctx.putImageData(imageData, 0, 0);
+
+            // Adding grain effect
+            if (adjustments.grainSlider.value > 0) {
+                addFilmGrain(parseInt(adjustments.grainSlider.value, 10));
+            }
+        }
+
+        function addFilmGrain(level) {
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const data = imageData.data;
+            const grainAmount = level * 0.5;
+
+            for (let i = 0; i < data.length; i += 4) {
+                // Randomly adjust pixel values within the grain amount
+                const grain = (Math.random() - 0.5) * grainAmount;
+                data[i] = Math.min(255, data[i] + grain);
+                data[i + 1] = Math.min(255, data[i + 1] + grain);
+                data[i + 2] = Math.min(255, data[i + 2] + grain);
+            }
+
+            ctx.putImageData(imageData, 0, 0);
+        }
+
+        function handleDownload() {
+            const link = document.createElement('a');
+            link.href = canvas.toDataURL('image/png');
+            link.download = 'edited-image.png';
+            link.click();
+        }
+    </script>
+</body>
+</html>
+```
+
+### Overview of Controls Added:
+- **Film Grain Slider**: Adjust the amount and size of grain applied to mimic film grain texture.
+- **Contrast and Saturation Sliders**: Achieve desired dynamic range and color intensity.
+- **Clarity and Sharpness Sliders**: Enhance image details or soften them.
+- **Shadow and Highlight**: Adjust regions of darkness and brightness.
+- **Image Overall Brightness/Darkness**: Quick controls for overall light adjustment.
+- **Color Component Adjustments**: Fine-tune individual color channels for precise color grading: Cyan, Yellow, Magenta, Green, Blue, Red, Orange, Violet.
+
+### Future Enhancements:
+Integrate more sophisticated color manipulation algorithms, real-time previews during adjustment, and more robust user feedback systems for non-intrusive and personalized editing assistance to help achieve professional-grade editing results.

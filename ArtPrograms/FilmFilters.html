@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>High-Fidelity Film Emulation Editor</title>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f9f9f9;
+        }
+        #toolbar {
+            display: flex;
+            justify-content: space-around;
+            width: 100%;
+            max-width: 800px;
+            margin-bottom: 20px;
+        }
+        #toolbar input, #toolbar select {
+            margin: 10px;
+        }
+        #imageCanvas {
+            border: 1px solid #ddd;
+            max-width: 100%;
+            height: auto;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>High-Fidelity Film Emulation Editor</h1>
+    <div id="toolbar">
+        <input type="file" id="upload" accept="image/*">
+        <select id="filmSimulation">
+            <option value="none">Film Simulation...</option>
+            <option value="kodachrome">Kodachrome</option>
+            <option value="velvia">Velvia</option>
+            <option value="fujiProvia">Fuji Provia</option>
+            <option value="ektachrome">Ektachrome</option>
+            <option value="agfaChrome">Agfa Chrome</option>
+            <option value="kodakPortra">Kodak Portra</option>
+            <option value="fujiAstia">Fuji Astia</option>
+            <option value="triX">Kodak Tri-X</option>
+            <option value="ilfordXP2">Ilford XP2</option>
+            <option value="cinestill800T">Cinestill 800T</option>
+            <option value="modernColor">Modern Color</option>
+            <option value="modernBlackAndWhite">Modern Black & White</option>
+        </select>
+        <button id="download" disabled>Download</button>
+    </div>
+
+    <canvas id="imageCanvas" width="800" height="600"></canvas>
+
+    <script>
+        const canvas = document.getElementById('imageCanvas');
+        const ctx = canvas.getContext('2d');
+        const upload = document.getElementById('upload');
+        const filmSimulationControl = document.getElementById('filmSimulation');
+        const downloadButton = document.getElementById('download');
+
+        let originalImageData = null;
+
+        upload.addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    const img = new Image();
+                    img.src = e.target.result;
+                    img.onload = () => {
+                        canvas.width = img.width;
+                        canvas.height = img.height;
+                        ctx.drawImage(img, 0, 0);
+                        originalImageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                        downloadButton.disabled = false;
+                    };
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        filmSimulationControl.addEventListener('change', applyFilmSimulation);
+
+        function applyFilmSimulation() {
+            if (!originalImageData) return;
+            
+            const imageData = ctx.createImageData(originalImageData);
+            const data = imageData.data;
+            const original = originalImageData.data;
+
+            const simulation = filmSimulationControl.value;
+            for (let i = 0; i < data.length; i += 4) {
+                const r = original[i];
+                const g = original[i + 1];
+                const b = original[i + 2];
+
+                let nr, ng, nb;
+                switch (simulation) {
+                    case 'kodachrome':
+                        nr = r * 0.9 + g * 0.05;
+                        ng = g * 0.85 + b * 0.1;
+                        nb = b * 0.6 + r * 0.35;
+                        break;
+                    case 'velvia':
+                        nr = r * 1.1;
+                        ng = g * 1.05;
+                        nb = b * 0.9;
+                        break;
+                    case 'fujiProvia':
+                        nr = r * 0.95 + 5;
+                        ng = g * 0.85 + r * 0.1;
+                        nb = b * 0.95 + g * 0.05;
+                        break;
+                    case 'ektachrome':
+                        nr = r * 1.05 + 10;
+                        ng = g * 0.9 + 5;
+                        nb = b * 1.2;
+                        break;
+                    case 'agfaChrome':
+                        nr = r * 1.1;
+                        ng = g * 1.1;
+                        nb = b * 0.95;
+                        break;
+                    case 'kodakPortra':
+                        nr = r * 1.02;
+                        ng = g * 1.02;
+                        nb = b * 0.98;
+                        break;
+                    case 'fujiAstia':
+                        nr = r * 0.9 + 15;
+                        ng = g * 0.95;
+                        nb = b * 1.05;
+                        break;
+                    case 'triX':
+                        const grayTRIX = 0.3 * r + 0.59 * g + 0.11 * b;
+                        nr = ng = nb = grayTRIX;
+                        break;
+                    case 'ilfordXP2':
+                        const grayILFORD = (r + g + b) / 3;
+                        nr = ng = nb = grayILFORD * 1.1;
+                        break;
+                    case 'cinestill800T':
+                        nr = r * 1.02;
+                        ng = g * 0.95;
+                        nb = b * 1.1;
+                        break;
+                    case 'modernColor':
+                        nr = r * 1.15;
+                        ng = g * 1.1;
+                        nb = b * 1.05;
+                        break;
+                    case 'modernBlackAndWhite':
+                        const grayModern = 0.4 * r + 0.5 * g + 0.1 * b;
+                        nr = ng = nb = grayModern;
+                        break;
+                    default:
+                        nr = r;
+                        ng = g;
+                        nb = b;
+                        break;
+                }
+
+                data[i] = Math.min(255, Math.max(0, nr));
+                data[i + 1] = Math.min(255, Math.max(0, ng));
+                data[i + 2] = Math.min(255, Math.max(0, nb));
+                data[i + 3] = original[i + 3]; // preserve alpha
+            }
+
+            ctx.putImageData(imageData, 0, 0);
+        }
+
+        downloadButton.addEventListener('click', () => {
+            const link = document.createElement('a');
+            link.href = canvas.toDataURL('image/png');
+            link.download = 'edited-image.png';
+            link.click();
+        });
+    </script>
+</body>
+</html>
+```
+
+### Expanded Film Simulations Included:
+
+1. **Kodachrome**: Classic warm colors with a slightly contrasty feel.
+2. **Velvia**: Highly saturated colors, perfect for landscapes.
+3. **Fuji Provia**: Balanced colors with a slightly cool tone.
+4. **Ektachrome**: Vibrant blues and greens with a touch of warmth.
+5. **Agfa Chrome**: Strong reds and contrast, originally known for distinctive color tones.
+6. **Kodak Portra**: Natural skin tones, often used for portraits.
+7. **Fuji Astia**: Subtle tones ideal for soft lighting.
+8. **Kodak Tri-X**: Iconic black and white with classic grain and contrast.
+9. **Ilford XP2**: Smooth black and white with controlled contrast.
+10. **Cinestill 800T**: Tungsten-balanced film, known for its cinematic look.
+11. **Modern Color**: Enhanced saturation for a vibrant pop.
+12. **Modern Black & White**: Crisp monochrome with a modern touch.
+
+### Features and Future Plans:
+
+This application offers a dynamic selection of both nostalgic and contemporary film styles, allowing users to experiment with their digital images creatively. Future developments could include real-time preview adjustments, more detailed LUT processing for precise color grading, and user-designed custom filters to hone in on personal creative expression.

@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced Image Editor with Film Simulations</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 0;
+        }
+        #toolbar {
+            margin: 10px;
+        }
+        #imageCanvas {
+            border: 1px solid #ccc;
+            max-width: 100%;
+            height: auto;
+        }
+        #controls {
+            display: flex;
+            justify-content: space-between;
+            width: 80%;
+            max-width: 800px;
+            margin-top: 10px;
+            flex-wrap: wrap;
+        }
+        .control-group {
+            margin: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Advanced Image Editor</h1>
+    <div id="toolbar">
+        <input type="file" id="upload" accept="image/*">
+    </div>
+    <canvas id="imageCanvas" width="600" height="400"></canvas>
+    <div id="controls">
+        <div class="control-group">
+            <label for="filmSimulation">Film Simulation</label>
+            <select id="filmSimulation">
+                <option value="none">None</option>
+                <option value="kodachrome">Kodachrome</option>
+                <option value="fujiProvia">Fuji Provia</option>
+                <option value="agfaVista">Agfa Vista</option>
+            </select>
+        </div>
+        <div class="control-group">
+            <label for="simulationIntensity">Intensity</label>
+            <input type="range" id="simulationIntensity" min="0" max="100" value="50">
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('imageCanvas');
+        const ctx = canvas.getContext('2d');
+        const upload = document.getElementById('upload');
+        const filmSimulationControl = document.getElementById('filmSimulation');
+        const simulationIntensity = document.getElementById('simulationIntensity');
+
+        let image = new Image();
+        let originalImageData;
+
+        // LUTs for basic simulation effects for demonstration
+        const LUTs = {
+            kodachrome: [1.2, 1.1, 0.9],
+            fujiProvia: [1.0, 1.05, 1.0],
+            agfaVista: [1.1, 1.05, 0.9],
+        };
+
+        upload.addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    image.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        image.onload = function () {
+            canvas.width = image.width;
+            canvas.height = image.height;
+            ctx.drawImage(image, 0, 0);
+            originalImageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        };
+
+        filmSimulationControl.addEventListener('change', applyFilters);
+        simulationIntensity.addEventListener('input', applyFilters);
+
+        function applyFilters() {
+            if (!originalImageData) return;
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const data = imageData.data;
+            const intensity = simulationIntensity.value / 100;
+            
+            const selectedSimulation = filmSimulationControl.value;
+            const LUT = LUTs[selectedSimulation] || [1, 1, 1];
+
+            for (let i = 0; i < data.length; i += 4) {
+                const originalR = originalImageData.data[i];
+                const originalG = originalImageData.data[i + 1];
+                const originalB = originalImageData.data[i + 2];
+
+                data[i] = applyLUT(originalR, LUT[0], intensity);
+                data[i + 1] = applyLUT(originalG, LUT[1], intensity);
+                data[i + 2] = applyLUT(originalB, LUT[2], intensity);
+            }
+            ctx.putImageData(imageData, 0, 0);
+        }
+
+        function applyLUT(color, lutValue, intensity) {
+            return Math.min(255, color * (1 - intensity + lutValue * intensity));
+        }
+    </script>
+</body>
+</html>
+```
+
+### Key Components:
+
+1. **Film Simulations with LUTs**: This simple LUT-based simulation adjusts the red, green, and blue channels using predefined multipliers.
+
+2. **Intensity Control**: A slider allows users to blend between the original image (intensity 0) and the fully applied LUT effect (intensity 100).
+
+3. **Real-time Feedback**: The effects are applied dynamically as users adjust sliders or select different film simulations.
+
+By adjusting the LUT values and intensity with real-world data, you could get much closer to authentic film emulation. This provides a foundational understanding, ready for more sophisticated techniques, such as using libraries for handling 3D LUTs directly.

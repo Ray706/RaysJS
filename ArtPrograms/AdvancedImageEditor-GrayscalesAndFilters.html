@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced Image Editor with Enhanced Film Simulations</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 0;
+        }
+        #toolbar {
+            margin: 10px;
+        }
+        #imageCanvas {
+            border: 1px solid #ccc;
+            max-width: 100%;
+            height: auto;
+        }
+        #controls {
+            display: flex;
+            justify-content: space-between;
+            width: 80%;
+            max-width: 800px;
+            margin-top: 10px;
+            flex-wrap: wrap;
+        }
+        .control-group {
+            margin: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Advanced Image Editor</h1>
+    <div id="toolbar">
+        <input type="file" id="upload" accept="image/*">
+    </div>
+    <canvas id="imageCanvas" width="600" height="400"></canvas>
+    <div id="controls">
+        <div class="control-group">
+            <label for="grayscale">Grayscale Level</label>
+            <select id="grayscale">
+                <option value="none">None</option>
+                <option value="light">Light</option>
+                <option value="medium">Medium</option>
+                <option value="heavy">Heavy</option>
+                <option value="luminance">Luminance</option>
+                <option value="desaturated">Desaturated</option>
+            </select>
+        </div>
+        <div class="control-group">
+            <label for="filmSimulation">Film Simulation</label>
+            <select id="filmSimulation">
+                <option value="none">None</option>
+                <option value="kodachrome">Kodachrome</option>
+                <option value="fujiProvia">Fuji Provia</option>
+                <option value="agfaVista">Agfa Vista</option>
+                <option value="velvia">Velvia</option>
+                <option value="triX">Kodak Tri-X</option>
+                <!-- More film simulation options could go here, or continue to use e.g., Film 6-90 as before -->
+            </select>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('imageCanvas');
+        const ctx = canvas.getContext('2d');
+        const upload = document.getElementById('upload');
+        const grayscaleControl = document.getElementById('grayscale');
+        const filmSimulationControl = document.getElementById('filmSimulation');
+
+        let image = new Image();
+        let originalImageData;
+        
+        upload.addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    image.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        image.onload = function () {
+            canvas.width = image.width;
+            canvas.height = image.height;
+            ctx.drawImage(image, 0, 0);
+            originalImageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        };
+
+        grayscaleControl.addEventListener('change', applyFilters);
+        filmSimulationControl.addEventListener('change', applyFilters);
+
+        function applyFilters() {
+            if (!originalImageData) return;
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const data = imageData.data;
+
+            for (let i = 0; i < data.length; i += 4) {
+                const r = data[i];
+                const g = data[i + 1];
+                const b = data[i + 2];
+
+                applyGrayscale(grayscaleControl.value, data, i, r, g, b);
+                applyFilmSimulation(filmSimulationControl.value, data, i, r, g, b);
+            }
+
+            ctx.putImageData(imageData, 0, 0);
+        }
+
+        function applyGrayscale(type, data, index, r, g, b) {
+            switch (type) {
+                case 'light':
+                    data[index] = data[index + 1] = data[index + 2] = (r * 0.5 + g + b * 0.3) / 2.8;
+                    break;
+                case 'medium':
+                    data[index] = data[index + 1] = data[index + 2] = (r + g + b) / 3;
+                    break;
+                case 'heavy':
+                    data[index] = data[index + 1] = data[index + 2] = (r + g + b) * 0.1;
+                    break;
+                case 'luminance':
+                    data[index] = data[index + 1] = data[index + 2] = (r * 0.21 + g * 0.72 + b * 0.07);
+                    break;
+                case 'desaturated':
+                    data[index] = data[index + 1] = data[index + 2] = (r * 0.3 + g * 0.3 + b * 0.3);
+                    break;
+            }
+        }
+
+        function applyFilmSimulation(simulation, data, index, r, g, b) {
+            let nr = r, ng = g, nb = b;
+
+            switch (simulation) {
+                case 'kodachrome':
+                    nr = r * 0.9 + g * 0.1;
+                    ng = g * 0.85 + b * 0.15;
+                    nb = b * 0.6 + r * 0.4;
+                    break;
+                case 'fujiProvia':
+                    nr = r * 0.95 + 5;
+                    ng = g * 0.85 + r * 0.15;
+                    nb = b * 0.95 + g * 0.05;
+                    break;
+                case 'agfaVista':
+                    nr = r * 0.8 + g * 0.2;
+                    ng = g * 0.75 + b * 0.25;
+                    nb = b * 1.1;
+                    break;
+                case 'velvia':
+                    nr = r * 1.1;
+                    ng = g * 1.05;
+                    nb = b * 0.9;
+                    break;
+                case 'triX':
+                    let gray = (r * 0.3 + g * 0.59 + b * 0.11);
+                    nr = ng = nb = gray;
+                    break;
+                default:
+                    // No adjustment
+                    return;
+            }
+            data[index] = nr > 255 ? 255 : nr;
+            data[index + 1] = ng > 255 ? 255 : ng;
+            data[index + 2] = nb > 255 ? 255 : nb;
+        }
+    </script>
+</body>
+</html>
+```
+
+### Key Features of Enhanced Film Simulations:
+
+1. **Kodachrome**:
+   - A warm, nostalgic look with desaturated blues and enhanced reds/yellows.
+   - Slightly softened greens to emulate Kodachrome's unique palette.
+
+2. **Fuji Provia**:
+   - Slightly boosts reds and greens while keeping overall saturation balanced for natural yet vivid colors.
+
+3. **Agfa Vista**:
+   - Muted tones with a focus on warmer colors like reds and yellows for a vintage feel.
+
+4. **Velvia**:
+   - Famous for vibrant color renditions, especially in reds and greens, with cooler blues.
+
+5. **Kodak Tri-X**:
+   - Emulates classic black and white film with a rich tonal range and contrast.
+
+### Additional Enhancements:
+
+- **Accuracy**: Real-life film simulation data could be incorporated using advanced color processing techniques or lookup tables for even more accurate film simulations.
+- **Player Customization**: Users could fine-tune the effects by adjusting sliders for each characteristic or by choosing from preset intensity levels.
+- **More Effects**: Extend simulations to include more film styles or add additional artistic effects like sepia, watercolor, and sketch.
+
+This example forms a solid basis for a more nuanced and enjoyable image editing experience, allowing users to explore different visuals inspired by classic and modern film techniques.
