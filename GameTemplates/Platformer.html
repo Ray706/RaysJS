@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Platformer Game</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+        }
+        canvas {
+            display: block;
+            background-color: #87CEEB; /* Sky blue */
+        }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas" width="800" height="400"></canvas>
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const context = canvas.getContext('2d');
+    
+        // Game parameters
+        const gravity = 0.5;
+        const player = {
+            x: 50,
+            y: 300,
+            width: 20,
+            height: 20,
+            speed: 5,
+            velocityX: 0,
+            velocityY: 0,
+            jumping: false
+        };
+    
+        const keys = {};
+    
+        const levels = [
+            {
+                platforms: [
+                    { x: 0, y: 350, width: 800, height: 50 }, // Ground
+                    { x: 100, y: 250, width: 100, height: 10 }, // Floating platform
+                    { x: 250, y: 200, width: 100, height: 10 }, // Floating platform
+                ],
+                enemies: [
+                    { x: 150, y: 325, width: 20, height: 20, direction: 1, speed: 2 },
+                    { x: 300, y: 175, width: 20, height: 20, direction: 1, speed: 2 }
+                ]
+            },
+            {
+                platforms: [
+                    { x: 0, y: 350, width: 800, height: 50 },
+                    { x: 400, y: 300, width: 100, height: 10 },
+                    { x: 550, y: 250, width: 100, height: 10 }
+                ],
+                enemies: [
+                    { x: 450, y: 275, width: 20, height: 20, direction: 1, speed: 2 },
+                ]
+            }
+        ];
+
+        let currentLevelIndex = 0;
+        let currentLevel = levels[currentLevelIndex];
+        
+        document.addEventListener('keydown', function(event) {
+            keys[event.code] = true;
+        });
+
+        document.addEventListener('keyup', function(event) {
+            keys[event.code] = false;
+        });
+
+        function drawPlayer() {
+            context.fillStyle = 'red';
+            context.fillRect(player.x, player.y, player.width, player.height);
+        }
+
+        function drawPlatforms() {
+            context.fillStyle = 'green';
+            currentLevel.platforms.forEach(platform => {
+                context.fillRect(platform.x, platform.y, platform.width, platform.height);
+            });
+        }
+
+        function drawEnemies() {
+            context.fillStyle = 'purple';
+            currentLevel.enemies.forEach(enemy => {
+                context.fillRect(enemy.x, enemy.y, enemy.width, enemy.height);
+            });
+        }
+
+        function handlePlayerInput() {
+            if ((keys['ArrowLeft'] || keys['KeyA']) && player.x > 0) {
+                player.velocityX = -player.speed;
+            } else if ((keys['ArrowRight'] || keys['KeyD']) && player.x + player.width < canvas.width) {
+                player.velocityX = player.speed;
+            } else {
+                player.velocityX = 0;
+            }
+    
+            if ((keys['ArrowUp'] || keys['Space'] || keys['KeyW']) && !player.jumping) {
+                player.jumping = true;
+                player.velocityY = -10; // Jump strength
+            }
+        }
+        
+        function applyPhysics() {
+            player.velocityY += gravity;
+            player.x += player.velocityX;
+            player.y += player.velocityY;
+            
+            // Collision with the platforms
+            currentLevel.platforms.forEach(platform => {
+                if (player.x < platform.x + platform.width && player.x + player.width > platform.x && 
+                    player.y < platform.y + platform.height && player.y + player.height > platform.y) {
+                    player.y = platform.y - player.height;
+                    player.velocityY = 0;
+                    player.jumping = false;
+                }
+            });
+
+            // Check for ground contact
+            if (player.y + player.height >= canvas.height) {
+                player.y = canvas.height - player.height;
+                player.velocityY = 0;
+                player.jumping = false;
+            }
+
+            // Move enemies
+            currentLevel.enemies.forEach(enemy => {
+                enemy.x += enemy.speed * enemy.direction;
+                // Reverse direction when hitting the edge of the canvas
+                if (enemy.x < 0 || enemy.x + enemy.width > canvas.width) {
+                    enemy.direction *= -1;
+                }
+            });
+
+            // Check for enemy collisions
+            currentLevel.enemies.forEach(enemy => {
+                if (player.x < enemy.x + enemy.width && player.x + player.width > enemy.x &&
+                    player.y < enemy.y + enemy.height && player.y + player.height > enemy.y) {
+                    // Reset player position if knocked by enemy (simple reset for simplicity)
+                    player.x = 50;
+                    player.y = 300;
+                }
+            });
+
+            // Check for reaching end of level
+            if (player.x + player.width >= canvas.width) {
+                advanceLevel();
+            }
+        }
+
+        function advanceLevel() {
+            currentLevelIndex++;
+            if (currentLevelIndex < levels.length) {
+                currentLevel = levels[currentLevelIndex];
+                // Reset player position for the new level
+                player.x = 50;
+                player.y = 300;
+            } else {
+                // Game won, reset to first level
+                alert("Congratulations! You've completed all levels!");
+                currentLevelIndex = 0;
+                currentLevel = levels[currentLevelIndex];
+                player.x = 50;
+                player.y = 300;
+            }
+        }
+
+        function gameLoop() {
+            context.clearRect(0, 0, canvas.width, canvas.height);
+            handlePlayerInput();
+            applyPhysics();
+            drawPlayer();
+            drawPlatforms();
+            drawEnemies();
+            requestAnimationFrame(gameLoop);
+        }
+
+        gameLoop();
+
+    </script>
+</body>
+</html>
+```
+
+### Explanation
+
+- **Levels Array**: The `levels` array holds different configurations for platforms and enemies for each level. Each level is accessed by `currentLevel`.
+- **Enemies**: Each enemy is represented by an object and moves horizontally. The direction reverses when they hit the edges of the canvas.
+- **Level Transition**: When the player reaches the right edge of the canvas, the game advances to the next level. If all levels are completed, a congratulatory message is shown, and the game resets to the first level.
+
+Feel free to customize levels, enemy speeds, and behaviors to create a more challenging and engaging platformer game. You can expand the logic with features like scoring, time limits, collectibles, and power-ups for added depth. Enjoy creating your enhanced platformer adventure!

@@ -1,0 +1,238 @@
+<html><head><base href="https://game.example.com/">
+<style>
+  body {
+    background: #000;
+    margin: 0;
+    overflow: hidden;
+    font-family: 'Courier New', monospace;
+  }
+  
+  #gameCanvas {
+    image-rendering: pixelated;
+    width: 100vw;
+    height: 100vh;
+  }
+  
+  .crt-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%);
+    background-size: 100% 4px;
+    pointer-events: none;
+    animation: flicker 0.15s infinite;
+    opacity: 0.3;
+  }
+  
+  .score {
+    position: fixed;
+    top: 20px;
+    left: 20px;
+    color: #0f0;
+    font-size: 24px;
+    text-shadow: 2px 2px #000;
+  }
+  
+  @keyframes flicker {
+    0% { opacity: 0.3; }
+    50% { opacity: 0.4; }
+    100% { opacity: 0.3; }
+  }
+</style>
+</head>
+<body>
+<canvas id="gameCanvas"></canvas>
+<div class="crt-overlay"></div>
+<div class="score">SCORE: <span id="scoreValue">0</span></div>
+
+<script>
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+const scoreElement = document.getElementById('scoreValue');
+
+// Set canvas size
+function resizeCanvas() {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+}
+resizeCanvas();
+window.addEventListener('resize', resizeCanvas);
+
+// Game constants
+const CELL_SIZE = 20;
+const PLAYER_SIZE = 16;
+const MAZE_WIDTH = 50;
+const MAZE_HEIGHT = 50;
+const COLORS = {
+  wall: '#2020ff',
+  player: '#ffff00',
+  path: '#000000',
+  collectible: '#00ff00'
+};
+
+// Game state
+let player = { x: CELL_SIZE * 1.5, y: CELL_SIZE * 1.5 };
+let maze = [];
+let collectibles = [];
+let score = 0;
+let keys = {};
+
+// Generate maze using recursive backtracking
+function generateMaze() {
+  // Initialize maze with walls
+  for (let y = 0; y < MAZE_HEIGHT; y++) {
+    maze[y] = [];
+    for (let x = 0; x < MAZE_WIDTH; x++) {
+      maze[y][x] = 1;
+    }
+  }
+
+  function carve(x, y) {
+    maze[y][x] = 0;
+    const directions = [[0, 2], [2, 0], [0, -2], [-2, 0]];
+    directions.sort(() => Math.random() - 0.5);
+    
+    for (let [dx, dy] of directions) {
+      const newX = x + dx;
+      const newY = y + dy;
+      
+      if (newX > 0 && newX < MAZE_WIDTH - 1 && newY > 0 && newY < MAZE_HEIGHT - 1 && maze[newY][newX] === 1) {
+        maze[y + dy/2][x + dx/2] = 0;
+        carve(newX, newY);
+      }
+    }
+  }
+
+  carve(1, 1);
+  
+  // Add collectibles
+  for (let i = 0; i < 20; i++) {
+    let x, y;
+    do {
+      x = Math.floor(Math.random() * (MAZE_WIDTH - 2)) + 1;
+      y = Math.floor(Math.random() * (MAZE_HEIGHT - 2)) + 1;
+    } while (maze[y][x] === 1);
+    collectibles.push({x: x * CELL_SIZE + CELL_SIZE/2, y: y * CELL_SIZE + CELL_SIZE/2});
+  }
+}
+
+// Handle input
+window.addEventListener('keydown', (e) => keys[e.key] = true);
+window.addEventListener('keyup', (e) => keys[e.key] = false);
+
+function update() {
+  const speed = 3;
+  
+  if (keys['ArrowUp'] || keys['w']) player.y -= speed;
+  if (keys['ArrowDown'] || keys['s']) player.y += speed;
+  if (keys['ArrowLeft'] || keys['a']) player.x -= speed;
+  if (keys['ArrowRight'] || keys['d']) player.x += speed;
+
+  // Collision detection with walls
+  const cellX = Math.floor(player.x / CELL_SIZE);
+  const cellY = Math.floor(player.y / CELL_SIZE);
+  
+  for (let dy = -1; dy <= 1; dy++) {
+    for (let dx = -1; dx <= 1; dx++) {
+      if (cellY + dy >= 0 && cellY + dy < MAZE_HEIGHT && 
+          cellX + dx >= 0 && cellX + dx < MAZE_WIDTH) {
+        if (maze[cellY + dy][cellX + dx] === 1) {
+          const wallX = (cellX + dx) * CELL_SIZE;
+          const wallY = (cellY + dy) * CELL_SIZE;
+          
+          if (player.x + PLAYER_SIZE > wallX && 
+              player.x < wallX + CELL_SIZE &&
+              player.y + PLAYER_SIZE > wallY && 
+              player.y < wallY + CELL_SIZE) {
+            // Push player away from wall
+            const centerX = player.x + PLAYER_SIZE/2;
+            const centerY = player.y + PLAYER_SIZE/2;
+            const wallCenterX = wallX + CELL_SIZE/2;
+            const wallCenterY = wallY + CELL_SIZE/2;
+            
+            if (Math.abs(centerX - wallCenterX) > Math.abs(centerY - wallCenterY)) {
+              player.x = centerX > wallCenterX ? wallX + CELL_SIZE : wallX - PLAYER_SIZE;
+            } else {
+              player.y = centerY > wallCenterY ? wallY + CELL_SIZE : wallY - PLAYER_SIZE;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // Collect items
+  collectibles = collectibles.filter(c => {
+    const dx = c.x - (player.x + PLAYER_SIZE/2);
+    const dy = c.y - (player.y + PLAYER_SIZE/2);
+    const distance = Math.sqrt(dx*dx + dy*dy);
+    
+    if (distance < PLAYER_SIZE) {
+      score += 100;
+      scoreElement.textContent = score;
+      return false;
+    }
+    return true;
+  });
+}
+
+function draw() {
+  ctx.fillStyle = '#000';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  // Calculate camera position
+  const cameraX = Math.min(Math.max(player.x - canvas.width/2, 0), MAZE_WIDTH * CELL_SIZE - canvas.width);
+  const cameraY = Math.min(Math.max(player.y - canvas.height/2, 0), MAZE_HEIGHT * CELL_SIZE - canvas.height);
+
+  // Draw maze
+  for (let y = 0; y < MAZE_HEIGHT; y++) {
+    for (let x = 0; x < MAZE_WIDTH; x++) {
+      if (maze[y][x] === 1) {
+        ctx.fillStyle = COLORS.wall;
+        ctx.fillRect(
+          x * CELL_SIZE - cameraX,
+          y * CELL_SIZE - cameraY,
+          CELL_SIZE,
+          CELL_SIZE
+        );
+      }
+    }
+  }
+
+  // Draw collectibles
+  ctx.fillStyle = COLORS.collectible;
+  for (let c of collectibles) {
+    ctx.beginPath();
+    ctx.arc(
+      c.x - cameraX,
+      c.y - cameraY,
+      PLAYER_SIZE/4,
+      0,
+      Math.PI * 2
+    );
+    ctx.fill();
+  }
+
+  // Draw player
+  ctx.fillStyle = COLORS.player;
+  ctx.fillRect(
+    player.x - cameraX,
+    player.y - cameraY,
+    PLAYER_SIZE,
+    PLAYER_SIZE
+  );
+}
+
+function gameLoop() {
+  update();
+  draw();
+  requestAnimationFrame(gameLoop);
+}
+
+// Start game
+generateMaze();
+gameLoop();
+</script>
+</body></html>

@@ -1,0 +1,188 @@
+<html><head><base href="." />
+<style>
+  body {
+    background: #000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    margin: 0;
+    font-family: monospace;
+    overflow: hidden;
+  }
+  
+  #game {
+    width: 800px;
+    height: 600px;
+    background: #000;
+    position: relative;
+    border: 4px solid #444;
+  }
+  
+  .player {
+    width: 40px;
+    height: 40px;
+    background: #0f0;
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+  
+  .enemy {
+    width: 30px;
+    height: 30px;
+    background: #f00;
+    position: absolute;
+    animation: float 2s infinite alternate ease-in-out;
+  }
+  
+  .bullet {
+    width: 6px;
+    height: 15px;
+    background: #ff0;
+    position: absolute;
+  }
+  
+  .score {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    color: #0f0;
+    font-size: 24px;
+  }
+  
+  @keyframes float {
+    from { transform: translateY(0); }
+    to { transform: translateY(30px); }
+  }
+  
+  .scanlines {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(
+      to bottom,
+      rgba(255,255,255,0) 50%,
+      rgba(0,0,0,0.2) 50%
+    );
+    background-size: 100% 4px;
+    pointer-events: none;
+  }
+  
+  .crt-effect {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(
+      circle at center,
+      transparent 30%,
+      rgba(0,0,0,0.2) 90%
+    );
+    pointer-events: none;
+  }
+</style>
+</head>
+<body>
+<div id="game">
+  <div class="score">SCORE: <span id="scoreValue">0</span></div>
+  <div class="player"></div>
+  <div class="scanlines"></div>
+  <div class="crt-effect"></div>
+</div>
+
+<script>
+const game = document.getElementById('game');
+const player = document.querySelector('.player');
+const scoreElement = document.getElementById('scoreValue');
+let score = 0;
+let playerX = game.offsetWidth / 2;
+const playerSpeed = 5;
+let bullets = [];
+let enemies = [];
+let keys = {};
+
+// Key handlers
+document.addEventListener('keydown', (e) => keys[e.key] = true);
+document.addEventListener('keyup', (e) => keys[e.key] = false);
+
+// Shoot handler
+document.addEventListener('keydown', (e) => {
+  if (e.key === ' ') {
+    shoot();
+  }
+});
+
+function shoot() {
+  const bullet = document.createElement('div');
+  bullet.className = 'bullet';
+  bullet.style.left = (playerX + 17) + 'px';
+  bullet.style.bottom = '60px';
+  game.appendChild(bullet);
+  bullets.push(bullet);
+}
+
+function spawnEnemy() {
+  const enemy = document.createElement('div');
+  enemy.className = 'enemy';
+  enemy.style.left = Math.random() * (game.offsetWidth - 30) + 'px';
+  enemy.style.top = '50px';
+  game.appendChild(enemy);
+  enemies.push(enemy);
+}
+
+function updateGame() {
+  // Player movement
+  if (keys['ArrowLeft'] && playerX > 0) {
+    playerX -= playerSpeed;
+  }
+  if (keys['ArrowRight'] && playerX < game.offsetWidth - 40) {
+    playerX += playerSpeed;
+  }
+  player.style.left = playerX + 'px';
+  
+  // Bullet movement
+  bullets.forEach((bullet, bulletIndex) => {
+    const bulletY = parseInt(bullet.style.bottom) + 5;
+    bullet.style.bottom = bulletY + 'px';
+    
+    // Remove bullets that are off screen
+    if (bulletY > game.offsetHeight) {
+      bullet.remove();
+      bullets.splice(bulletIndex, 1);
+    }
+    
+    // Collision detection
+    enemies.forEach((enemy, enemyIndex) => {
+      const enemyRect = enemy.getBoundingClientRect();
+      const bulletRect = bullet.getBoundingClientRect();
+      
+      if (
+        bulletRect.left < enemyRect.right &&
+        bulletRect.right > enemyRect.left &&
+        bulletRect.top < enemyRect.bottom &&
+        bulletRect.bottom > enemyRect.top
+      ) {
+        // Collision occurred
+        score += 100;
+        scoreElement.textContent = score;
+        enemy.remove();
+        enemies.splice(enemyIndex, 1);
+        bullet.remove();
+        bullets.splice(bulletIndex, 1);
+      }
+    });
+  });
+}
+
+// Game loop
+setInterval(updateGame, 1000/60);
+
+// Spawn enemies periodically
+setInterval(spawnEnemy, 2000);
+</script>
+</body></html>

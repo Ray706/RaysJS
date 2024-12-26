@@ -1,0 +1,301 @@
+<html><head><base href="https://stackblitz.com/" />
+<title>3D Maze Generator</title>
+<style>
+body {
+  margin: 0;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: #f0f0f0;
+  font-family: system-ui, sans-serif;
+}
+
+.controls {
+  margin: 20px 0;
+  padding: 20px;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+button {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 4px;
+  background: #4CAF50;
+  color: white;
+  cursor: pointer;
+  font-size: 14px;
+  margin: 0 8px;
+}
+
+button:hover {
+  background: #45a049;
+}
+
+.maze-container {
+  background: white;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+input {
+  width: 60px;
+  padding: 4px;
+  margin: 0 8px;
+}
+
+label {
+  margin-right: 16px;
+}
+</style>
+</head>
+<body>
+
+<h1>3D Maze Generator</h1>
+
+<div class="controls">
+  <label>Width: <input type="number" id="width" value="9" min="3" max="20"></label>
+  <label>Height: <input type="number" id="height" value="9" min="3" max="20"></label>
+  <label>Depth: <input type="number" id="depth" value="4" min="2" max="9"></label>
+  <label>Cell Size: <input type="number" id="cellSize" value="10" min="5" max="20"></label>
+  <button onclick="generateNewMaze()">Generate New Maze</button>
+</div>
+
+<div class="maze-container" id="mazeOutput"></div>
+
+<script>
+// Define bit masks
+const WALL_ABOVE = 1;
+const WALL_BELOW = 2;
+const WALL_LEFT = 4;
+const WALL_RIGHT = 8;
+const WALL_FRONT = 16;
+const WALL_BACK = 32;
+const QUEUED = 64;
+const IN_MAZE = 128;
+
+Math.nextInt = function(number) {
+    return Math.floor(Math.random() * number);
+}
+
+function println(string) {
+    document.getElementById('mazeOutput').innerHTML = string;
+}
+
+function Maze(lenx, leny, lenz, cell_width) {
+    this.lenx = lenx || 9;
+    this.leny = leny || 9;
+    this.lenz = lenz || 4;
+    this.cell_width = cell_width || 10;
+    this.maze = [];
+
+    this.createMaze = function() {
+        var lenx = this.lenx;
+        var leny = this.leny;
+        var lenz = this.lenz;
+        var maze = this.maze;
+        var x, y, z, x_dx, y_dy, z_dz, n, d;
+        var dx = [0, 0, -1, 1, 0, 0];
+        var dy = [-1, 1, 0, 0, 0, 0];
+        var dz = [0, 0, 0, 0, -1, 1];
+
+        var todo = new Array(leny * lenx * lenz);
+        var todonum = 0;
+
+        for (x = 0; x < lenx; ++x) {
+            maze[x] = [];
+            for (y = 0; y < leny; ++y) {
+                maze[x][y] = [];
+                for (z = 0; z < lenz; ++z) {
+                    maze[x][y][z] = WALL_ABOVE + WALL_BELOW + WALL_LEFT + WALL_RIGHT + WALL_FRONT + WALL_BACK + QUEUED + IN_MAZE;
+                }
+            }
+        }
+
+        x = Math.nextInt(lenx - 1);
+        y = Math.nextInt(leny - 1);
+        z = Math.nextInt(lenz - 1);
+
+        maze[x][y][z] &= ~(QUEUED + IN_MAZE);
+
+        for (d = 0; d < 6; ++d) {
+            x_dx = x + dx[d];
+            y_dy = y + dy[d];
+            z_dz = z + dz[d];
+            if (x_dx >= 0 && x_dx < lenx && y_dy >= 0 && y_dy < leny && z_dz >= 0 && z_dz < lenz) {
+                if ((maze[x_dx][y_dy][z_dz] & QUEUED) != 0) {
+                    todo[todonum++] = [x_dx, y_dy, z_dz];
+                    maze[x_dx][y_dy][z_dz] &= ~QUEUED;
+                }
+            }
+        }
+
+        while (todonum > 0) {
+            n = Math.nextInt(todonum);
+            x = todo[n][0];
+            y = todo[n][1];
+            z = todo[n][2];
+
+            todo[n] = todo[--todonum];
+
+            var passBool = 0;
+            while (passBool == 0) {
+                d = Math.nextInt(6);
+                x_dx = x + dx[d];
+                y_dy = y + dy[d];
+                z_dz = z + dz[d];
+                if (x_dx >= 0 && x_dx < lenx && y_dy >= 0 && y_dy < leny && z_dz >= 0 && z_dz < lenz) {
+                    if ((maze[x_dx][y_dy][z_dz] & IN_MAZE) == 0)
+                        passBool = 1;
+                }
+            }
+
+            maze[x][y][z] &= ~((1 << d) | IN_MAZE);
+            maze[x + dx[d]][y + dy[d]][z + dz[d]] &= ~(1 << (d ^ 1));
+
+            for (d = 0; d < 6; ++d) {
+                x_dx = x + dx[d];
+                y_dy = y + dy[d];
+                z_dz = z + dz[d];
+                if (x_dx >= 0 && x_dx < lenx && y_dy >= 0 && y_dy < leny && z_dz >= 0 && z_dz < lenz) {
+                    if ((maze[x_dx][y_dy][z_dz] & QUEUED) != 0) {
+                        todo[todonum++] = [x_dx, y_dy, z_dz];
+                        maze[x_dx][y_dy][z_dz] &= ~QUEUED;
+                    }
+                }
+            }
+        }
+
+        maze[0][Math.floor(leny/2)][0] &= ~WALL_LEFT;
+        maze[lenx - 1][Math.floor(leny/2)][lenz - 1] &= ~WALL_RIGHT;
+    };
+
+    this.drawLine = function(x1, y1, x2, y2) {
+        return "    <line x1=\"" + x1 + "\" y1=\"" + y1 + "\" x2=\"" + x2 + "\" y2=\"" + y2 + "\" />\n";
+    };
+
+    this.drawText = function(x, y, label) {
+        var cell_width = this.cell_width;
+        y -= cell_width/10;
+        return "    <text x=\"" + x + "\" y=\"" + y + "\" font-size=\"" + cell_width + "px\" font-family=\"LucidaTypewriter Sans\">" + label + ".</text>\n";
+    };
+
+    this.drawMaze = function() {
+        var x, y, z;
+        var lenx = this.lenx;
+        var leny = this.leny;
+        var lenz = this.lenz;
+        var cell_width = this.cell_width;
+        var pics_xy = Math.ceil(Math.sqrt(lenz));
+        var outstring = "";
+        for (z = 0; z < lenz; ++z) {
+            var row_x = cell_width + cell_width * (lenx + 1) * (z % pics_xy);
+            var row_y = cell_width + cell_width * (leny + 1) * Math.floor(z / pics_xy);
+            for (y = 0; y < leny; ++y) {
+                for (x = 0; x < lenx; ++x) {
+                    if ((this.maze[x][y][z] & WALL_ABOVE) != 0) {
+                        var x1_pos = row_x + cell_width * x;
+                        var y1_pos = row_y + cell_width * y;
+                        var x2_pos = row_x + cell_width * (x + 1);
+                        var y2_pos = row_y + cell_width * y;
+                        outstring += this.drawLine(x1_pos, y1_pos, x2_pos, y2_pos);
+                    }
+                    if ((this.maze[x][y][z] & WALL_BELOW) != 0) {
+                        var x1_pos = row_x + cell_width * x;
+                        var y1_pos = row_y + cell_width * (y + 1);
+                        var x2_pos = row_x + cell_width * (x + 1);
+                        var y2_pos = row_y + cell_width * (y + 1);
+                        outstring += this.drawLine(x1_pos, y1_pos, x2_pos, y2_pos);
+                    }
+                    if ((this.maze[x][y][z] & WALL_LEFT) != 0) {
+                        var x1_pos = row_x + cell_width * x;
+                        var y1_pos = row_y + cell_width * y;
+                        var x2_pos = row_x + cell_width * x;
+                        var y2_pos = row_y + cell_width * (y + 1);
+                        outstring += this.drawLine(x1_pos, y1_pos, x2_pos, y2_pos);
+                    }
+                    if ((this.maze[x][y][z] & WALL_RIGHT) != 0) {
+                        var x1_pos = row_x + cell_width * (x + 1);
+                        var y1_pos = row_y + cell_width * y;
+                        var x2_pos = row_x + cell_width * (x + 1);
+                        var y2_pos = row_y + cell_width * (y + 1);
+                        outstring += this.drawLine(x1_pos, y1_pos, x2_pos, y2_pos);
+                    }
+                    if ((this.maze[x][y][z] & WALL_FRONT) == 0) {
+                        var x1_pos = row_x + cell_width/3 + cell_width * x;
+                        var y1_pos = row_y + cell_width/3 + cell_width * y;
+                        var x2_pos = row_x - cell_width/3 + cell_width * (x + 1);
+                        var y2_pos = row_y - cell_width/3 + cell_width * (y + 1);
+                        outstring += this.drawLine(x1_pos, y1_pos, x2_pos, y2_pos);
+                    }
+                    if ((this.maze[x][y][z] & WALL_BACK) == 0) {
+                        var x1_pos = row_x + cell_width/3 + cell_width * x;
+                        var y1_pos = row_y - cell_width/3 + cell_width * (y + 1);
+                        var x2_pos = row_x - cell_width/3 + cell_width * (x + 1);
+                        var y2_pos = row_y + cell_width/3 + cell_width * y;
+                        outstring += this.drawLine(x1_pos, y1_pos, x2_pos, y2_pos);
+                    }
+                }
+            }
+        }
+        return outstring;
+    };
+
+    this.drawLabels = function() {
+        var z;
+        var lenx = this.lenx;
+        var leny = this.leny;
+        var lenz = this.lenz;
+        var cell_width = this.cell_width;
+        var pics_xy = Math.ceil(Math.sqrt(lenz));
+        var outstring = "";
+        for (z = 0; z < lenz; ++z) {
+            var row_x = cell_width + cell_width * (lenx + 1) * (z % pics_xy);
+            var row_y = cell_width + cell_width * (leny + 1) * Math.floor(z / pics_xy);
+            outstring += this.drawText(row_x, row_y, z + 1);
+        }
+        return outstring;
+    };
+
+    this.printSVG = function() {
+        var lenx = this.lenx;
+        var leny = this.leny;
+        var lenz = this.lenz;
+        var cell_width = this.cell_width;
+        var pics_xy = Math.ceil(Math.sqrt(lenz));
+        var size_x = (lenx + 1) * pics_xy * cell_width + cell_width;
+        var size_y = (leny + 1) * pics_xy * cell_width + cell_width;
+        println(
+            "<svg width=\"" + size_x + "px\" height=\"" + size_y + "px\" viewBox=\"0 0 " + size_x + " " + size_y + "\" version=\"1.1\" xmlns=\"http://www.w3.org/2000/svg\">\n" +
+            "  <title>SVG Maze</title>\n" +
+            "  <desc>A 3D maze generated using a modified version of Prim's algorithm. Vertical layers are numbered starting from the bottom layer to the top. Stairs up are indicated with '/'; stairs down with '\\', and stairs up-and-down with 'x'.</desc>\n" +
+            "  <g stroke=\"black\" stroke-width=\"1\" stroke-linecap=\"round\">\n" +
+            this.drawMaze() +
+            "  </g>\n" +
+            "  <g fill=\"black\">\n" +
+            this.drawLabels() +
+            "  </g>\n" +
+            "</svg>\n"
+        );
+    };
+}
+
+function generateNewMaze() {
+    const width = parseInt(document.getElementById('width').value);
+    const height = parseInt(document.getElementById('height').value);
+    const depth = parseInt(document.getElementById('depth').value);
+    const cellSize = parseInt(document.getElementById('cellSize').value);
+    
+    const m = new Maze(width, height, depth, cellSize);
+    m.createMaze();
+    m.printSVG();
+}
+
+// Generate initial maze
+generateNewMaze();
+</script>
+
+</body></html>

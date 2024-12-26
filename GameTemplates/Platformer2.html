@@ -1,0 +1,165 @@
+<html><head><base href="https://websim.ai"/>
+<title>2D Platformer</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+    body {
+        font-family: 'Press Start 2P', cursive;
+        background-color: #000;
+        color: #0f0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100vh;
+        margin: 0;
+        padding: 0;
+    }
+    canvas {
+        border: 2px solid #0f0;
+    }
+</style>
+</head>
+<body>
+    <h1>2D Platformer</h1>
+    <canvas id="gameCanvas" width="800" height="400"></canvas>
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        let player, platforms, enemies;
+        let keys = {};
+        let gameLoop;
+
+        class Player {
+            constructor(x, y, width, height) {
+                this.x = x;
+                this.y = y;
+                this.width = width;
+                this.height = height;
+                this.speed = 5;
+                this.jumpForce = 10;
+                this.velY = 0;
+                this.jumping = false;
+            }
+
+            draw() {
+                ctx.fillStyle = '#0f0';
+                ctx.fillRect(this.x, this.y, this.width, this.height);
+            }
+
+            update() {
+                if (keys['ArrowLeft']) this.x -= this.speed;
+                if (keys['ArrowRight']) this.x += this.speed;
+
+                if (keys['ArrowUp'] && !this.jumping) {
+                    this.velY = -this.jumpForce;
+                    this.jumping = true;
+                }
+
+                this.velY += 0.5;
+                this.y += this.velY;
+
+                platforms.forEach(platform => {
+                    if (this.x < platform.x + platform.width &&
+                        this.x + this.width > platform.x &&
+                        this.y < platform.y + platform.height &&
+                        this.y + this.height > platform.y) {
+                        this.y = platform.y - this.height;
+                        this.velY = 0;
+                        this.jumping = false;
+                    }
+                });
+
+                if (this.x < 0) this.x = 0;
+                if (this.x + this.width > canvas.width) this.x = canvas.width - this.width;
+                if (this.y + this.height > canvas.height) {
+                    this.y = canvas.height - this.height;
+                    this.velY = 0;
+                    this.jumping = false;
+                }
+            }
+        }
+
+        class Platform {
+            constructor(x, y, width, height) {
+                this.x = x;
+                this.y = y;
+                this.width = width;
+                this.height = height;
+            }
+
+            draw() {
+                ctx.fillStyle = '#00f';
+                ctx.fillRect(this.x, this.y, this.width, this.height);
+            }
+        }
+
+        class Enemy {
+            constructor(x, y, width, height, speed) {
+                this.x = x;
+                this.y = y;
+                this.width = width;
+                this.height = height;
+                this.speed = speed;
+            }
+
+            draw() {
+                ctx.fillStyle = '#f00';
+                ctx.fillRect(this.x, this.y, this.width, this.height);
+            }
+
+            update() {
+                this.x += this.speed;
+                if (this.x < 0 || this.x + this.width > canvas.width) {
+                    this.speed = -this.speed;
+                }
+            }
+        }
+
+        function init() {
+            player = new Player(50, 200, 30, 30);
+            platforms = [
+                new Platform(0, 350, 800, 50),
+                new Platform(300, 200, 200, 20),
+                new Platform(100, 300, 150, 20),
+                new Platform(600, 250, 150, 20)
+            ];
+            enemies = [
+                new Enemy(200, 320, 30, 30, 2),
+                new Enemy(500, 170, 30, 30, 3)
+            ];
+        }
+
+        function update() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            player.update();
+            player.draw();
+
+            platforms.forEach(platform => platform.draw());
+
+            enemies.forEach(enemy => {
+                enemy.update();
+                enemy.draw();
+            });
+
+            requestAnimationFrame(update);
+        }
+
+        window.addEventListener('keydown', (e) => keys[e.code] = true);
+        window.addEventListener('keyup', (e) => keys[e.code] = false);
+
+        init();
+        update();
+
+        function loadGoogleFont() {
+            const link = document.createElement('link');
+            link.rel = 'stylesheet';
+            link.href = 'https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap';
+            document.head.appendChild(link);
+        }
+
+        window.onload = loadGoogleFont;
+    </script>
+</body>
+</html>
