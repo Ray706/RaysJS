@@ -1,0 +1,121 @@
+<html><head><base href="." /><title>ABC Music Notation Converter</title>
+<style>
+  body {
+    font-family: 'Courier New', monospace;
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px;
+    background: #f0f0f8;
+  }
+  
+  .container {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  }
+  
+  textarea {
+    width: 100%;
+    height: 150px;
+    font-family: 'Courier New', monospace;
+    margin: 10px 0;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+  }
+  
+  #output, #freqOutput {
+    background: #eee;
+    padding: 15px;
+    border-radius: 4px;
+    min-height: 100px;
+    white-space: pre-wrap;
+    margin-bottom: 20px;
+  }
+  
+  button {
+    background: #4CAF50;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background 0.3s;
+  }
+  
+  button:hover {
+    background: #45a049;
+  }
+
+  .note {
+    display: inline-block;
+    margin: 5px;
+    padding: 5px 10px;
+    background: #e3f2fd;
+    border-radius: 4px;
+    border: 1px solid #90caf9;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>ABC Music Notation Converter</h1>
+  <p>Enter ABC notation below (example: C,DEFGABc)</p>
+  <textarea id="input" placeholder="Enter ABC notation here...">C,DEFGABc</textarea>
+  <button onclick="convertABC()">Convert</button>
+  <h3>Pitch Output:</h3>
+  <div id="output"></div>
+  <h3>Frequency Output (Hz):</h3>
+  <div id="freqOutput"></div>
+</div>
+
+<script>
+const noteMapping = {
+  'c': 'C5', 'b': 'B4', 'a': 'A4', 'g': 'G4', 'f': 'F4', 'e': 'E4', 'd': 'D4',
+  'C': 'C4', 'B': 'B3', 'A': 'A3', 'G': 'G3', 'F': 'F3', 'E': 'E3', 'D': 'D3',
+  'C,': 'C3', 'B,': 'B2', 'A,': 'A2', 'G,': 'G2', 'F,': 'F2', 'E,': 'E2', 'D,': 'D2'
+};
+
+const frequencyMapping = {
+  'C5': 523.25, 'B4': 493.88, 'A4': 440.00, 'G4': 392.00, 'F4': 349.23, 'E4': 329.63, 'D4': 293.66,
+  'C4': 261.63, 'B3': 246.94, 'A3': 220.00, 'G3': 196.00, 'F3': 174.61, 'E3': 164.81, 'D3': 146.83,
+  'C3': 130.81, 'B2': 123.47, 'A2': 110.00, 'G2': 98.00, 'F2': 87.31, 'E2': 82.41, 'D2': 73.42
+};
+
+function convertABC() {
+  const input = document.getElementById('input').value;
+  const output = document.getElementById('output');
+  const freqOutput = document.getElementById('freqOutput');
+  output.innerHTML = '';
+  freqOutput.innerHTML = '';
+  
+  // Split input into individual notes
+  const notes = input.match(/[A-Ga-g][,']?/g) || [];
+  
+  notes.forEach(note => {
+    if (noteMapping[note]) {
+      // Create pitch note span
+      const noteSpan = document.createElement('span');
+      noteSpan.className = 'note';
+      noteSpan.textContent = noteMapping[note];
+      output.appendChild(noteSpan);
+      
+      // Create frequency span
+      const freqSpan = document.createElement('span');
+      freqSpan.className = 'note';
+      freqSpan.textContent = frequencyMapping[noteMapping[note]].toFixed(2) + ' Hz';
+      freqOutput.appendChild(freqSpan);
+    }
+  });
+  
+  if (notes.length === 0) {
+    output.textContent = 'No valid ABC notation found. Please enter valid notes (A-G, with optional commas for lower octaves)';
+    freqOutput.textContent = 'No frequencies to display';
+  }
+}
+
+// Initial conversion
+convertABC();
+</script>
+</body></html>

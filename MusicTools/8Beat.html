@@ -1,0 +1,824 @@
+<html><head><base href="https://websim.ai">
+    <title>8-Beats</title>
+    <style>
+        @font-face {
+            font-family: '8BitFont';
+            src: url('https://fonts.cdnfonts.com/css/8bit-wonder') format('woff2');
+        }
+        body {
+            font-family: '8BitFont', sans-serif;
+            background-color: #E8E5E3;
+            color: #565663;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            transition: background-color 0.3s, color 0.3s;
+            min-height: 100vh;
+            margin: 0;
+            box-sizing: border-box;
+        }
+        body.dark-mode {
+            background-color: #151729;
+            color: #3B415F;
+        }
+        .app-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            width: 100%;
+            max-width: 360px;
+            height: 100%;
+            max-height: 640px;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        @media (min-width: 768px) {
+            .app-container {
+                width: 56.25vh; /* 9:16 aspect ratio */
+                height: 100vh;
+                max-width: none;
+                max-height: none;
+                background-color: #F0EDE9;
+                border-radius: 20px;
+                box-shadow: 8px 8px 16px #D1CEC9, 
+                            -8px -8px 16px #FFFFFF;
+            }
+            body.dark-mode .app-container {
+                background-color: #1E2235;
+                box-shadow: 8px 8px 16px #0D0F1A, 
+                            -8px -8px 16px #2F3550;
+            }
+        }
+        h1 {
+            font-size: 24px;
+            text-align: center;
+            margin-bottom: 20px;
+            color: #E9E1DA;
+        }
+        #piano-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+        }
+        #piano {
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            padding: 10px;
+            border-radius: 10px;
+            width: 100%;
+            justify-content: center;
+            background-color: #D4CFCB;
+        }
+        body.dark-mode #piano {
+            background-color: #3B415F;
+        }
+        .key-row {
+            display: flex;
+            justify-content: center;
+            width: 100%;
+            margin-bottom: 10px;
+        }
+        .key {
+            width: 60px;
+            height: 120px;
+            margin: 0 3px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            transition: all 0.1s;
+            background-color: #CA2C72;
+            color: #E9E1DA;
+            font-size: 10px;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        .key:hover {
+            opacity: 0.8;
+        }
+        .key:active, .key.active {
+            opacity: 0.6;
+            transform: scale(1.05);
+        }
+        .sharp {
+            width: 80px;
+            height: 80px;
+            background-color: #800E45;
+            color: #E9E1DA;
+            text-align: center;
+            margin: 0 5px;
+        }
+        .note-name {
+            font-weight: bold;
+        }
+        .note-name-es {
+            opacity: 0.5;
+            font-style: italic;
+        }
+        #composition-container {
+            width: 100%;
+            margin: 10px 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        #file-name {
+            font-size: 14px;
+            color: #E9E1DA;
+            margin-bottom: 5px;
+        }
+        #composition {
+            width: 100%;
+            height: 180px;
+            background-color: #79951B;
+            color: #E9E1DA;
+            font-family: '8BitFont', monospace;
+            font-size: 14px;
+            padding: 10px;
+            border: none;
+            border-radius: 10px;
+            resize: none;
+            box-sizing: border-box;
+        }
+        .controls {
+            display: flex;
+            gap: 10px;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+            margin-bottom: 10px;
+        }
+        .file-controls {
+            display: flex;
+            gap: 10px;
+        }
+        .slider-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 50%;
+            height: 60px;
+        }
+        .slider-container input[type=range] {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 10px;
+            background: #CA2C72;
+            outline: none;
+            opacity: 0.8;
+            transition: opacity 0.2s;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .slider-container input[type=range]:hover {
+            opacity: 1;
+        }
+        .slider-container input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            background: #800E45;
+            cursor: pointer;
+            border-radius: 10px;
+        }
+        .slider-container input[type=range]::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            background: #800E45;
+            cursor: pointer;
+            border-radius: 10px;
+        }
+        .slider-container label {
+            margin-bottom: 5px;
+            font-size: 14px;
+            color: #CA2C72;
+        }
+        .slider-milestones {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            margin-top: 5px;
+            font-size: 12px;
+            color: #565663;
+        }
+        button {
+            font-family: '8BitFont', sans-serif;
+            background-color: transparent;
+            color: #565663;
+            border: 2px solid #565663;
+            padding: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 12px;
+            border-radius: 10px;
+        }
+        button:hover {
+            background-color: rgba(86, 86, 99, 0.1);
+        }
+        #clear {
+            background-color: #E2374C;
+            border: none;
+            color: #E9E1DA;
+        }
+        #clear:hover {
+            opacity: 0.8;
+        }
+        #play {
+            background-color: #565663;
+            border: none;
+            color: #E9E1DA;
+        }
+        #play:hover {
+            opacity: 0.8;
+        }
+        #dark-mode-switch {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            display: flex;
+            align-items: center;
+        }
+        #dark-mode-label {
+            margin-right: 10px;
+            font-size: 14px;
+        }
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 24px;
+        }
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #CA2C72;
+            transition: .4s;
+            border-radius: 24px;
+        }
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 16px;
+            width: 16px;
+            left: 4px;
+            bottom: 4px;
+            background-color: #E9E1DA;
+            transition: .4s;
+            border-radius: 50%;
+        }
+        input:checked + .slider {
+            background-color: #800E45;
+        }
+        input:checked + .slider:before {
+            transform: translateX(26px);
+        }
+        .octave-controls {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 10px 0;
+        }
+        .octave-btn {
+            font-size: 16px;
+            width: 30px;
+            height: 30px;
+            padding: 0;
+            margin: 0 10px;
+            background-color: transparent;
+            color: #CA2C72;
+            border: 2px solid #CA2C72;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .octave-btn:hover {
+            background-color: rgba(202, 44, 114, 0.1);
+        }
+        #octave-indicator {
+            font-size: 14px;
+            color: #CA2C72;
+        }
+        #file-input {
+            display: none;
+        }
+        #silence-key, #long-key {
+            width: calc(50% - 5px);
+            height: 40px;
+            background-color: #611B3A;
+            color: #E9E1DA;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            border-radius: 10px;
+            font-size: 10px;
+            margin: 10px 0;
+        }
+        #silence-key:hover, #long-key:hover {
+            opacity: 0.8;
+        }
+        #silence-key:active, #long-key:active {
+            opacity: 0.6;
+        }
+        .special-keys {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+        }
+        .playback-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            width: 100%;
+            margin: 10px 0;
+            height: 60px;
+        }
+        .playback-controls .slider-container {
+            width: 45%;
+        }
+        .playback-controls .switch-container {
+            width: 20%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            height: 100%;
+        }
+        .playback-controls .switch-container label {
+            margin-bottom: 5px;
+            font-size: 12px;
+            color: #CA2C72;
+        }
+        .playback-controls #play {
+            width: 30%;
+            height: 100%;
+        }
+        .playing {
+            background-color: #FFFF00 !important;
+            color: #000000 !important;
+        }
+        body.dark-mode button {
+            color: #3B415F;
+            border-color: #3B415F;
+        }
+        body.dark-mode #play {
+            background-color: #3B415F;
+            color: #151729;
+        }
+        #sound-selector {
+            font-family: '8BitFont', sans-serif;
+            background-color: #CA2C72;
+            color: #E9E1DA;
+            border: none;
+            padding: 10px;
+            font-size: 12px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+            width: 120px;
+            padding-right: 25px;
+            margin-left: 5px;
+        }
+        #sound-selector:hover {
+            opacity: 0.8;
+        }
+        body.dark-mode #sound-selector {
+            background-color: #800E45;
+        }
+        .title-composition-container {
+            background-color: #565663;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        body.dark-mode .title-composition-container {
+            background-color: #3B415F;
+        }
+        body.dark-mode h1,
+        body.dark-mode #file-name {
+            color: #151729;
+        }
+        .tooltip {
+            position: absolute;
+            background-color: rgba(0, 0, 0, 0.8);
+            color: #fff;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 12px;
+            z-index: 1000;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <div id="dark-mode-switch">
+            <span id="dark-mode-label">Light Mode</span>
+            <label class="switch">
+                <input type="checkbox" id="dark-mode-toggle">
+                <span class="slider"></span>
+            </label>
+        </div>
+        <div class="title-composition-container">
+            <h1>8-Beats</h1>
+            <div id="composition-container">
+                <div id="file-name">New Beat</div>
+                <textarea id="composition" data-tooltip="This is where your composition appears. You can also edit it directly."></textarea>
+            </div>
+        </div>
+        <div id="piano-container">
+            <div class="controls">
+                <div style="display: flex; gap: 5px;">
+                    <button id="clear" data-tooltip="Clear the current composition">Clear</button>
+                    <select id="sound-selector" data-tooltip="Choose the type of sound for your notes">
+                        <option value="square">Square</option>
+                        <option value="sine">Sine</option>
+                        <option value="sawtooth">Sawtooth</option>
+                        <option value="triangle">Triangle</option>
+                        <option value="custom1">8-bit</option>
+                        <option value="custom2">FM Bass</option>
+                        <option value="custom3">Synth Pad</option>
+                        <option value="custom4">Pluck</option>
+                    </select>
+                </div>
+                <div class="file-controls">
+                    <button id="save" data-tooltip="Save your composition as a text file">Save TXT</button>
+                    <button id="open" data-tooltip="Open a previously saved composition">Open</button>
+                </div>
+            </div>
+            <div class="playback-controls">
+                <div class="slider-container" data-tooltip="Adjust the playback speed">
+                    <label for="tempo">Speed</label>
+                    <input type="range" id="tempo" min="1" max="5" value="3">
+                    <div class="slider-milestones">
+                    </div>
+                </div>
+                <div class="switch-container" data-tooltip="Toggle looping of the composition">
+                    <label for="loop-toggle">Loop</label>
+                    <label class="switch">
+                        <input type="checkbox" id="loop-toggle"><span class="slider"></span>
+                    </label>
+                </div>
+                <button id="play" class="play" data-tooltip="Play or stop the current composition">Play</button>
+            </div>
+            <div id="piano" data-tooltip="Click on the keys to add notes to your composition">
+                <div class="key-row">
+                    <div class="key" data-note="C"><span class="note-name">C</span><span class="note-name-es">DO</span></div>
+                    <div class="key" data-note="D"><span class="note-name">D</span><span class="note-name-es">RE</span></div>
+                    <div class="key" data-note="E"><span class="note-name">E</span><span class="note-name-es">MI</span></div>
+                    <div class="key" data-note="F"><span class="note-name">F</span><span class="note-name-es">FA</span></div>
+                    <div class="key" data-note="G"><span class="note-name">G</span><span class="note-name-es">SOL</span></div>
+                    <div class="key" data-note="A"><span class="note-name">A</span><span class="note-name-es">LA</span></div>
+                    <div class="key" data-note="B"><span class="note-name">B</span><span class="note-name-es">SI</span></div>
+                </div>
+                <div class="key-row">
+                    <div class="key sharp" data-note="C#"><span class="note-name">C#</span><span class="note-name-es">DO#</span></div>
+                    <div class="key sharp" data-note="D#"><span class="note-name">D#</span><span class="note-name-es">RE#</span></div>
+                    <div class="key sharp" data-note="F#"><span class="note-name">F#</span><span class="note-name-es">FA#</span></div>
+                    <div class="key sharp" data-note="G#"><span class="note-name">G#</span><span class="note-name-es">SOL#</span></div>
+                    <div class="key sharp" data-note="A#"><span class="note-name">A#</span><span class="note-name-es">LA#</span></div>
+                </div>
+                <div class="special-keys">
+                    <div id="silence-key" data-tooltip="Add a silence to your composition"><span class="note-name">Silence</span></div>
+                    <div id="long-key" data-tooltip="Make the next note longer"><span class="note-name">Long</span></div>
+                </div>
+            </div>
+            <div class="octave-controls" data-tooltip="Change the octave of the piano">
+                <button class="octave-btn" id="decrease-octave">-</button>
+                <div id="octave-indicator">Octave: <span id="current-octave">3</span></div>
+                <button class="octave-btn" id="increase-octave">+</button>
+            </div>
+            <input type="file" id="file-input" accept=".txt">
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jsmidgen/0.1.5/jsmidgen.min.js"></script>
+    <script>
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        const composition = document.getElementById('composition');
+        const fileName = document.getElementById('file-name');
+        const playButton = document.getElementById('play');
+        const loopToggle = document.getElementById('loop-toggle');
+        const clearButton = document.getElementById('clear');
+        const saveButton = document.getElementById('save');
+        const openButton = document.getElementById('open');
+        const fileInput = document.getElementById('file-input');
+        const tempoSlider = document.getElementById('tempo');
+        const darkModeToggle = document.getElementById('dark-mode-toggle');
+        const darkModeLabel = document.getElementById('dark-mode-label');
+        const decreaseOctaveBtn = document.getElementById('decrease-octave');
+        const increaseOctaveBtn = document.getElementById('increase-octave');
+        const currentOctaveSpan = document.getElementById('current-octave');
+        const silenceKey = document.getElementById('silence-key');
+        const longKey = document.getElementById('long-key');
+        const soundSelector = document.getElementById('sound-selector');
+        let notes = [];
+        let currentOctave = 3;
+        let isLooping = false;
+        let isPlaying = false;
+        let intervalId;
+        let currentFileName = "New Beat";
+        let longNoteCount = 0;
+
+        const tempoValues = {
+            1: 500,
+            2: 400,
+            3: 300,
+            4: 200,
+            5: 100
+        };
+
+        function updateFileName(name) {
+            currentFileName = name;
+            fileName.textContent = name;
+        }
+
+        function playNote(frequency, duration = 0.2) {
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            switch(soundSelector.value) {
+                case 'square':
+                case 'sine':
+                case 'sawtooth':
+                case 'triangle':
+                    oscillator.type = soundSelector.value;
+                    break;
+                case 'custom1':
+                    // 8-bit sound
+                    oscillator.type = 'square';
+                    const bitCrusher = audioContext.createWaveShaper();
+                    bitCrusher.curve = new Float32Array(256);
+                    for (let i = 0; i < 256; i++) {
+                        bitCrusher.curve[i] = Math.random() < 0.5 ? -1 : 1;
+                    }
+                    oscillator.connect(bitCrusher);
+                    bitCrusher.connect(gainNode);
+                    break;
+                case 'custom2':
+                    // FM Bass
+                    const modulatorFreq = frequency * 2;
+                    const modulator = audioContext.createOscillator();
+                    modulator.frequency.setValueAtTime(modulatorFreq, audioContext.currentTime);
+                    const modulationIndex = audioContext.createGain();
+                    modulationIndex.gain.setValueAtTime(100, audioContext.currentTime);
+                    modulator.connect(modulationIndex);
+                    modulationIndex.connect(oscillator.frequency);
+                    modulator.start();
+                    modulator.stop(audioContext.currentTime + duration);
+                    break;
+                case 'custom3':
+                    // Synth Pad
+                    oscillator.type = 'sine';
+                    const lfo = audioContext.createOscillator();
+                    lfo.frequency.setValueAtTime(5, audioContext.currentTime);
+                    const lfoGain = audioContext.createGain();
+                    lfoGain.gain.setValueAtTime(10, audioContext.currentTime);
+                    lfo.connect(lfoGain);
+                    lfoGain.connect(oscillator.frequency);
+                    lfo.start();
+                    lfo.stop(audioContext.currentTime + duration);
+                    break;
+                case 'custom4':
+                    // Pluck
+                    oscillator.type = 'triangle';
+                    const pluckEnvelope = audioContext.createGain();
+                    pluckEnvelope.gain.setValueAtTime(1, audioContext.currentTime);
+                    pluckEnvelope.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + duration);
+                    oscillator.connect(pluckEnvelope);
+                    pluckEnvelope.connect(gainNode);
+                    break;
+            }
+            
+            oscillator.frequency.setValueAtTime(frequency, audioContext.currentTime);
+            
+            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.00001, audioContext.currentTime + duration);
+            
+            if (soundSelector.value !== 'custom1' && soundSelector.value !== 'custom4') {
+                oscillator.connect(gainNode);
+            }
+            gainNode.connect(audioContext.destination);
+            
+            oscillator.start();
+            oscillator.stop(audioContext.currentTime + duration);
+        }
+
+        function getNoteFrequency(note) {
+            const notes = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+            const baseFreq = 440; // A4
+            const baseNoteIndex = notes.indexOf('A');
+            const baseOctave = 4;
+
+            const [noteName, octave] = note.split(/(?<=\D)(?=\d)/);
+            const noteIndex = notes.indexOf(noteName);
+            const octaveDiff = parseInt(octave) - baseOctave;
+            const halfSteps = noteIndex - baseNoteIndex + octaveDiff * 12;
+
+            return baseFreq * Math.pow(2, halfSteps / 12);
+        }
+
+        function addNoteToComposition(note) {
+            let formattedNote = note;
+            for (let i = 0; i < longNoteCount; i++) {
+                formattedNote = `(${formattedNote})`;
+            }
+            composition.value += formattedNote + ' ';
+            longNoteCount = 0;
+        }
+
+        function clearComposition() {
+            composition.value = '';
+            updateFileName("New Beat");
+        }
+
+        function highlightPlayingNote(note) {
+            document.querySelectorAll('.key').forEach(key => {
+                key.classList.remove('playing');
+            });
+            if (note !== '-') {
+                const noteWithoutOctave = note.replace(/\d+/, '').replace(/[()]/g, '');
+                const keyElement = document.querySelector(`.key[data-note="${noteWithoutOctave}"]`);
+                if (keyElement) {
+                    keyElement.classList.add('playing');
+                }
+            }
+        }
+
+        function playComposition() {
+            if (isPlaying) {
+                clearInterval(intervalId);
+                playButton.textContent = 'Play';
+                isPlaying = false;
+                document.querySelectorAll('.key').forEach(key => {
+                    key.classList.remove('playing');
+                });
+                return;
+            }
+
+            const notes = composition.value.trim().split(' ');
+            let index = 0;
+
+            playButton.textContent = 'Stop';
+            isPlaying = true;
+
+            function playNextNote() {
+                if (index >= notes.length) {
+                    if (isLooping) {
+                        index = 0;
+                    } else {
+                        clearInterval(intervalId);
+                        playButton.textContent = 'Play';
+                        isPlaying = false;
+                        document.querySelectorAll('.key').forEach(key => {
+                            key.classList.remove('playing');
+                        });
+                        return;
+                    }
+                }
+
+                const note = notes[index];
+                highlightPlayingNote(note);
+                if (note !== '-') {
+                    const cleanNote = note.replace(/[()]/g, '');
+                    const frequency = getNoteFrequency(cleanNote);
+                    const duration = 0.2 * (note.match(/\(/g) || []).length + 1;
+                    playNote(frequency, duration);
+                }
+                index++;
+            }
+
+            intervalId = setInterval(playNextNote, tempoValues[tempoSlider.value]);
+        }
+
+        function saveComposition() {
+            const blob = new Blob([composition.value], {type: 'text/plain'});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = currentFileName + '.txt';
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function openComposition(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    composition.value = e.target.result;
+                    updateFileName(file.name.replace('.txt', ''));
+                };
+                reader.readAsText(file);
+            }
+        }
+
+        function toggleDarkMode() {
+            document.body.classList.toggle('dark-mode');
+            darkModeLabel.textContent = document.body.classList.contains('dark-mode') ? 'Dark Mode' : 'Light Mode';
+        }
+
+        function changeOctave(delta) {
+            currentOctave = Math.max(0, Math.min(7, currentOctave + delta));
+            currentOctaveSpan.textContent = currentOctave;
+        }
+
+        document.querySelectorAll('.key').forEach(key => {
+            key.addEventListener('click', () => {
+                const note = key.getAttribute('data-note');
+                const fullNote = `${note}${currentOctave}`;
+                addNoteToComposition(fullNote);
+                playNote(getNoteFrequency(fullNote));
+            });
+        });
+
+        silenceKey.addEventListener('click', () => {
+            addNoteToComposition('-');
+        });
+
+        longKey.addEventListener('click', () => {
+            longNoteCount++;
+        });
+
+        clearButton.addEventListener('click', clearComposition);
+        playButton.addEventListener('click', playComposition);
+        saveButton.addEventListener('click', saveComposition);
+        openButton.addEventListener('click', () => fileInput.click());
+        fileInput.addEventListener('change', openComposition);
+        tempoSlider.addEventListener('input', () => {
+            if (isPlaying) {
+                clearInterval(intervalId);
+                intervalId = setInterval(playComposition, tempoValues[tempoSlider.value]);
+            }
+        });
+        loopToggle.addEventListener('change', () => {
+            isLooping = loopToggle.checked;
+        });
+        darkModeToggle.addEventListener('change', toggleDarkMode);
+        decreaseOctaveBtn.addEventListener('click', () => changeOctave(-1));
+        increaseOctaveBtn.addEventListener('click', () => changeOctave(1));
+        soundSelector.addEventListener('change', () => {
+            // The sound will change for the next note played
+        });
+
+        // Tooltip functionality
+        function createTooltip(text) {
+            const tooltip = document.createElement('div');
+            tooltip.className = 'tooltip';
+            tooltip.textContent = text;
+            document.body.appendChild(tooltip);
+            return tooltip;
+        }
+
+        function showTooltip(element, tooltip) {
+            const rect = element.getBoundingClientRect();
+            tooltip.style.left = `${rect.left + window.scrollX}px`;
+            tooltip.style.top = `${rect.bottom + window.scrollY + 5}px`;
+            tooltip.style.opacity = '1';
+        }
+
+        function hideTooltip(tooltip) {
+            tooltip.style.opacity = '0';
+        }
+
+        document.querySelectorAll('[data-tooltip]').forEach(element => {
+            const tooltip = createTooltip(element.getAttribute('data-tooltip'));
+            let tooltipTimer;
+
+            element.addEventListener('mouseenter', () => {
+                tooltipTimer = setTimeout(() => {
+                    showTooltip(element, tooltip);
+                }, 1500);
+            });
+
+            element.addEventListener('mouseleave', () => {
+                clearTimeout(tooltipTimer);
+                hideTooltip(tooltip);
+            });
+        });
+    </script>
+</body>
+</html>

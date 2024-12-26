@@ -1,0 +1,194 @@
+<html><head><base href="https://8bitgen.com/"><title>8-Bit Boss Battle Music Generator (Remixed)</title><style>body { font-family: 'Press Start 2P', cursive; background-color: #000; color: #0ff; text-align: center; padding: 20px; } h1 { font-size: 24px; margin-bottom: 20px; text-shadow: 2px 2px #088; } #game-console { width: 320px; height: 240px; background-color: #033; border: 10px solid #055; border-radius: 10px; margin: 0 auto 20px; position: relative; overflow: hidden; } #pixel-display { width: 100%; height: 100%; display: flex; flex-wrap: wrap; } .pixel { width: 10px; height: 10px; background-color: #000; } #controls { margin-bottom: 20px; } button { background-color: #0ff; color: #000; border: none; padding: 10px 20px; font-size: 16px; cursor: pointer; margin: 0 10px; } button:hover { background-color: #5ff; } #volume-control, #intensity-control { margin: 20px 0; } #volume-slider, #intensity-slider { -webkit-appearance: none; width: 200px; height: 15px; background: #055; outline: none; opacity: 0.7; transition: opacity .2s; } #volume-slider:hover, #intensity-slider:hover { opacity: 1; } #volume-slider::-webkit-slider-thumb, #intensity-slider::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 25px; height: 25px; background: #0ff; cursor: pointer; } #volume-slider::-moz-range-thumb, #intensity-slider::-moz-range-thumb { width: 25px; height: 25px; background: #0ff; cursor: pointer; } #song-info { margin-bottom: 20px; } a { color: #0ff; text-decoration: none; } a:hover { text-decoration: underline; } #loading-bar { width: 0%; height: 20px; background-color: #0ff; transition: width 0.5s; margin: 10px auto; } #loading-container { width: 300px; height: 20px; background-color: #033; margin: 0 auto; display: none; } #boss-name { font-size: 20px; margin-bottom: 10px; color: #0ff; } #tone-log { width: 80%; height: 150px; margin: 20px auto; background-color: #033; border: 2px solid #055; color: #0f0; font-family: monospace; overflow-y: scroll; text-align: left; padding: 10px; } #tone-log::-webkit-scrollbar { width: 10px; } #tone-log::-webkit-scrollbar-track { background: #033; } #tone-log::-webkit-scrollbar-thumb { background: #0ff; } #seed-input { background-color: #033; color: #0ff; border: 2px solid #055; padding: 5px; font-family: 'Press Start 2P', cursive; width: 100px; margin: 0 10px; text-align: center; } #seed-input:focus { outline: none; border-color: #0ff; }</style></head><body><h1>8-Bit Boss Battle Music Generator (Remixed)</h1><div id="game-console"><div id="pixel-display"></div></div><div id="loading-container"><div id="loading-bar"></div></div><div id="boss-name">The Cyan Prompter</div><div id="controls"><button id="new-boss">New Boss</button><button id="play-pause">Play</button><span>(may lag at start)</span></div><div id="volume-control"><input type="range" min="0" max="100" value="50" id="volume-slider"><div id="volume-label">Volume: 50%</div></div><div id="intensity-control"><input type="range" min="1" max="10" value="5" id="intensity-slider"><div id="intensity-label">Intensity: 5</div></div><div id="song-info">Boss Seed: <input type="number" id="seed-input" min="1" max="999999" value="000001"> <button id="apply-seed">Apply Seed</button></div><div id="tone-log"></div><p>Generate epic 8-bit boss battle themes!</p><script>const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+const playPauseBtn = document.getElementById('play-pause');
+const newBossBtn = document.getElementById('new-boss');
+const seedInput = document.getElementById('seed-input');
+const applySeedBtn = document.getElementById('apply-seed');
+const pixelDisplay = document.getElementById('pixel-display');
+const volumeSlider = document.getElementById('volume-slider');
+const volumeLabel = document.getElementById('volume-label');
+const intensitySlider = document.getElementById('intensity-slider');
+const intensityLabel = document.getElementById('intensity-label');
+const loadingBar = document.getElementById('loading-bar');
+const loadingContainer = document.getElementById('loading-container');
+const bossNameDisplay = document.getElementById('boss-name');
+const toneLog = document.getElementById('tone-log');
+
+let isPlaying = false;
+let currentSeed = 1;
+let loopLength = 64;
+let currentTime = 0;
+
+const bossNames = [
+    "The Cyan Prompter", "Pixelizer", "Dreaded Glitch", "Terrorbyte Tyrant",
+    "Retro Regent", "8-Bit Badguy", "Digital Downloner", "Megabyte Monster",
+    "Syntaxinator", "Binary Bramble", "Quantum Quasar", "Vector Vexer"
+];
+
+function generateRandomSeed() {
+    return Math.floor(Math.random() * 1000000) + 1;
+}
+
+// Update tone log with more entries
+function logTone(freq, type) {
+    const timestamp = new Date().toLocaleTimeString();
+    const logEntry = `${type}: ${Math.round(freq)}Hz, `;
+    toneLog.textContent = `${type}: ${Math.round(freq)}Hz, \n` + toneLog.textContent;
+    if (toneLog.textContent.split('\n').length > 5000) {
+        toneLog.textContent = toneLog.textContent.split('\n').slice(0, 5000).join('\n');
+    toneLog.scrollTop = 0;
+    }
+}
+
+function createOscillator(freq, type = 'square') {
+    const osc = audioContext.createOscillator();
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, audioContext.currentTime);
+    const gainNode = audioContext.createGain();
+    osc.connect(gainNode);
+    gainNode.connect(audioContext.destination);
+    const volume = volumeSlider.value / 100;
+    gainNode.gain.setValueAtTime(volume * 0.3, audioContext.currentTime);
+    logTone(freq, type);
+    return { oscillator: osc, gainNode: gainNode };
+}
+
+function generateNote(seed, time, baseFreq) {
+    const scale = [0, 2, 3, 5, 7, 8, 10, 12, 14, 15, 17, 19];
+    const noteIndex = (seed * time) % scale.length;
+    const octave = Math.floor((seed + time) / scale.length) % 3;
+    return baseFreq * Math.pow(2, scale[noteIndex] / 12 + octave);
+}
+
+function playBossBattleMusic() {
+    const intensity = parseInt(intensitySlider.value);
+    const baseFreq = 110 + (currentSeed % 110);
+    const bassFreq = baseFreq / 2;
+    
+    function playNote() {
+        if (!isPlaying) return;
+        
+        const melodyFreq = generateNote(currentSeed, currentTime, baseFreq);
+        const { oscillator: melodyOsc, gainNode: melodyGain } = createOscillator(melodyFreq);
+        melodyOsc.start();
+        melodyOsc.stop(audioContext.currentTime + 0.1);
+        
+        if (currentTime % 4 === 0) {
+            const bassFreq = generateNote(currentSeed, Math.floor(currentTime / 4), baseFreq / 2);
+            const { oscillator: bassOsc, gainNode: bassGain } = createOscillator(bassFreq, 'sawtooth');
+            bassOsc.start();
+            bassOsc.stop(audioContext.currentTime + 0.3);
+            bassGain.gain.setValueAtTime(volumeSlider.value / 100 * 0.4, audioContext.currentTime);
+        }
+        
+        if (currentTime % 8 === 0 || (intensity > 5 && currentTime % 4 === 2)) {
+            const { oscillator: kickOsc, gainNode: kickGain } = createOscillator(55, 'sine');
+            kickOsc.start();
+            kickOsc.stop(audioContext.currentTime + 0.1);
+            kickGain.gain.setValueAtTime(volumeSlider.value / 100 * 0.5, audioContext.currentTime);
+            kickGain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
+        }
+        
+        currentTime++;
+        if (currentTime >= loopLength) currentTime = 0;
+        
+        const interval = Math.max(30, Math.min(150, 180 - (intensity * 15)));
+        setTimeout(playNote, interval);
+        updatePixelDisplay(currentTime);
+    }
+    playNote();
+}
+
+function updatePixelDisplay(time) {
+    pixelDisplay.innerHTML = '';
+    const intensity = parseInt(intensitySlider.value);
+    for (let i = 0; i < 768; i++) {
+        const pixel = document.createElement('div');
+        pixel.className = 'pixel';
+        const hue = (i * currentSeed + time * intensity) % 360;
+        const lightness = Math.sin(time * 0.1 + i * 0.01) * 25 + 50;
+        pixel.style.backgroundColor = `hsl(${hue}, 100%, ${lightness}%)`;
+        pixelDisplay.appendChild(pixel);
+    }
+}
+
+function loadBossMusic() {
+    return new Promise((resolve) => {
+        loadingContainer.style.display = 'block';
+        let progress = 0;
+        const interval = setInterval(() => {
+            progress += 10;
+            loadingBar.style.width = `${progress}%`;
+            if (progress >= 100) {
+                clearInterval(interval);
+                setTimeout(() => {
+                    loadingContainer.style.display = 'none';
+                    resolve();
+                }, 500);
+            }
+        }, 100);
+    });
+}
+
+function updateSeed(seed) {
+    currentSeed = seed;
+    seedInput.value = currentSeed.toString().padStart(6, '0');
+    bossNameDisplay.textContent = bossNames[currentSeed % bossNames.length];
+    currentTime = 0;
+    if (isPlaying) {
+        isPlaying = false;
+        loadBossMusic().then(() => {
+            isPlaying = true;
+            playBossBattleMusic();
+        });
+    } else {
+        updatePixelDisplay(0);
+    }
+}
+
+playPauseBtn.addEventListener('click', () => {
+    if (isPlaying) {
+        isPlaying = false;
+        playPauseBtn.textContent = 'Play';
+    } else {
+        loadBossMusic().then(() => {
+            isPlaying = true;
+            playPauseBtn.textContent = 'Pause';
+            if (audioContext.state === 'suspended') {
+                audioContext.resume();
+            }
+            playBossBattleMusic();
+        });
+    }
+});
+
+newBossBtn.addEventListener('click', () => {
+    updateSeed(generateRandomSeed());
+});
+
+applySeedBtn.addEventListener('click', () => {
+    const newSeed = parseInt(seedInput.value);
+    if (newSeed >= 1 && newSeed <= 999999) {
+        updateSeed(newSeed);
+    } else {
+        alert('Please enter a seed between 1 and 999999');
+    }
+});
+
+seedInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+        applySeedBtn.click();
+    }
+});
+
+volumeSlider.addEventListener('input', (e) => {
+    const volume = e.target.value;
+    volumeLabel.textContent = `Volume: ${volume}%`;
+});
+
+intensitySlider.addEventListener('input', (e) => {
+    const intensity = e.target.value;
+    intensityLabel.textContent = `Intensity: ${intensity}`;
+});
+
+seedInput.value = currentSeed.toString().padStart(6, '0');
+updatePixelDisplay(0);</script></body></html>
