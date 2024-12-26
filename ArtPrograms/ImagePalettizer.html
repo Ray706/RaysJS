@@ -1,0 +1,273 @@
+<html><head><base href="." target="_blank">
+<title>Image Palettizer</title>
+<style>
+body {
+    font-family: Arial, sans-serif;
+    max-width: 800px;
+    margin: 20px auto;
+    padding: 20px;
+    background: #f0f0f0;
+}
+
+.container {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+#preview {
+    max-width: 100%;
+    height: auto;
+    margin: 20px 0;
+    border: 1px solid #ddd;
+}
+
+#palettized {
+    max-width: 100%;
+    height: auto;
+    margin: 20px 0;
+    border: 1px solid #ddd;
+}
+
+.color-palette {
+    display: flex;
+    gap: 10px;
+    margin: 20px 0;
+    flex-wrap: wrap;
+}
+
+.color-swatch {
+    width: 50px;
+    height: 50px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+button {
+    background: #4CAF50;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 4px;
+    cursor: pointer;
+    margin: 5px;
+}
+
+button:hover {
+    background: #45a049;
+}
+
+input[type="number"] {
+    width: 80px;
+    padding: 5px;
+    margin: 5px;
+}
+</style>
+</head>
+<body>
+<div class="container">
+    <h1>Image Palettizer</h1>
+    <div>
+        <input type="file" id="imageInput" accept="image/*">
+        <br><br>
+        <label>Number of colors: 
+            <input type="number" id="colorCount" value="16" min="2" max="256">
+        </label>
+        <br><br>
+        <button id="process">Process Image</button>
+        <button id="downloadArray">Download Array Data</button>
+        <button id="downloadPalette">Download Palette Data</button>
+    </div>
+    
+    <div>
+        <h3>Original Image:</h3>
+        <canvas id="preview"></canvas>
+        <h3>Palettized Image:</h3>
+        <canvas id="palettized"></canvas>
+        <h3>Color Palette:</h3>
+        <div class="color-palette" id="paletteDisplay"></div>
+    </div>
+</div>
+
+<script>
+const imageInput = document.getElementById('imageInput');
+const preview = document.getElementById('preview');
+const palettized = document.getElementById('palettized');
+const colorCount = document.getElementById('colorCount');
+const processBtn = document.getElementById('process');
+const downloadArrayBtn = document.getElementById('downloadArray');
+const downloadPaletteBtn = document.getElementById('downloadPalette');
+const paletteDisplay = document.getElementById('paletteDisplay');
+
+let originalImageData;
+let palette = [];
+let indexedData = [];
+
+function getColorDistance(color1, color2) {
+    return Math.sqrt(
+        Math.pow(color1.r - color2.r, 2) +
+        Math.pow(color1.g - color2.g, 2) +
+        Math.pow(color1.b - color2.b, 2)
+    );
+}
+
+function findClosestColor(color, palette) {
+    let minDistance = Infinity;
+    let closestIndex = 0;
+    
+    palette.forEach((paletteColor, index) => {
+        const distance = getColorDistance(color, paletteColor);
+        if (distance < minDistance) {
+            minDistance = distance;
+            closestIndex = index;
+        }
+    });
+    
+    return closestIndex;
+}
+
+function medianCut(pixels, depth) {
+    if (depth === 0 || pixels.length === 0) {
+        const averageColor = pixels.reduce((acc, pixel) => {
+            return {
+                r: acc.r + pixel.r,
+                g: acc.g + pixel.g,
+                b: acc.b + pixel.b
+            };
+        }, {r: 0, g: 0, b: 0});
+        
+        return {
+            r: Math.round(averageColor.r / pixels.length),
+            g: Math.round(averageColor.g / pixels.length),
+            b: Math.round(averageColor.b / pixels.length)
+        };
+    }
+
+    let maxRange = 0;
+    let maxChannel = 'r';
+    
+    ['r', 'g', 'b'].forEach(channel => {
+        const min = Math.min(...pixels.map(p => p[channel]));
+        const max = Math.max(...pixels.map(p => p[channel]));
+        const range = max - min;
+        
+        if (range > maxRange) {
+            maxRange = range;
+            maxChannel = channel;
+        }
+    });
+
+    pixels.sort((a, b) => a[maxChannel] - b[maxChannel]);
+    
+    const mid = Math.floor(pixels.length / 2);
+    const left = pixels.slice(0, mid);
+    const right = pixels.slice(mid);
+    
+    return [
+        medianCut(left, depth - 1),
+        medianCut(right, depth - 1)
+    ].flat();
+}
+
+function processImage() {
+    const ctx = preview.getContext('2d');
+    const pCtx = palettized.getContext('2d');
+    
+    // Get image data
+    originalImageData = ctx.getImageData(0, 0, preview.width, preview.height);
+    const pixels = [];
+    
+    // Extract pixels
+    for (let i = 0; i < originalImageData.data.length; i += 4) {
+        pixels.push({
+            r: originalImageData.data[i],
+            g: originalImageData.data[i + 1],
+            b: originalImageData.data[i + 2]
+        });
+    }
+    
+    // Generate palette using median cut
+    const depth = Math.log2(parseInt(colorCount.value));
+    palette = medianCut(pixels, depth);
+    
+    // Create indexed image
+    indexedData = [];
+    const palettizedImageData = new ImageData(preview.width, preview.height);
+    
+    for (let i = 0; i < originalImageData.data.length; i += 4) {
+        const pixel = {
+            r: originalImageData.data[i],
+            g: originalImageData.data[i + 1],
+            b: originalImageData.data[i + 2]
+        };
+        
+        const colorIndex = findClosestColor(pixel, palette);
+        indexedData.push(colorIndex);
+        
+        palettizedImageData.data[i] = palette[colorIndex].r;
+        palettizedImageData.data[i + 1] = palette[colorIndex].g;
+        palettizedImageData.data[i + 2] = palette[colorIndex].b;
+        palettizedImageData.data[i + 3] = 255;
+    }
+    
+    pCtx.putImageData(palettizedImageData, 0, 0);
+    
+    // Display palette
+    paletteDisplay.innerHTML = '';
+    palette.forEach(color => {
+        const swatch = document.createElement('div');
+        swatch.className = 'color-swatch';
+        swatch.style.backgroundColor = `rgb(${color.r},${color.g},${color.b})`;
+        paletteDisplay.appendChild(swatch);
+    });
+}
+
+function downloadArrayData() {
+    const content = indexedData.join(',');
+    const blob = new Blob([content], {type: 'text/plain'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'image_data.txt';
+    a.click();
+    URL.revokeObjectURL(url);
+}
+
+function downloadPaletteData() {
+    const content = palette.map(color => `${color.r},${color.g},${color.b}`).join('\n');
+    const blob = new Blob([content], {type: 'text/plain'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'palette_data.txt';
+    a.click();
+    URL.revokeObjectURL(url);
+}
+
+imageInput.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    const reader = new FileReader();
+    
+    reader.onload = (event) => {
+        const img = new Image();
+        img.onload = () => {
+            preview.width = img.width;
+            preview.height = img.height;
+            palettized.width = img.width;
+            palettized.height = img.height;
+            
+            const ctx = preview.getContext('2d');
+            ctx.drawImage(img, 0, 0);
+        };
+        img.src = event.target.result;
+    };
+    
+    reader.readAsDataURL(file);
+});
+
+processBtn.addEventListener('click', processImage);
+downloadArrayBtn.addEventListener('click', downloadArrayData);
+downloadPaletteBtn.addEventListener('click', downloadPaletteData);
+</script>
+</body></html>
