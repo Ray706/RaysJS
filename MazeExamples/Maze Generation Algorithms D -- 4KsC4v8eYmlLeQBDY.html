@@ -1,0 +1,1017 @@
+<html><head><base href="/" />
+<meta charset="utf-8" />
+<title>Maze Generation Algorithms Explorer</title>
+<style>
+:root {
+  --primary: #2c3e50;
+  --secondary: #34495e;
+  --accent: #3498db;
+  --text: #ecf0f1;
+}
+
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  line-height: 1.6;
+  color: var(--text);
+  background: var(--primary);
+  margin: 0;
+  padding: 20px;
+}
+
+header {
+  text-align: center;
+  padding: 2rem;
+  background: var(--secondary);
+  border-radius: 10px;
+  margin-bottom: 2rem;
+}
+
+.algorithm-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 2rem;
+}
+
+.algorithm-card {
+  background: var(--secondary);
+  border-radius: 10px;
+  padding: 1rem;
+  transition: transform 0.3s ease;
+}
+
+.algorithm-card:hover {
+  transform: translateY(-5px);
+}
+
+.maze-canvas {
+  width: 100%;
+  height: 300px;
+  background: #fff;
+  border-radius: 5px;
+  margin: 1rem 0;
+}
+
+button {
+  background: var(--accent);
+  color: var(--text);
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: opacity 0.3s ease;
+}
+
+button:hover {
+  opacity: 0.9;
+}
+</style>
+</head>
+<body>
+  <header>
+    <h1>Maze Generation Algorithms</h1>
+    <p>Explore different maze generation techniques with interactive examples</p>
+  </header>
+
+  <div class="algorithm-container">
+    <div class="algorithm-card">
+      <h2>Recursive Backtracking</h2>
+      <canvas id="recursiveBacktracking" class="maze-canvas"></canvas>
+      <button onclick="generateRecursiveBacktracking()">Generate New Maze</button>
+      <p>A depth-first search approach that creates perfect mazes by carving paths and backtracking when stuck.</p>
+    </div>
+
+    <div class="algorithm-card">
+      <h2>Kruskal's Algorithm</h2>
+      <canvas id="kruskals" class="maze-canvas"></canvas>
+      <button onclick="generateKruskals()">Generate New Maze</button>
+      <p>Creates a maze by randomly connecting cells while avoiding cycles using disjoint sets.</p>
+    </div>
+
+    <div class="algorithm-card">
+      <h2>Prim's Algorithm</h2>
+      <canvas id="prims" class="maze-canvas"></canvas>
+      <button onclick="generatePrims()">Generate New Maze</button>
+      <p>Builds a maze by expanding from a starting point, adding random adjacent walls to a frontier.</p>
+    </div>
+
+    <div class="algorithm-card">
+      <h2>Wilson's Algorithm</h2>
+      <canvas id="wilsons" class="maze-canvas"></canvas>
+      <button onclick="generateWilsons()">Generate New Maze</button>
+      <p>Uses loop-erased random walks to generate unbiased perfect mazes.</p>
+    </div>
+
+    <div class="algorithm-card">
+      <h2>Hunt and Kill</h2>
+      <canvas id="huntKill" class="maze-canvas"></canvas>
+      <button onclick="generateHuntKill()">Generate New Maze</button>
+      <p>Similar to recursive backtracking but hunts for a new valid cell when stuck.</p>
+    </div>
+
+    <div class="algorithm-card">
+      <h2>Aldous-Broder</h2>
+      <canvas id="aldousBroder" class="maze-canvas"></canvas>
+      <button onclick="generateAldousBroder()">Generate New Maze</button>
+      <p>Generates unbiased mazes through random walks, visiting all cells exactly once.</p>
+    </div>
+
+    <div class="algorithm-card">
+      <h2>Binary Tree</h2>
+      <canvas id="binaryTree" class="maze-canvas"></canvas>
+      <button onclick="generateBinaryTree()">Generate New Maze</button>
+      <p>A simple maze generation algorithm that creates mazes with a distinct bias towards two directions.</p>
+    </div>
+
+    <div class="algorithm-card">
+      <h2>Eller's Algorithm</h2>
+      <canvas id="ellers" class="maze-canvas"></canvas>
+      <button onclick="generateEllers()">Generate New Maze</button>
+      <p>Generates perfect mazes one row at a time, using minimal memory.</p>
+    </div>
+
+    <div class="algorithm-card">
+      <h2>Growing Tree</h2>
+      <canvas id="growingTree" class="maze-canvas"></canvas>
+      <button onclick="generateGrowingTree()">Generate New Maze</button>
+      <p>A flexible algorithm that can mimic other algorithms or create unique patterns.</p>
+    </div>
+
+    <div class="algorithm-card">
+      <h2>Recursive Division</h2>
+      <canvas id="recursiveDivision" class="maze-canvas"></canvas>
+      <button onclick="generateRecursiveDivision()">Generate New Maze</button>
+      <p>Creates a maze by recursively dividing the space with walls and adding passages.</p>
+    </div>
+
+    <div class="algorithm-card">
+      <h2>Sidewinder</h2>
+      <canvas id="sidewinder" class="maze-canvas"></canvas>
+      <button onclick="generateSidewinder()">Generate New Maze</button>
+      <p>A variant of Binary Tree that creates horizontal runs with vertical connections.</p>
+    </div>
+
+    <div class="algorithm-card">
+      <h2>Spiral Backtracker</h2>
+      <canvas id="spiralBacktracker" class="maze-canvas"></canvas>
+      <button onclick="generateSpiralBacktracker()">Generate New Maze</button>
+      <p>A modified recursive backtracker that favors creating spiral patterns.</p>
+    </div>
+  </div>
+
+<script>
+function initCanvas(canvasId, width = 20, height = 20) {
+    const canvas = document.getElementById(canvasId);
+    const ctx = canvas.getContext('2d');
+    canvas.width = canvas.offsetWidth;
+    canvas.height = canvas.offsetHeight;
+    const cellSize = Math.floor(Math.min(canvas.width / width, canvas.height / height));
+    return { canvas, ctx, cellSize, width, height };
+}
+
+function clearCanvas(ctx, canvas) {
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#000';
+}
+
+function generateRecursiveBacktracking() {
+    const { canvas, ctx, cellSize, width, height } = initCanvas('recursiveBacktracking');
+    clearCanvas(ctx, canvas);
+    
+    const grid = Array(height).fill().map(() => Array(width).fill(1));
+    const stack = [];
+    const start = { x: 1, y: 1 };
+    
+    grid[start.y][start.x] = 0;
+    stack.push(start);
+
+    function getNeighbors(cell) {
+        const neighbors = [];
+        const directions = [
+            { dx: 0, dy: -2 }, // North
+            { dx: 2, dy: 0 },  // East
+            { dx: 0, dy: 2 },  // South
+            { dx: -2, dy: 0 }  // West
+        ];
+
+        for (const dir of directions) {
+            const newX = cell.x + dir.dx;
+            const newY = cell.y + dir.dy;
+            
+            if (newX > 0 && newX < width - 1 && newY > 0 && newY < height - 1 && grid[newY][newX] === 1) {
+                neighbors.push({ x: newX, y: newY, dx: dir.dx/2, dy: dir.dy/2 });
+            }
+        }
+        
+        return neighbors;
+    }
+
+    function carve() {
+        if (stack.length === 0) return;
+
+        const current = stack[stack.length - 1];
+        const neighbors = getNeighbors(current);
+
+        if (neighbors.length === 0) {
+            stack.pop();
+            requestAnimationFrame(carve);
+            return;
+        }
+
+        const next = neighbors[Math.floor(Math.random() * neighbors.length)];
+        grid[next.y][next.x] = 0;
+        grid[current.y + next.dy][current.x + next.dx] = 0;
+        stack.push(next);
+
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = '#000';
+        
+        for (let y = 0; y < height; y++) {
+            for (let x = 0; x < width; x++) {
+                if (grid[y][x] === 1) {
+                    ctx.fillRect(x * cellSize, y * cellSize, cellSize, cellSize);
+                }
+            }
+        }
+
+        requestAnimationFrame(carve);
+    }
+
+    carve();
+}
+
+function generateKruskals() {
+    const { canvas, ctx, cellSize, width, height } = initCanvas('kruskals');
+    clearCanvas(ctx, canvas);
+
+    class DisjointSet {
+        constructor(size) {
+            this.parent = Array(size).fill().map((_, i) => i);
+            this.rank = Array(size).fill(0);
+        }
+
+        find(x) {
+            if (this.parent[x] !== x) {
+                this.parent[x] = this.find(this.parent[x]);
+            }
+            return this.parent[x];
+        }
+
+        union(x, y) {
+            const rootX = this.find(x);
+            const rootY = this.find(y);
+            
+            if (rootX === rootY) return false;
+            
+            if (this.rank[rootX] < this.rank[rootY]) {
+                this.parent[rootX] = rootY;
+            } else if (this.rank[rootX] > this.rank[rootY]) {
+                this.parent[rootY] = rootX;
+            } else {
+                this.parent[rootY] = rootX;
+                this.rank[rootX]++;
+            }
+            return true;
+        }
+    }
+
+    const grid = Array(height).fill().map(() => Array(width).fill(1));
+    const walls = [];
+    const ds = new DisjointSet(width * height);
+
+    for (let y = 1; y < height - 1; y += 2) {
+        for (let x = 1; x < width - 1; x += 2) {
+            if (x + 2 < width) {
+                walls.push({ x1: x, y1: y, x2: x + 2, y2: y });
+            }
+            if (y + 2 < height) {
+                walls.push({ x1: x, y1: y, x2: x, y2: y + 2 });
+            }
+        }
+    }
+
+    for (let i = walls.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [walls[i], walls[j]] = [walls[j], walls[i]];
+    }
+
+    function animate() {
+        if (walls.length === 0) return;
+
+        const wall = walls.pop();
+        const cell1 = wall.y1 * width + wall.x1;
+        const cell2 = wall.y2 * width + wall.x2;
+
+        if (ds.union(cell1, cell2)) {
+            grid[wall.y1][wall.x1] = 0;
+            grid[wall.y2][wall.x2] = 0;
+            grid[(wall.y1 + wall.y2) / 2][(wall.x1 + wall.x2) / 2] = 0;
+        }
+
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = '#000';
+        
+        for (let y = 0; y < height; y++) {
+            for (let x = 0; x < width; x++) {
+                if (grid[y][x] === 1) {
+                    ctx.fillRect(x * cellSize, y * cellSize, cellSize, cellSize);
+                }
+            }
+        }
+
+        requestAnimationFrame(animate);
+    }
+
+    animate();
+}
+
+function generatePrims() {
+    const { canvas, ctx, cellSize, width, height } = initCanvas('prims');
+    clearCanvas(ctx, canvas);
+
+    const grid = Array(height).fill().map(() => Array(width).fill(1));
+    const frontier = new Set();
+    
+    const start = { x: 1, y: 1 };
+    grid[start.y][start.x] = 0;
+    
+    function addFrontier(x, y) {
+        if (x > 0 && x < width - 1 && y > 0 && y < height - 1 && grid[y][x] === 1) {
+            frontier.add(`${x},${y}`);
+        }
+    }
+
+    addFrontier(start.x + 2, start.y);
+    addFrontier(start.x - 2, start.y);
+    addFrontier(start.x, start.y + 2);
+    addFrontier(start.x, start.y - 2);
+
+    function getNeighbors(x, y) {
+        const neighbors = [];
+        const directions = [[-2, 0], [2, 0], [0, -2], [0, 2]];
+        
+        for (const [dx, dy] of directions) {
+            const newX = x + dx;
+            const newY = y + dy;
+            if (newX > 0 && newX < width - 1 && newY > 0 && newY < height - 1 && grid[newY][newX] === 0) {
+                neighbors.push({ x: newX, y: newY });
+            }
+        }
+        
+        return neighbors;
+    }
+
+    function animate() {
+        if (frontier.size === 0) return;
+
+        const frontierCells = Array.from(frontier);
+        const randomIndex = Math.floor(Math.random() * frontierCells.length);
+        const [x, y] = frontierCells[randomIndex].split(',').map(Number);
+        frontier.delete(frontierCells[randomIndex]);
+
+        const neighbors = getNeighbors(x, y);
+        if (neighbors.length > 0) {
+            const neighbor = neighbors[Math.floor(Math.random() * neighbors.length)];
+            
+            grid[y][x] = 0;
+            grid[(y + neighbor.y) / 2][(x + neighbor.x) / 2] = 0;
+
+            addFrontier(x + 2, y);
+            addFrontier(x - 2, y);
+            addFrontier(x, y + 2);
+            addFrontier(x, y - 2);
+        }
+
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = '#000';
+        
+        for (let y = 0; y < height; y++) {
+            for (let x = 0; x < width; x++) {
+                if (grid[y][x] === 1) {
+                    ctx.fillRect(x * cellSize, y * cellSize, cellSize, cellSize);
+                }
+            }
+        }
+
+        requestAnimationFrame(animate);
+    }
+
+    animate();
+}
+
+function generateWilsons() {
+    const { canvas, ctx, cellSize, width, height } = initCanvas('wilsons');
+    clearCanvas(ctx, canvas);
+
+    const grid = Array(height).fill().map(() => Array(width).fill(1));
+    const visited = Array(height).fill().map(() => Array(width).fill(false));
+    const path = new Map();
+
+    // Mark the start cell as visited
+    visited[1][1] = true;
+    grid[1][1] = 0;
+
+    function getUnvisitedCells() {
+        const cells = [];
+        for (let y = 1; y < height - 1; y += 2) {
+            for (let x = 1; x < width - 1; x += 2) {
+                if (!visited[y][x]) {
+                    cells.push({x, y});
+                }
+            }
+        }
+        return cells;
+    }
+
+    function getRandomNeighbor(x, y) {
+        const neighbors = [];
+        const directions = [[0, -2], [2, 0], [0, 2], [-2, 0]];
+        
+        for (const [dx, dy] of directions) {
+            const newX = x + dx;
+            const newY = y + dy;
+            if (newX > 0 && newX < width - 1 && newY > 0 && newY < height - 1) {
+                neighbors.push({x: newX, y: newY});
+            }
+        }
+        
+        if (neighbors.length === 0) return null;
+        return neighbors[Math.floor(Math.random() * neighbors.length)];
+    }
+
+    function performWalk() {
+        const unvisited = getUnvisitedCells();
+        if (unvisited.length === 0) return false;
+
+        let current = unvisited[Math.floor(Math.random() * unvisited.length)];
+        path.clear();
+
+        while (!visited[current.y][current.x]) {
+            const next = getRandomNeighbor(current.x, current.y);
+            // Add null check for next
+            if (!next) return true; // Skip this iteration if no valid neighbor found
+            
+            path.set(`${current.x},${current.y}`, next);
+            current = next;
+        }
+
+        // Start carving the path
+        let walkCell = unvisited[Math.floor(Math.random() * unvisited.length)];
+        while (!visited[walkCell.y][walkCell.x]) {
+            const next = path.get(`${walkCell.x},${walkCell.y}`);
+            // Add null check for next
+            if (!next) break;
+            
+            grid[walkCell.y][walkCell.x] = 0;
+            grid[(walkCell.y + next.y) / 2][(walkCell.x + next.x) / 2] = 0;
+            visited[walkCell.y][walkCell.x] = true;
+            walkCell = next;
+        }
+
+        return true;
+    }
+
+    function animate() {
+        if (performWalk()) {
+            ctx.fillStyle = '#fff';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = '#000';
+            
+            for (let y = 0; y < height; y++) {
+                for (let x = 0; x < width; x++) {
+                    if (grid[y][x] === 1) {
+                        ctx.fillRect(x * cellSize, y * cellSize, cellSize, cellSize);
+                    }
+                }
+            }
+
+            requestAnimationFrame(animate);
+        }
+    }
+
+    animate();
+}
+
+function generateHuntKill() {
+    const { canvas, ctx, cellSize, width, height } = initCanvas('huntKill');
+    clearCanvas(ctx, canvas);
+
+    const grid = Array(height).fill().map(() => Array(width).fill(1));
+    const visited = Array(height).fill().map(() => Array(width).fill(false));
+    let current = { x: 1, y: 1 };
+
+    function getRandomUnvisitedNeighbor(cell) {
+        const neighbors = [];
+        const directions = [[0, -2], [2, 0], [0, 2], [-2, 0]];
+        
+        for (const [dx, dy] of directions) {
+            const newX = cell.x + dx;
+            const newY = cell.y + dy;
+            if (newX > 0 && newX < width - 1 && newY > 0 && newY < height - 1 && !visited[newY][newX]) {
+                neighbors.push({x: newX, y: newY, dx, dy});
+            }
+        }
+        
+        return neighbors.length > 0 ? neighbors[Math.floor(Math.random() * neighbors.length)] : null;
+    }
+
+    function hunt() {
+        for (let y = 1; y < height - 1; y += 2) {
+            for (let x = 1; x < width - 1; x += 2) {
+                if (!visited[y][x]) {
+                    const directions = [[0, -2], [2, 0], [0, 2], [-2, 0]];
+                    for (const [dx, dy] of directions) {
+                        const newX = x + dx;
+                        const newY = y + dy;
+                        if (newX > 0 && newX < width - 1 && newY > 0 && newY < height - 1 && visited[newY][newX]) {
+                            return {
+                                x, y,
+                                dx: -dx/2,
+                                dy: -dy/2,
+                                nextX: x,
+                                nextY: y
+                            };
+                        }
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
+    function animate() {
+        if (!current) return;
+
+        visited[current.y][current.x] = true;
+        grid[current.y][current.x] = 0;
+
+        const next = getRandomUnvisitedNeighbor(current);
+        
+        if (next) {
+            grid[current.y + next.dy/2][current.x + next.dx/2] = 0;
+            current = { x: next.x, y: next.y };
+        } else {
+            const hunted = hunt();
+            if (hunted) {
+                grid[hunted.y + hunted.dy][hunted.x + hunted.dx] = 0;
+                current = { x: hunted.nextX, y: hunted.nextY };
+            } else {
+                current = null;
+            }
+        }
+
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = '#000';
+        
+        for (let y = 0; y < height; y++) {
+            for (let x = 0; x < width; x++) {
+                if (grid[y][x] === 1) {
+                    ctx.fillRect(x * cellSize, y * cellSize, cellSize, cellSize);
+                }
+            }
+        }
+
+        requestAnimationFrame(animate);
+    }
+
+    animate();
+}
+
+function generateAldousBroder() {
+    const { canvas, ctx, cellSize, width, height } = initCanvas('aldousBroder');
+    clearCanvas(ctx, canvas);
+
+    const grid = Array(height).fill().map(() => Array(width).fill(1));
+    const visited = Array(height).fill().map(() => Array(width).fill(false));
+    let current = { x: 1, y: 1 };
+    let unvisitedCount = Math.floor(((width - 1) * (height - 1)) / 4);
+
+    function getRandomNeighbor(cell) {
+        const neighbors = [];
+        const directions = [[0, -2], [2, 0], [0, 2], [-2, 0]];
+        
+        for (const [dx, dy] of directions) {
+            const newX = cell.x + dx;
+            const newY = cell.y + dy;
+            if (newX > 0 && newX < width - 1 && newY > 0 && newY < height - 1) {
+                neighbors.push({x: newX, y: newY, dx, dy});
+            }
+        }
+        
+        return neighbors[Math.floor(Math.random() * neighbors.length)];
+    }
+
+    function animate() {
+        if (unvisitedCount <= 0) return;
+
+        const next = getRandomNeighbor(current);
+        
+        if (!visited[next.y][next.x]) {
+            grid[current.y + next.dy/2][current.x + next.dx/2] = 0;
+            grid[next.y][next.x] = 0;
+            visited[next.y][next.x] = true;
+            unvisitedCount--;
+        }
+
+        current = { x: next.x, y: next.y };
+
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = '#000';
+        
+        for (let y = 0; y < height; y++) {
+            for (let x = 0; x < width; x++) {
+                if (grid[y][x] === 1) {
+                    ctx.fillRect(x * cellSize, y * cellSize, cellSize, cellSize);
+                }
+            }
+        }
+
+        requestAnimationFrame(animate);
+    }
+
+    visited[current.y][current.x] = true;
+    grid[current.y][current.x] = 0;
+    unvisitedCount--;
+    animate();
+}
+
+function generateBinaryTree() {
+    const { canvas, ctx, cellSize, width, height } = initCanvas('binaryTree');
+    clearCanvas(ctx, canvas);
+    
+    const grid = Array(height).fill().map(() => Array(width).fill(1));
+    
+    function animate(x = 1, y = 1) {
+        if (y >= height - 1) return;
+        
+        if (x >= width - 1) {
+            requestAnimationFrame(() => animate(1, y + 2));
+            return;
+        }
+        
+        grid[y][x] = 0;
+        
+        // Randomly choose to carve north or east
+        const goNorth = Math.random() < 0.5;
+        
+        if (y > 1 && (goNorth || x >= width - 2)) {
+            grid[y-1][x] = 0;
+        } else if (x < width - 2) {
+            grid[y][x+1] = 0;
+        }
+        
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = '#000';
+        
+        for (let py = 0; py < height; py++) {
+            for (let px = 0; px < width; px++) {
+                if (grid[py][px] === 1) {
+                    ctx.fillRect(px * cellSize, py * cellSize, cellSize, cellSize);
+                }
+            }
+        }
+        
+        requestAnimationFrame(() => animate(x + 2, y));
+    }
+    
+    animate();
+}
+
+function generateEllers() {
+    const { canvas, ctx, cellSize, width, height } = initCanvas('ellers');
+    clearCanvas(ctx, canvas);
+    
+    const grid = Array(height).fill().map(() => Array(width).fill(1));
+    let sets = new Map();
+    let setCounter = 1;
+    
+    function animate(y = 1) {
+        if (y >= height - 1) return;
+        
+        // Initialize cells in the row
+        for (let x = 1; x < width - 1; x += 2) {
+            if (!sets.has(`${x},${y}`)) {
+                sets.set(`${x},${y}`, setCounter++);
+            }
+        }
+        
+        // Randomly join cells horizontally
+        for (let x = 1; x < width - 3; x += 2) {
+            if (Math.random() < 0.5) {
+                const set1 = sets.get(`${x},${y}`);
+                const set2 = sets.get(`${x+2},${y}`);
+                if (set1 !== set2) {
+                    grid[y][x+1] = 0;
+                    // Merge sets
+                    for (let [key, value] of sets) {
+                        if (value === set2) {
+                            sets.set(key, set1);
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Randomly create vertical connections
+        if (y < height - 2) {
+            const verticals = new Set();
+            for (let x = 1; x < width - 1; x += 2) {
+                const set = sets.get(`${x},${y}`);
+                if (!verticals.has(set) || Math.random() < 0.3) {
+                    grid[y][x] = 0;
+                    grid[y+1][x] = 0;
+                    sets.set(`${x},${y+2}`, set);
+                    verticals.add(set);
+                }
+            }
+        }
+        
+        // Draw current state
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = '#000';
+        
+        for (let py = 0; py < height; py++) {
+            for (let px = 0; px < width; px++) {
+                if (grid[py][px] === 1) {
+                    ctx.fillRect(px * cellSize, py * cellSize, cellSize, cellSize);
+                }
+            }
+        }
+        
+        if (y < height - 2) {
+            requestAnimationFrame(() => animate(y + 2));
+        }
+    }
+    
+    animate();
+}
+
+function generateGrowingTree() {
+    const { canvas, ctx, cellSize, width, height } = initCanvas('growingTree');
+    clearCanvas(ctx, canvas);
+    
+    const grid = Array(height).fill().map(() => Array(width).fill(1));
+    const cells = [{x: 1, y: 1}];
+    const visited = new Set(['1,1']);
+    
+    function getUnvisitedNeighbors(cell) {
+        const neighbors = [];
+        const directions = [[0, -2], [2, 0], [0, 2], [-2, 0]];
+        
+        for (const [dx, dy] of directions) {
+            const newX = cell.x + dx;
+            const newY = cell.y + dy;
+            if (newX > 0 && newX < width - 1 && 
+                newY > 0 && newY < height - 1 && 
+                !visited.has(`${newX},${newY}`)) {
+                neighbors.push({x: newX, y: newY, dx, dy});
+            }
+        }
+        
+        return neighbors;
+    }
+    
+    function animate() {
+        if (cells.length === 0) return;
+        
+        // Mix between newest and random selection (creates interesting patterns)
+        const index = Math.random() < 0.5 ? cells.length - 1 : Math.floor(Math.random() * cells.length);
+        const cell = cells[index];
+        
+        const neighbors = getUnvisitedNeighbors(cell);
+        
+        if (neighbors.length === 0) {
+            cells.splice(index, 1);
+        } else {
+            const next = neighbors[Math.floor(Math.random() * neighbors.length)];
+            grid[cell.y][cell.x] = 0;
+            grid[cell.y + next.dy/2][cell.x + next.dx/2] = 0;
+            grid[next.y][next.x] = 0;
+            cells.push({x: next.x, y: next.y});
+            visited.add(`${next.x},${next.y}`);
+        }
+        
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = '#000';
+        
+        for (let y = 0; y < height; y++) {
+            for (let x = 0; x < width; x++) {
+                if (grid[y][x] === 1) {
+                    ctx.fillRect(x * cellSize, y * cellSize, cellSize, cellSize);
+                }
+            }
+        }
+        
+        requestAnimationFrame(animate);
+    }
+    
+    animate();
+}
+
+function generateRecursiveDivision() {
+    const { canvas, ctx, cellSize, width, height } = initCanvas('recursiveDivision');
+    clearCanvas(ctx, canvas);
+    
+    const grid = Array(height).fill().map(() => Array(width).fill(0));
+    
+    // Add border walls
+    for (let x = 0; x < width; x++) {
+        grid[0][x] = 1;
+        grid[height-1][x] = 1;
+    }
+    for (let y = 0; y < height; y++) {
+        grid[y][0] = 1;
+        grid[y][width-1] = 1;
+    }
+    
+    function divide(x, y, w, h, isHorizontal) {
+        if (w < 3 || h < 3) return;
+        
+        const horizontal = isHorizontal ?? Math.random() < 0.5;
+        
+        if (horizontal) {
+            const wallY = y + 2 * Math.floor(Math.random() * (h/2 - 1)) + 1;
+            const passageX = x + 2 * Math.floor(Math.random() * (w/2));
+            
+            for (let i = x; i < x + w; i++) {
+                if (i !== passageX) grid[wallY][i] = 1;
+            }
+            
+            divide(x, y, w, wallY - y, !horizontal);
+            divide(x, wallY + 1, w, h - (wallY - y + 1), !horizontal);
+            
+        } else {
+            const wallX = x + 2 * Math.floor(Math.random() * (w/2 - 1)) + 1;
+            const passageY = y + 2 * Math.floor(Math.random() * (h/2));
+            
+            for (let i = y; i < y + h; i++) {
+                if (i !== passageY) grid[i][wallX] = 1;
+            }
+            
+            divide(x, y, wallX - x, h, !horizontal);
+            divide(wallX + 1, y, w - (wallX - x + 1), h, !horizontal);
+        }
+    }
+    
+    function animate() {
+        divide(1, 1, width-2, height-2);
+        
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = '#000';
+        
+        for (let y = 0; y < height; y++) {
+            for (let x = 0; x < width; x++) {
+                if (grid[y][x] === 1) {
+                    ctx.fillRect(x * cellSize, y * cellSize, cellSize, cellSize);
+                }
+            }
+        }
+    }
+    
+    animate();
+}
+
+function generateSidewinder() {
+    const { canvas, ctx, cellSize, width, height } = initCanvas('sidewinder');
+    clearCanvas(ctx, canvas);
+    
+    const grid = Array(height).fill().map(() => Array(width).fill(1));
+    let currentRun = [];
+    
+    function animate(y = 1) {
+        if (y >= height - 1) return;
+        
+        for (let x = 1; x < width - 1; x += 2) {
+            grid[y][x] = 0;
+            currentRun.push({x, y});
+            
+            const atEasternBoundary = x >= width - 2;
+            const shouldCloseRun = atEasternBoundary || (Math.random() < 0.5);
+            
+            if (shouldCloseRun && y > 1) {
+                const randomCell = currentRun[Math.floor(Math.random() * currentRun.length)];
+                grid[randomCell.y-1][randomCell.x] = 0;
+                currentRun = [];
+            } else if (!atEasternBoundary) {
+                grid[y][x+1] = 0;
+            }
+        }
+        
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = '#000';
+        
+        for (let py = 0; py < height; py++) {
+            for (let px = 0; px < width; px++) {
+                if (grid[py][px] === 1) {
+                    ctx.fillRect(px * cellSize, py * cellSize, cellSize, cellSize);
+                }
+            }
+        }
+        
+        if (y < height - 2) {
+            requestAnimationFrame(() => animate(y + 2));
+        }
+    }
+    
+    animate();
+}
+
+function generateSpiralBacktracker() {
+    const { canvas, ctx, cellSize, width, height } = initCanvas('spiralBacktracker');
+    clearCanvas(ctx, canvas);
+    
+    const grid = Array(height).fill().map(() => Array(width).fill(1));
+    const stack = [];
+    const visited = new Set();
+    const start = { x: 1, y: 1 };
+    
+    grid[start.y][start.x] = 0;
+    stack.push(start);
+    visited.add(`${start.x},${start.y}`);
+    
+    function getNeighbors(cell) {
+        const neighbors = [];
+        // Prioritize directions to encourage spiral patterns
+        const directions = [
+            { dx: 2, dy: 0 },   // East
+            { dx: 0, dy: 2 },   // South
+            { dx: -2, dy: 0 },  // West
+            { dx: 0, dy: -2 }   // North
+        ];
+        
+        for (const dir of directions) {
+            const newX = cell.x + dir.dx;
+            const newY = cell.y + dir.dy;
+            
+            if (newX > 0 && newX < width - 1 && 
+                newY > 0 && newY < height - 1 && 
+                !visited.has(`${newX},${newY}`)) {
+                neighbors.push({ x: newX, y: newY, dx: dir.dx/2, dy: dir.dy/2 });
+            }
+        }
+        
+        return neighbors;
+    }
+    
+    function animate() {
+        if (stack.length === 0) return;
+        
+        const current = stack[stack.length - 1];
+        const neighbors = getNeighbors(current);
+        
+        if (neighbors.length === 0) {
+            stack.pop();
+        } else {
+            // Prefer the first available direction to encourage spiral formation
+            const next = neighbors[0];
+            grid[current.y + next.dy][current.x + next.dx] = 0;
+            grid[next.y][next.x] = 0;
+            stack.push(next);
+            visited.add(`${next.x},${next.y}`);
+        }
+        
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = '#000';
+        
+        for (let y = 0; y < height; y++) {
+            for (let x = 0; x < width; x++) {
+                if (grid[y][x] === 1) {
+                    ctx.fillRect(x * cellSize, y * cellSize, cellSize, cellSize);
+                }
+            }
+        }
+        
+        requestAnimationFrame(animate);
+    }
+    
+    animate();
+}
+
+window.onload = () => {
+    generateRecursiveBacktracking();
+    generateKruskals();
+    generatePrims();
+    generateWilsons();
+    generateHuntKill();
+    generateAldousBroder();
+    generateBinaryTree();
+    generateEllers();
+    generateGrowingTree();
+    generateRecursiveDivision();
+    generateSidewinder();
+    generateSpiralBacktracker();
+};
+</script>
+</body>
+</html>

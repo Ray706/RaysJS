@@ -1,0 +1,161 @@
+<html><head><base href="." /><style>
+    body {
+        margin: 0;
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        background: #1a1a1a;
+        color: #fff;
+        font-family: Arial, sans-serif;
+    }
+
+    #maze-container {
+        margin: 20px;
+    }
+
+    canvas {
+        background: #000;
+        border: 2px solid #333;
+    }
+
+    .controls {
+        margin: 20px;
+        display: flex;
+        gap: 10px;
+    }
+
+    button {
+        padding: 10px 20px;
+        background: #333;
+        color: #fff;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        transition: background 0.3s;
+    }
+
+    button:hover {
+        background: #444;
+    }
+
+    .rule-select {
+        margin: 10px;
+        padding: 5px;
+        background: #333;
+        color: #fff;
+        border: 1px solid #444;
+    }
+</style></head><body>
+    <h1>Maze Generation Cellular Automata</h1>
+    <div class="controls">
+        <select id="rule-select" class="rule-select">
+            <option value="maze">Maze (B3/S12345)</option>
+            <option value="mazectric">Mazectric (B3/S1234)</option>
+        </select>
+        <button id="reset">Reset Random</button>
+        <button id="step">Step</button>
+        <button id="play">Play/Pause</button>
+    </div>
+    <div id="maze-container">
+        <canvas id="mazeCanvas" width="600" height="600"></canvas>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('mazeCanvas');
+        const ctx = canvas.getContext('2d');
+        const cellSize = 6;
+        const cols = Math.floor(canvas.width / cellSize);
+        const rows = Math.floor(canvas.height / cellSize);
+        
+        let grid = Array(rows).fill().map(() => Array(cols).fill(0));
+        let isPlaying = false;
+        let intervalId = null;
+
+        // Initialize with random cells
+        function randomize() {
+            for(let i = 0; i < rows; i++) {
+                for(let j = 0; j < cols; j++) {
+                    grid[i][j] = Math.random() > 0.5 ? 1 : 0;
+                }
+            }
+            draw();
+        }
+
+        function countNeighbors(grid, x, y) {
+            let count = 0;
+            for(let i = -1; i <= 1; i++) {
+                for(let j = -1; j <= 1; j++) {
+                    if(i === 0 && j === 0) continue;
+                    const row = (x + i + rows) % rows;
+                    const col = (y + j + cols) % cols;
+                    count += grid[row][col];
+                }
+            }
+            return count;
+        }
+
+        function step() {
+            const newGrid = Array(rows).fill().map(() => Array(cols).fill(0));
+            const ruleset = document.getElementById('rule-select').value;
+
+            for(let i = 0; i < rows; i++) {
+                for(let j = 0; j < cols; j++) {
+                    const neighbors = countNeighbors(grid, i, j);
+                    if(ruleset === 'maze') {
+                        // B3/S12345
+                        if(grid[i][j] === 1) {
+                            newGrid[i][j] = (neighbors >= 1 && neighbors <= 5) ? 1 : 0;
+                        } else {
+                            newGrid[i][j] = (neighbors === 3) ? 1 : 0;
+                        }
+                    } else {
+                        // B3/S1234
+                        if(grid[i][j] === 1) {
+                            newGrid[i][j] = (neighbors >= 1 && neighbors <= 4) ? 1 : 0;
+                        } else {
+                            newGrid[i][j] = (neighbors === 3) ? 1 : 0;
+                        }
+                    }
+                }
+            }
+            grid = newGrid;
+            draw();
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            for(let i = 0; i < rows; i++) {
+                for(let j = 0; j < cols; j++) {
+                    if(grid[i][j] === 1) {
+                        ctx.fillStyle = '#00ff00';
+                        ctx.fillRect(j * cellSize, i * cellSize, cellSize - 1, cellSize - 1);
+                    }
+                }
+            }
+        }
+
+        function togglePlay() {
+            isPlaying = !isPlaying;
+            if(isPlaying) {
+                intervalId = setInterval(step, 100);
+            } else {
+                clearInterval(intervalId);
+            }
+        }
+
+        // Event Listeners
+        document.getElementById('reset').addEventListener('click', randomize);
+        document.getElementById('step').addEventListener('click', step);
+        document.getElementById('play').addEventListener('click', togglePlay);
+        document.getElementById('rule-select').addEventListener('change', () => {
+            if(isPlaying) {
+                togglePlay();
+            }
+            randomize();
+        });
+
+        // Initial setup
+        randomize();
+    </script>
+</body></html>
