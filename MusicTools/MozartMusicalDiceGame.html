@@ -1,0 +1,196 @@
+<html><head><base href="." />
+<meta charset="UTF-8" />
+<title>Mozart Musical Dice Game</title>
+<style>
+  body {
+    font-family: 'Courier New', monospace;
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px;
+    background: #f5f5f5;
+  }
+  
+  .controls {
+    margin: 20px 0;
+    padding: 20px;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  }
+  
+  button {
+    background: #4a90e2;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 16px;
+    transition: background 0.3s ease;
+    margin-right: 10px;
+  }
+  
+  button:hover {
+    background: #357abd;
+  }
+  
+  #output {
+    white-space: pre-wrap;
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  }
+  
+  .notation {
+    font-family: monospace;
+    margin-top: 20px;
+  }
+
+  #paper {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    margin-top: 20px;
+  }
+</style>
+</head>
+<body>
+  <h1>Mozart's Musical Dice Game Generator</h1>
+  <div class="controls">
+    <button onclick="generateMinuet()">Generate New Minuet</button>
+    <button onclick="playMusic()">Play Music</button>
+    <button onclick="stopMusic()">Stop Music</button>
+    <button onclick="downloadMIDI()">Download MIDI</button>
+  </div>
+  <div id="output"></div>
+  <div id="paper"></div>
+
+<script>
+// Mozart's Musical Dice Game measures
+const measures = {
+  M1: [
+    "A2 | G4 F4 E4 D4 | C4 B,4 A,4 G,4 |",
+    "C3 | E4 G4 C5 G4 | E4 C4 G3 E3 |",
+    "G2 | B4 G4 D4 G4 | B4 G4 D4 B,4 |",
+    "E3 | G4 C5 G4 E4 | C4 G3 E3 C3 |",
+    "C3 | C4 E4 G4 C5 | G4 E4 C4 G3 |",
+    "F2 | A4 F4 C4 F4 | A4 F4 C4 A,4 |",
+    "D3 | F4 A4 D5 A4 | F4 D4 A3 F3 |",
+    "B,2 | D4 F4 B4 F4 | D4 B,3 F3 D3 |",
+    "G2 | G4 B4 D5 B4 | G4 D4 B3 G3 |",
+    "E3 | E4 G4 B4 G4 | E4 B,3 G3 E3 |",
+    "C3 | C4 E4 G4 E4 | C4 G3 E3 C3 |"
+  ],
+  M2: [
+    "z2 | c4 e4 g4 c5 | e4 c4 G3 E3 |",
+    "z2 | g4 b4 d5 g5 | b4 g4 d4 B3 |",
+    "z2 | e4 g4 b4 e5 | g4 e4 B3 G3 |",
+    "z2 | a4 c5 e5 a5 | c5 a4 e4 C4 |",
+    "z2 | f4 a4 c5 f5 | a4 f4 c4 A3 |",
+    "z2 | d4 f4 a4 d5 | f4 d4 A3 F3 |",
+    "z2 | b3 d4 f4 b4 | d4 B3 F3 D3 |",
+    "z2 | g4 b4 d5 g5 | b4 g4 d4 B3 |"
+  ]
+};
+
+let currentTune = null;
+let currentSynth = null;
+let currentVisualObj = null;
+
+function rollDice() {
+  return Math.floor(Math.random() * 6) + 1;
+}
+
+function generateMinuet() {
+  let abc = `X:1
+T:Computer Generated Minuet
+M:3/4
+L:1/4
+K:C
+`;
+  
+  // Generate 16 measures
+  for (let i = 0; i < 16; i++) {
+    const roll = rollDice() + rollDice();
+    if (i % 2 === 0) {
+      abc += measures.M1[roll % measures.M1.length];
+    } else {
+      abc += measures.M2[roll % measures.M2.length];
+    }
+    abc += "\n";
+  }
+  
+  document.getElementById('output').textContent = abc;
+  
+  // Render the music notation
+  currentVisualObj = ABCJS.renderAbc("paper", abc, {
+    responsive: "resize"
+  })[0];
+
+  // Create synth
+  if (currentSynth) {
+    currentSynth.stop();
+  }
+  currentTune = abc;
+}
+
+async function playMusic() {
+  if (!currentTune) return;
+  
+  if (currentSynth) {
+    currentSynth.stop();
+  }
+
+  currentSynth = new ABCJS.synth.CreateSynth();
+  
+  await currentSynth.init({
+    visualObj: currentVisualObj,
+    audioContext: new (window.AudioContext || window.webkitAudioContext)(),
+    millisecondsPerMeasure: 2000
+  });
+
+  await currentSynth.prime();
+  currentSynth.start();
+}
+
+function stopMusic() {
+  if (currentSynth) {
+    currentSynth.stop();
+  }
+}
+
+function downloadMIDI() {
+  if (!currentTune) return;
+  
+  // Create MIDI file
+  const midi = ABCJS.synth.getMidiFile(currentVisualObj, {
+    generateInline: false,
+    generateDownload: true,
+    downloadClass: "hidden",
+    midiOutputType: "midi"
+  });
+  
+  // Create download link
+  const blob = new Blob([midi], {type: 'audio/midi'});
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.style.display = 'none';
+  a.href = url;
+  a.download = 'mozart-dice-game.midi';
+  document.body.appendChild(a);
+  a.click();
+  window.URL.revokeObjectURL(url);
+  document.body.removeChild(a);
+}
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/abcjs@6.0.0/dist/abcjs-basic-min.js"></script>
+
+<div class="notation"></div>
+
+<script>
+// Initialize with a composition when page loads
+generateMinuet();
+</script>
+</body></html>
