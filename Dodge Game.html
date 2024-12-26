@@ -1,0 +1,160 @@
+<html><head><base href=""><link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet"><style>
+body {
+    background: #000;
+    margin: 0;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    font-family: 'Press Start 2P', cursive;
+    color: #5fff5f;
+}
+
+#game-container {
+    border: 4px solid #5fff5f;
+    padding: 10px;
+    position: relative;
+    width: 800px;
+    height: 600px;
+    overflow: hidden;
+}
+
+#player {
+    width: 40px;
+    height: 40px;
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    background: #5fff5f;
+    transition: left 0.1s;
+}
+
+.enemy {
+    width: 30px;
+    height: 30px;
+    position: absolute;
+    background: #ff5f5f;
+}
+
+#score {
+    font-size: 24px;
+    margin: 20px 0;
+    text-shadow: 2px 2px #000;
+}
+
+.scanline {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(
+        to bottom,
+        rgba(255,255,255,0) 50%,
+        rgba(0,0,0,0.2) 50%
+    );
+    background-size: 100% 4px;
+    pointer-events: none;
+    animation: flicker 0.15s infinite;
+    opacity: 0.3;
+}
+
+@keyframes flicker {
+    0% { opacity: 0.3; }
+    50% { opacity: 0.4; }
+    100% { opacity: 0.3; }
+}
+
+.crt-effect {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(
+        circle at center,
+        transparent 30%,
+        rgba(0,0,0,0.4) 100%
+    );
+    pointer-events: none;
+}
+</style></head><body>
+<div id="score">SCORE: <span id="score-value">0</span></div>
+<div id="game-container">
+    <div id="player"></div>
+    <div class="scanline"></div>
+    <div class="crt-effect"></div>
+</div>
+
+<script>
+const player = document.getElementById('player');
+const gameContainer = document.getElementById('game-container');
+const scoreElement = document.getElementById('score-value');
+let score = 0;
+let playerX = 400;
+let enemies = [];
+let gameLoop;
+let gameActive = true;
+
+function movePlayer(e) {
+    if (!gameActive) return;
+    
+    if (e.key === 'ArrowLeft' && playerX > 0) {
+        playerX -= 20;
+    }
+    if (e.key === 'ArrowRight' && playerX < gameContainer.offsetWidth - 40) {
+        playerX += 20;
+    }
+    player.style.left = playerX + 'px';
+}
+
+function createEnemy() {
+    if (!gameActive) return;
+    
+    const enemy = document.createElement('div');
+    enemy.className = 'enemy';
+    enemy.style.left = Math.random() * (gameContainer.offsetWidth - 30) + 'px';
+    enemy.style.top = '0px';
+    gameContainer.appendChild(enemy);
+    enemies.push({
+        element: enemy,
+        y: 0,
+        x: parseInt(enemy.style.left)
+    });
+}
+
+function updateGame() {
+    if (!gameActive) return;
+    
+    enemies.forEach((enemy, index) => {
+        enemy.y += 3;
+        enemy.element.style.top = enemy.y + 'px';
+
+        // Collision detection
+        if (enemy.y + 30 > gameContainer.offsetHeight - 40 &&
+            enemy.x < playerX + 40 &&
+            enemy.x + 30 > playerX) {
+            gameOver();
+        }
+
+        // Remove enemies that went off screen
+        if (enemy.y > gameContainer.offsetHeight) {
+            enemy.element.remove();
+            enemies.splice(index, 1);
+            score += 10;
+            scoreElement.textContent = score;
+        }
+    });
+}
+
+function gameOver() {
+    gameActive = false;
+    clearInterval(gameLoop);
+    alert(`Game Over! Final Score: ${score}`);
+    location.reload();
+}
+
+document.addEventListener('keydown', movePlayer);
+gameLoop = setInterval(updateGame, 16);
+setInterval(createEnemy, 1000);
+</script></body></html>
