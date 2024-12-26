@@ -1,0 +1,151 @@
+<html><head><base href="https://"><title>BASIC MAZE</title>
+<style>
+body {
+  background: #000;
+  color: #33ff33;
+  font-family: monospace;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+#mazeDisplay {
+  white-space: pre;
+  font-size: 16px;
+  line-height: 1.2;
+  margin: 20px;
+}
+
+button {
+  background: #33ff33;
+  color: black; 
+  border: none;
+  padding: 10px 20px;
+  font-family: monospace;
+  cursor: pointer;
+  margin: 10px;
+}
+
+input {
+  background: #000;
+  color: #33ff33;
+  border: 1px solid #33ff33;
+  padding: 5px;
+  font-family: monospace;
+  margin: 5px;
+  width: 50px;
+}
+
+.title {
+  text-align: center;
+  margin-bottom: 40px;
+}
+</style>
+</head>
+<body>
+
+<div class="title">
+  <div>AMAZING PROGRAM</div>
+  <div>CREATIVE COMPUTING MORRISTOWN, NEW JERSEY</div>
+</div>
+
+<div>
+  Width: <input type="number" id="width" min="2" value="10">
+  Length: <input type="number" id="length" min="2" value="10">
+  <button onclick="generateMaze()">Generate Maze</button>
+</div>
+
+<pre id="mazeDisplay"></pre>
+
+<script>
+class MazeGenerator {
+  constructor(width, height) {
+    this.width = width;
+    this.height = height;
+    this.walls = Array(height).fill().map(() => Array(width).fill().map(() => ({right: true, bottom: true})));
+    this.visited = Array(height).fill().map(() => Array(width).fill(false));
+  }
+
+  generate() {
+    const startX = Math.floor(Math.random() * this.width);
+    let maze = '';
+    
+    // Top border
+    maze += '.';
+    for(let i = 0; i < this.width; i++) {
+      maze += i === startX ? '  .' : '--.'
+    }
+    maze += '\n';
+
+    this.generateMazeRecursive(startX, 0);
+
+    // Generate maze display
+    for(let y = 0; y < this.height; y++) {
+      let line1 = 'I';
+      let line2 = ':';
+      
+      for(let x = 0; x < this.width; x++) {
+        line1 += this.walls[y][x].right ? '  I' : '   ';
+        line2 += this.walls[y][x].bottom ? '--:' : '  :';
+      }
+      maze += line1 + '\n' + line2 + '\n';
+    }
+
+    return maze;
+  }
+
+  generateMazeRecursive(x, y) {
+    this.visited[y][x] = true;
+    
+    const directions = this.shuffleDirections();
+    
+    for(const [dx, dy] of directions) {
+      const newX = x + dx;
+      const newY = y + dy;
+      
+      if(this.isValid(newX, newY) && !this.visited[newY][newX]) {
+        if(dx === 1) this.walls[y][x].right = false;
+        if(dx === -1) this.walls[y][newX].right = false;
+        if(dy === 1) this.walls[y][x].bottom = false;
+        if(dy === -1) this.walls[newY][x].bottom = false;
+        
+        this.generateMazeRecursive(newX, newY);
+      }
+    }
+  }
+
+  shuffleDirections() {
+    const directions = [[0, 1], [1, 0], [0, -1], [-1, 0]];
+    for(let i = directions.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [directions[i], directions[j]] = [directions[j], directions[i]];
+    }
+    return directions;
+  }
+
+  isValid(x, y) {
+    return x >= 0 && x < this.width && y >= 0 && y < this.height;
+  }
+}
+
+function generateMaze() {
+  const width = parseInt(document.getElementById('width').value);
+  const height = parseInt(document.getElementById('length').value);
+  
+  if(width < 2 || height < 2) {
+    alert('Width and length must be at least 2');
+    return;
+  }
+  
+  const generator = new MazeGenerator(width, height);
+  const maze = generator.generate();
+  document.getElementById('mazeDisplay').textContent = maze;
+}
+
+// Generate initial maze
+generateMaze();
+</script>
+
+</body>
+</html>

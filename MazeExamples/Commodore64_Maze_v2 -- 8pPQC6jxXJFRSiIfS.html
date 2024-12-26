@@ -1,0 +1,114 @@
+<html><head><base href="." /><meta charset="UTF-8"><title>C64 MAZE Generator</title>
+<style>
+  body {
+    background-color: #4242E7; /* C64 blue background */
+    margin: 0;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    font-family: monospace;
+    color: #a7a7ff;
+  }
+  
+  #mazeContainer {
+    background-color: #4242E7;
+    padding: 20px;
+    border: 2px solid #a7a7ff;
+    margin-top: 20px;
+  }
+
+  #maze {
+    font-family: monospace;
+    font-size: 24px;
+    line-height: 20px;
+    color: #a7a7ff;
+    white-space: pre;
+  }
+
+  .c64-header {
+    color: #a7a7ff;
+    margin-bottom: 20px;
+    text-align: center;
+  }
+
+  .code {
+    background: #2222a7;
+    padding: 10px;
+    border: 1px solid #a7a7ff;
+    margin: 10px 0;
+  }
+
+  button {
+    background: #a7a7ff;
+    color: #4242E7;
+    border: none;
+    padding: 10px 20px;
+    font-family: monospace;
+    font-weight: bold;
+    cursor: pointer;
+    margin: 10px;
+  }
+
+  button:hover {
+    background: #8484ff;
+  }
+</style>
+</head>
+<body>
+<div class="c64-header">
+  <h1>**** COMMODORE 64 BASIC V2 ****</h1>
+  <h2>64K RAM SYSTEM</h2>
+  <div class="code">
+    10 PRINT CHR$(205.5+RND(1)); : GOTO 10
+  </div>
+</div>
+
+<button onclick="generateNewMaze()">GENERATE NEW MAZE</button>
+<button onclick="toggleAnimation()">START/STOP ANIMATION</button>
+
+<div id="mazeContainer">
+  <pre id="maze"></pre>
+</div>
+
+<script>
+const mazeChars = ['╱', '╲'];
+let isAnimating = false;
+let animationInterval;
+const width = 40;
+const height = 25;
+
+function generateMazeLine() {
+    let line = '';
+    for (let i = 0; i < width; i++) {
+        line += mazeChars[Math.floor(Math.random() * 2)];
+    }
+    return line;
+}
+
+function generateFullMaze() {
+    let mazeText = '';
+    for (let i = 0; i < height; i++) {
+        mazeText += generateMazeLine() + '\n';
+    }
+    document.getElementById('maze').textContent = mazeText;
+}
+
+function generateNewMaze() {
+    generateFullMaze();
+}
+
+function toggleAnimation() {
+    if (isAnimating) {
+        clearInterval(animationInterval);
+        isAnimating = false;
+    } else {
+        isAnimating = true;
+        animationInterval = setInterval(generateFullMaze, 100);
+    }
+}
+
+// Initial generation
+generateFullMaze();
+</script>
+</body></html>

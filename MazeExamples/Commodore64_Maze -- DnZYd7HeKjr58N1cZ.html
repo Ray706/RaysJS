@@ -1,0 +1,162 @@
+<html><head><base href="." /><meta charset="UTF-8" /><title>Commodore 64 BASIC Maze</title><style>
+body {
+    background-color: #4040ff;
+    margin: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    font-family: monospace;
+    overflow: hidden;
+}
+
+#mazeContainer {
+    background-color: #4040ff;
+    padding: 20px;
+    border: 10px solid #8080ff;
+    box-shadow: 0 0 20px rgba(0,0,0,0.5);
+}
+
+#maze {
+    background-color: #4040ff;
+    color: #8080ff;
+    font-size: 24px;
+    line-height: 1;
+    white-space: pre;
+    font-weight: bold;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+}
+
+.controls {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 10px;
+}
+
+button {
+    background-color: #8080ff;
+    color: #4040ff;
+    border: none;
+    padding: 10px 20px;
+    font-family: monospace;
+    font-size: 16px;
+    cursor: pointer;
+    font-weight: bold;
+    box-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+}
+
+button:hover {
+    background-color: #a0a0ff;
+}
+
+.c64-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(
+        rgba(255,255,255,0.1) 50%,
+        rgba(0,0,0,0.1) 50%
+    );
+    background-size: 100% 4px;
+    pointer-events: none;
+    animation: scanline 10s linear infinite;
+    opacity: 0.5;
+}
+
+@keyframes scanline {
+    0% { transform: translateY(0); }
+    100% { transform: translateY(100vh); }
+}
+</style></head><body>
+<div class="controls">
+    <button id="toggleButton">STOP</button>
+    <button id="downloadButton">SAVE MAZE</button>
+</div>
+<div class="c64-overlay"></div>
+<div id="mazeContainer">
+    <div id="maze"></div>
+</div>
+
+<script>
+const maze = document.getElementById('maze');
+const toggleButton = document.getElementById('toggleButton');
+const downloadButton = document.getElementById('downloadButton');
+const width = 40;
+const height = 25;
+let isRunning = true;
+let intervalId;
+
+function generateMaze() {
+    let mazeText = '';
+    for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width; x++) {
+            // Recreate the RND(1) behavior from C64 BASIC
+            mazeText += Math.random() < 0.5 ? '╱' : '╲';
+        }
+        mazeText += '\n';
+    }
+    return mazeText;
+}
+
+// Initial generation
+maze.textContent = generateMaze();
+
+function startMazeAnimation() {
+    let currentMaze = maze.textContent.split('\n');
+    intervalId = setInterval(() => {
+        // Shift rows up
+        currentMaze.shift();
+        // Add new row at bottom
+        let newRow = '';
+        for (let x = 0; x < width; x++) {
+            newRow += Math.random() < 0.5 ? '╱' : '╲';
+        }
+        currentMaze.push(newRow);
+        // Update display
+        maze.textContent = currentMaze.join('\n');
+    }, 100);
+}
+
+// Start the animation initially
+startMazeAnimation();
+
+// Toggle button functionality
+toggleButton.addEventListener('click', () => {
+    if (isRunning) {
+        clearInterval(intervalId);
+        toggleButton.textContent = 'START';
+    } else {
+        startMazeAnimation();
+        toggleButton.textContent = 'STOP';
+    }
+    isRunning = !isRunning;
+});
+
+// Download button functionality
+downloadButton.addEventListener('click', () => {
+    const mazeContent = maze.textContent;
+    const blob = new Blob([mazeContent], { type: 'text/plain' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'c64_maze.txt';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+});
+
+// Add classic Commodore 64 startup message
+console.log(`
+**** COMMODORE 64 BASIC V2 ****
+64K RAM SYSTEM  38911 BASIC BYTES FREE
+READY.
+10 PRINT CHR$(205.5+RND(1)); : GOTO 10
+RUN
+`);
+</script></body></html>
