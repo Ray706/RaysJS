@@ -1,0 +1,221 @@
+<html><head><base href="." />
+<style>
+  canvas {
+    border: 2px solid #333;
+    margin: 20px;
+  }
+  body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background: #f0f0f0;
+    font-family: Arial, sans-serif;
+  }
+  button {
+    padding: 10px 20px;
+    font-size: 16px;
+    margin: 10px;
+    cursor: pointer;
+    background: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 5px;
+  }
+  button:hover {
+    background: #45a049;
+  }
+</style>
+</head>
+<body>
+<canvas id="mazeCanvas" width="400" height="400"></canvas>
+<button onclick="generateNewMaze()">Generate New Maze</button>
+
+<script>
+const canvas = document.getElementById('mazeCanvas');
+const ctx = canvas.getContext('2d');
+const cellSize = 10;
+const gridSize = 40;
+let grid = [];
+let path = [];
+
+function generateWaypoints() {
+    const quadrants = [
+        { minX: 2, maxX: gridSize/2-2, minY: 2, maxY: gridSize/2-2 },           // Top-left
+        { minX: gridSize/2+2, maxX: gridSize-4, minY: 2, maxY: gridSize/2-2 },  // Top-right
+        { minX: 2, maxX: gridSize/2-2, minY: gridSize/2+2, maxY: gridSize-4 },  // Bottom-left
+        { minX: gridSize/2+2, maxX: gridSize-4, minY: gridSize/2+2, maxY: gridSize-4 }  // Bottom-right
+    ];
+    
+    const waypoints = [];
+    const shuffledQuadrants = [...quadrants].sort(() => Math.random() - 0.5);
+    
+    shuffledQuadrants.forEach(quad => {
+        const x = Math.floor(Math.random() * (quad.maxX - quad.minX + 1)) + quad.minX;
+        const y = Math.floor(Math.random() * (quad.maxY - quad.minY + 1)) + quad.minY;
+        waypoints.push({x, y});
+    });
+    
+    return waypoints;
+}
+
+function connectPoints(start, end, existingPath) {
+    const pathSegment = [];
+    let current = {...start};
+    let attempts = 0;
+    const maxAttempts = 100;
+    
+    while((current.x !== end.x || current.y !== end.y) && attempts < maxAttempts) {
+        attempts++;
+        let nextX = current.x;
+        let nextY = current.y;
+        
+        if(Math.random() < 0.5) {
+            if(current.x !== end.x) {
+                nextX += Math.sign(end.x - current.x);
+            } else if(current.y !== end.y) {
+                nextY += Math.sign(end.y - current.y);
+            }
+        } else {
+            if(current.y !== end.y) {
+                nextY += Math.sign(end.y - current.y);
+            } else if(current.x !== end.x) {
+                nextX += Math.sign(end.x - current.x);
+            }
+        }
+        
+        const wouldOverlap = existingPath.some(p => p.x === nextX && p.y === nextY);
+        
+        if(!wouldOverlap) {
+            current.x = nextX;
+            current.y = nextY;
+            pathSegment.push({...current});
+        }
+    }
+    
+    if(current.x !== end.x || current.y !== end.y) {
+        return connectPointsDirect(start, end, existingPath);
+    }
+    
+    return pathSegment;
+}
+
+function connectPointsDirect(start, end, existingPath) {
+    const pathSegment = [];
+    let current = {...start};
+    
+    while(current.x !== end.x || current.y !== end.y) {
+        if(Math.abs(end.x - current.x) > Math.abs(end.y - current.y)) {
+            current.x += Math.sign(end.x - current.x);
+        } else {
+            current.y += Math.sign(end.y - current.y);
+        }
+        
+        if(!existingPath.some(p => p.x === current.x && p.y === current.y)) {
+            pathSegment.push({...current});
+        }
+    }
+    
+    return pathSegment;
+}
+
+function generatePath(waypoints) {
+    path = [];
+    for(let i = 0; i < waypoints.length-1; i++) {
+        const start = waypoints[i];
+        const end = waypoints[i+1];
+        const pathSegment = connectPoints(start, end, path);
+        path = path.concat(pathSegment);
+    }
+    waypoints.forEach(wp => {
+        if(!path.some(p => p.x === wp.x && p.y === wp.y)) {
+            path.push({...wp});
+        }
+    });
+    return path;
+}
+
+function generateMaze() {
+    // Initialize grid
+    grid = Array(gridSize).fill().map(() => Array(gridSize).fill(1));
+    
+    const waypoints = generateWaypoints();
+    const mazePath = generatePath(waypoints);
+    
+    // Generate random noise
+    for(let y = 2; y < gridSize-2; y++) {
+        for(let x = 2; x < gridSize-2; x++) {
+            if(!mazePath.some(p => p.x === x && p.y === y)) {
+                grid[y][x] = (Math.random() * 320) < 146 ? 0 : 1;
+            }
+        }
+    }
+    
+    // Draw 1-cell wide border
+    for(let i = 0; i < gridSize; i++) {
+        grid[0][i] = 1;
+        grid[1][i] = 1;
+        grid[gridSize-1][i] = 1;
+        grid[gridSize-2][i] = 1;
+        grid[i][0] = 1;
+        grid[i][1] = 1;
+        grid[i][gridSize-1] = 1;
+        grid[i][gridSize-2] = 1;
+    }
+    
+    // Draw path and white border around it
+    mazePath.forEach((point, index) => {
+        for(let dy = -1; dy <= 1; dy++) {
+            for(let dx = -1; dx <= 1; dx++) {
+                const ny = point.y + dy;
+                const nx = point.x + dx;
+                if(ny >= 0 && ny < gridSize && nx >= 0 && nx < gridSize) {
+                    grid[ny][nx] = 1;
+                }
+            }
+        }
+    });
+    
+    // Draw the actual path
+    mazePath.forEach(point => {
+        grid[point.y][point.x] = 0;
+    });
+    
+    // Mark start and end points
+    grid[waypoints[0].y][waypoints[0].x] = 2; // Start (green)
+    grid[waypoints[3].y][waypoints[3].x] = 3; // End (red)
+    
+    return { grid, waypoints };
+}
+
+function drawMaze() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    for(let y = 0; y < gridSize; y++) {
+        for(let x = 0; x < gridSize; x++) {
+            switch(grid[y][x]) {
+                case 0: // Path and black cells
+                    ctx.fillStyle = '#000';
+                    break;
+                case 1: // Walls
+                    ctx.fillStyle = '#fff';
+                    break;
+                case 2: // Start
+                    ctx.fillStyle = '#0f0';
+                    break;
+                case 3: // End
+                    ctx.fillStyle = '#f00';
+                    break;
+            }
+            ctx.fillRect(x * cellSize, y * cellSize, cellSize, cellSize);
+        }
+    }
+}
+
+function generateNewMaze() {
+    generateMaze();
+    drawMaze();
+}
+
+generateNewMaze();
+</script>
+</body></html>

@@ -1,0 +1,240 @@
+<html><head><base href="." />
+<style>
+canvas {
+    border: 2px solid #333;
+    margin: 20px;
+}
+body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background: #f0f0f0;
+    font-family: Arial, sans-serif;
+}
+button {
+    padding: 10px 20px;
+    font-size: 16px;
+    margin: 10px;
+    cursor: pointer;
+    background: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 5px;
+}
+button:hover {
+    background: #45a049;
+}
+</style>
+</head>
+<body>
+<canvas id="mazeCanvas" width="400" height="400"></canvas>
+<button onclick="generateNewMaze()">Generate New Maze</button>
+
+<script>
+const canvas = document.getElementById('mazeCanvas');
+const ctx = canvas.getContext('2d');
+const cellSize = 10;
+const gridSize = 40;
+let grid = [];
+let path = [];
+
+function generateWaypoints() {
+    const quadrants = [
+        { minX: 2, maxX: gridSize/2-2, minY: 2, maxY: gridSize/2-2 },
+        { minX: gridSize/2+2, maxX: gridSize-4, minY: 2, maxY: gridSize/2-2 },
+        { minX: 2, maxX: gridSize/2-2, minY: gridSize/2+2, maxY: gridSize-4 },
+        { minX: gridSize/2+2, maxX: gridSize-4, minY: gridSize/2+2, maxY: gridSize-4 }
+    ];
+    
+    const waypoints = [];
+    const shuffledQuadrants = [...quadrants].sort(() => Math.random() - 0.5);
+    
+    shuffledQuadrants.forEach(quad => {
+        const x = Math.floor(Math.random() * (quad.maxX - quad.minX + 1)) + quad.minX;
+        const y = Math.floor(Math.random() * (quad.maxY - quad.minY + 1)) + quad.minY;
+        waypoints.push({x, y});
+    });
+    
+    return waypoints;
+}
+
+function checkPathAhead(current, direction, existingPath) {
+    for(let dist = 1; dist <= 2; dist++) {
+        const checkX = current.x + (direction.x * dist);
+        const checkY = current.y + (direction.y * dist);
+        
+        if(checkX >= 0 && checkX < gridSize && checkY >= 0 && checkY < gridSize) {
+            if(grid[checkY][checkX] === 0 && !existingPath.some(p => p.x === checkX && p.y === checkY)) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+function connectPoints(start, end, existingPath) {
+    const pathSegment = [];
+    let current = {...start};
+    let attempts = 0;
+    const maxAttempts = 100;
+    
+    while((current.x !== end.x || current.y !== end.y) && attempts < maxAttempts) {
+        attempts++;
+        let nextX = current.x;
+        let nextY = current.y;
+        
+        const directionX = Math.sign(end.x - current.x);
+        const directionY = Math.sign(end.y - current.y);
+        
+        if(Math.random() < 0.5) {
+            if(current.x !== end.x) {
+                if(!checkPathAhead(current, {x: directionX, y: 0}, existingPath)) {
+                    nextX += directionX;
+                } else if(current.y !== end.y) {
+                    nextY += directionY;
+                }
+            } else if(current.y !== end.y) {
+                nextY += directionY;
+            }
+        } else {
+            if(current.y !== end.y) {
+                if(!checkPathAhead(current, {x: 0, y: directionY}, existingPath)) {
+                    nextY += directionY;
+                } else if(current.x !== end.x) {
+                    nextX += directionX;
+                }
+            } else if(current.x !== end.x) {
+                nextX += directionX;
+            }
+        }
+        
+        const wouldOverlap = existingPath.some(p => p.x === nextX && p.y === nextY);
+        
+        if(!wouldOverlap) {
+            current.x = nextX;
+            current.y = nextY;
+            pathSegment.push({...current});
+        }
+    }
+    
+    if(current.x !== end.x || current.y !== end.y) {
+        return connectPointsDirect(start, end, existingPath);
+    }
+    
+    return pathSegment;
+}
+
+function connectPointsDirect(start, end, existingPath) {
+    const pathSegment = [];
+    let current = {...start};
+    
+    while(current.x !== end.x || current.y !== end.y) {
+        if(Math.abs(end.x - current.x) > Math.abs(end.y - current.y)) {
+            current.x += Math.sign(end.x - current.x);
+        } else {
+            current.y += Math.sign(end.y - current.y);
+        }
+        
+        if(!existingPath.some(p => p.x === current.x && p.y === current.y)) {
+            pathSegment.push({...current});
+        }
+    }
+    
+    return pathSegment;
+}
+
+function generatePath(waypoints) {
+    path = [];
+    for(let i = 0; i < waypoints.length-1; i++) {
+        const start = waypoints[i];
+        const end = waypoints[i+1];
+        const pathSegment = connectPoints(start, end, path);
+        path = path.concat(pathSegment);
+    }
+    waypoints.forEach(wp => {
+        if(!path.some(p => p.x === wp.x && p.y === wp.y)) {
+            path.push({...wp});
+        }
+    });
+    return path;
+}
+
+function generateMaze() {
+    grid = Array(gridSize).fill().map(() => Array(gridSize).fill(1));
+    
+    const waypoints = generateWaypoints();
+    const mazePath = generatePath(waypoints);
+    
+    for(let y = 2; y < gridSize-2; y++) {
+        for(let x = 2; x < gridSize-2; x++) {
+            if(!mazePath.some(p => p.x === x && p.y === y)) {
+                grid[y][x] = (Math.random() * 320) < 146 ? 0 : 1;
+            }
+        }
+    }
+    
+    for(let i = 0; i < gridSize; i++) {
+        grid[0][i] = 1;
+        grid[1][i] = 1;
+        grid[gridSize-1][i] = 1;
+        grid[gridSize-2][i] = 1;
+        grid[i][0] = 1;
+        grid[i][1] = 1;
+        grid[i][gridSize-1] = 1;
+        grid[i][gridSize-2] = 1;
+    }
+    
+    mazePath.forEach((point, index) => {
+        for(let dy = -1; dy <= 1; dy++) {
+            for(let dx = -1; dx <= 1; dx++) {
+                const ny = point.y + dy;
+                const nx = point.x + dx;
+                if(ny >= 0 && ny < gridSize && nx >= 0 && nx < gridSize) {
+                    grid[ny][nx] = 1;
+                }
+            }
+        }
+    });
+    
+    mazePath.forEach(point => {
+        grid[point.y][point.x] = 0;
+    });
+    
+    grid[waypoints[0].y][waypoints[0].x] = 2;
+    grid[waypoints[3].y][waypoints[3].x] = 3;
+    
+    return { grid, waypoints };
+}
+
+function drawMaze() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    for(let y = 0; y < gridSize; y++) {
+        for(let x = 0; x < gridSize; x++) {
+            switch(grid[y][x]) {
+                case 0:
+                    ctx.fillStyle = '#000';
+                    break;
+                case 1:
+                    ctx.fillStyle = '#fff';
+                    break;
+                case 2:
+                    ctx.fillStyle = '#0f0';
+                    break;
+                case 3:
+                    ctx.fillStyle = '#f00';
+                    break;
+            }
+            ctx.fillRect(x * cellSize, y * cellSize, cellSize, cellSize);
+        }
+    }
+}
+
+function generateNewMaze() {
+    generateMaze();
+    drawMaze();
+}
+
+generateNewMaze();
+</script>
+</body></html>
