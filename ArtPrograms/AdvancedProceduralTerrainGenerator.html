@@ -1,0 +1,494 @@
+<html><head><base href="https://example.com">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced Procedural Terrain Generator</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            margin: 0;
+            overflow-x: hidden;
+            background-color: #f0f0f0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            min-height: 100vh;
+        }
+
+        #controls {
+            padding: 20px;
+            background-color: #fff;
+            border-bottom: 1px solid #ccc;
+            width: 100%;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            align-items: flex-start;
+        }
+
+        .controls-section {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            justify-content: center;
+            width: 100%;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        label {
+            margin-bottom: 5px;
+            font-size: 0.9em;
+            position: relative; /* For positioning the tooltip */
+        }
+
+        input[type="range"], input[type="number"] {
+            width: 150px;
+        }
+
+        #terrain-canvas {
+            border: 1px solid #ccc;
+            cursor: grab;
+            touch-action: none;
+        }
+
+        .credits {
+            position: fixed;
+            bottom: 10px;
+            right: 10px;
+            font-size: 0.8em;
+            color: #888;
+        }
+        .credits a {
+            color: #888;
+        }
+        /* Add a subtle animation for visual feedback */
+        input[type="range"] {
+            transition: background-color 0.3s ease;
+        }
+
+        input[type="range"]:hover,
+        input[type="range"]:focus {
+            background-color: #e0e0e0;
+        }
+
+        .octave-controls, .noise-layer-controls {
+            border: 1px solid #ddd;
+            padding: 10px;
+            margin-bottom: 10px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        .layer-settings {
+            flex-grow: 1;
+        }
+        .layer-actions button {
+            margin-bottom: 5px;
+            cursor: pointer;
+        }
+        .layer-thumbnail {
+            width: 50px;
+            height: 50px;
+            border: 1px solid #eee;
+            cursor: pointer; /* Indicate it's clickable */
+        }
+
+        /* Style for the tooltip */
+        .control-group .tooltip-text {
+            visibility: hidden;
+            width: 150px;
+            background-color: #333;
+            color: #fff;
+            text-align: center;
+            border-radius: 6px;
+            padding: 5px;
+            position: absolute;
+            z-index: 1;
+            bottom: 125%;
+            left: 50%;
+            margin-left: -75px;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .control-group .tooltip-text::after {
+            content: "";
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            margin-left: -5px;
+            border-width: 5px;
+            border-style: solid;
+            border-color: #333 transparent transparent transparent;
+        }
+
+        .control-group label:hover .tooltip-text,
+        .control-group label.tooltip-active .tooltip-text {
+            visibility: visible;
+            opacity: 1;
+        }
+
+        /* Style for the modal overlay */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+        }
+
+        .modal-overlay.open {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal-content {
+            background-color: #fff;
+            padding: 15px;
+            border-radius: 8px;
+            max-width: 90%;
+            max-height: 90%;
+            overflow: auto;
+        }
+
+        .modal-content img {
+            display: block;
+            max-width: 100%;
+            height: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>Advanced Procedural Terrain Generator</h1>
+    <div id="controls">
+        <div class="controls-section">
+            <div class="control-group">
+                <label for="seed" title="The seed for the random number generator. Use different seeds to create unique terrain variations.">Seed:
+                    <span class="tooltip-text">The seed for the random number generator. Use different seeds to create unique terrain variations.</span>
+                </label>
+                <input type="number" id="seed" value="12345">
+            </div>
+            <div class="control-group">
+                <label for="width" title="The width of the generated terrain in pixels. Higher values increase detail but may impact performance.">Width:
+                    <span class="tooltip-text">The width of the generated terrain in pixels. Higher values increase detail but may impact performance.</span>
+                </label>
+                <input type="number" id="width" value="512">
+            </div>
+            <div class="control-group">
+                <label for="height" title="The height of the generated terrain in pixels. Higher values increase detail but may impact performance.">Height:
+                    <span class="tooltip-text">The height of the generated terrain in pixels. Higher values increase detail but may impact performance.</span>
+                </label>
+                <input type="number" id="height" value="512">
+            </div>
+        </div>
+
+        <div class="controls-section">
+            <div class="control-group">
+                <label for="octaves" title="The number of layers of detail to combine for the terrain. More octaves add finer details but can increase processing time.">Octaves:
+                    <span class="tooltip-text">The number of layers of detail to combine for the terrain. More octaves add finer details but can increase processing time.</span>
+                </label>
+                <input type="number" id="octaves" min="1" max="10" value="4">
+            </div>
+        </div>
+
+        <div id="octave-settings">
+            <!-- Octave specific settings will be added here -->
+        </div>
+
+        <div id="noise-layers">
+            <!-- Noise layer settings will be added here -->
+        </div>
+
+        <button id="addNoiseLayer">Add Noise Layer</button>
+        <button id="generateButton">Generate</button>
+        <button id="downloadButton">Download Heightmap</button>
+    </div>
+    <canvas id="terrain-canvas"></canvas>
+    <div class="credits">Powered by advanced procedural generation techniques.</div>
+    <div class="modal-overlay">
+        <div class="modal-content">
+            <img id="layer-preview-large" src="" alt="Large Noise Layer Preview">
+        </div>
+    </div>
+    <footer style="padding: 20px; text-align: center; color: #555; font-size: 0.8em;">
+        <p> 2024 Procedural Terrain Generator. All rights reserved.</p>
+        <p>Simplex Noise implementation by <a href="https://github.com/josephg/noisejs" rel="noopener noreferrer">Joseph Gentle</a>, licensed under MIT.</p>
+        <p>This tool is for educational and creative purposes. Use at your own risk.</p>
+    </footer>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/simplex-noise/2.4.0/simplex-noise.min.js"></script>
+    <script>
+        const canvas = document.getElementById('terrain-canvas');
+        const ctx = canvas.getContext('2d');
+        const seedInput = document.getElementById('seed');
+        const widthInput = document.getElementById('width');
+        const heightInput = document.getElementById('height');
+        const octavesInput = document.getElementById('octaves');
+        const generateButton = document.getElementById('generateButton');
+        const octaveSettingsDiv = document.getElementById('octave-settings');
+        const noiseLayersDiv = document.getElementById('noise-layers');
+        const addNoiseLayerButton = document.getElementById('addNoiseLayer');
+        const downloadButton = document.getElementById('downloadButton');
+        const modalOverlay = document.querySelector('.modal-overlay');
+        const largePreviewImage = document.getElementById('layer-preview-large');
+        const labels = document.querySelectorAll('.control-group label');
+
+        let simplex;
+
+        labels.forEach(label => {
+            label.addEventListener('click', () => {
+                label.classList.toggle('tooltip-active');
+            });
+        });
+
+        function generateTerrain() {
+            const seed = parseInt(seedInput.value);
+            const width = parseInt(widthInput.value);
+            const height = parseInt(heightInput.value);
+            const octaves = parseInt(octavesInput.value);
+
+            canvas.width = width;
+            canvas.height = height;
+
+            simplex = new SimplexNoise(seed);
+
+            const noiseLayersData = Array.from(noiseLayersDiv.querySelectorAll('.noise-layer-controls')).map(layerDiv => {
+                return {
+                    detail: layerDiv.querySelector('[id$="-detail"]').value,
+                    roughness: layerDiv.querySelector('[id$="-roughness"]').value,
+                    blend: parseFloat(layerDiv.querySelector('[id$="-blend"]').value),
+                    frequencyFactor: layerDiv.querySelector('[id$="-frequencyFactor"]').value,
+                    thumbnailCanvas: layerDiv.querySelector('.layer-thumbnail').getContext('2d')
+                };
+            });
+
+            ctx.clearRect(0, 0, width, height);
+
+            noiseLayersData.forEach(layerData => {
+                const layerCanvas = document.createElement('canvas');
+                layerCanvas.width = width;
+                layerCanvas.height = height;
+                const layerCtx = layerCanvas.getContext('2d');
+                const layerImageData = layerCtx.createImageData(width, height);
+                const layerDataPixels = layerImageData.data;
+
+                for (let y = 0; y < height; y++) {
+                    for (let x = 0; x < width; x++) {
+                        let elevation = 0;
+                        let frequency = 1 / parseFloat(layerData.detail);
+                        let amplitude = 1;
+                        let normalization = 0;
+
+                        for (let i = 0; i < octaves; i++) {
+                            const noiseValue = simplex.noise2D(x * frequency, y * frequency);
+                            elevation += noiseValue * amplitude;
+                            normalization += amplitude;
+                            frequency *= parseFloat(layerData.frequencyFactor);
+                            amplitude *= parseFloat(layerData.roughness);
+                        }
+                        const normalizedElevation = elevation / normalization;
+                        const elevationScale = 100; // Default scale
+                        const waterLevel = 0.3;
+                        const scaledElevation = normalizedElevation * elevationScale;
+
+                        let r, g, b;
+
+                        if (scaledElevation < waterLevel * elevationScale) {
+                            r = 50;
+                            g = 100;
+                            b = 150;
+                        } else if (scaledElevation < (waterLevel + 0.1) * elevationScale) {
+                            r = 240;
+                            g = 230;
+                            b = 140;
+                        } else if (scaledElevation < 0.5 * elevationScale) {
+                            r = 100;
+                            g = 150;
+                            b = 70;
+                        } else if (scaledElevation < 0.8 * elevationScale) {
+                            r = 160;
+                            g = 160;
+                            b = 160;
+                        } else {
+                            r = 220;
+                            g = 220;
+                            b = 220;
+                        }
+
+                        const index = (y * width + x) * 4;
+                        layerDataPixels[index] = r;
+                        layerDataPixels[index + 1] = g;
+                        layerDataPixels[index + 2] = b;
+                        layerDataPixels[index + 3] = 255;
+                    }
+                }
+                layerCtx.putImageData(layerImageData, 0, 0);
+                ctx.globalAlpha = layerData.blend;
+                ctx.drawImage(layerCanvas, 0, 0);
+                ctx.globalAlpha = 1.0;
+
+                // Update Thumbnail
+                const thumbWidth = layerData.thumbnailCanvas.canvas.width;
+                const thumbHeight = layerData.thumbnailCanvas.canvas.height;
+                const thumbImageData = layerData.thumbnailCanvas.createImageData(thumbWidth, thumbHeight);
+                const thumbData = thumbImageData.data;
+                const scaleX = width / thumbWidth;
+                const scaleY = height / thumbHeight;
+
+                for (let y = 0; y < thumbHeight; y++) {
+                    for (let x = 0; x < thumbWidth; x++) {
+                        const pixelX = Math.floor(x * scaleX);
+                        const pixelY = Math.floor(y * scaleY);
+                        const mainIndex = (pixelY * width + pixelX) * 4;
+                        const thumbIndex = (y * thumbWidth + x) * 4;
+                        for (let i = 0; i < 4; i++) {
+                            thumbData[thumbIndex + i] = layerDataPixels[mainIndex + i];
+                        }
+                    }
+                }
+                layerData.thumbnailCanvas.putImageData(thumbImageData, 0, 0);
+            });
+        }
+
+        function updateOctaveSettings() {
+            const octaves = parseInt(octavesInput.value);
+            octaveSettingsDiv.innerHTML = '';
+            for (let i = 0; i < octaves; i++) {
+                const octaveControls = document.createElement('div');
+                octaveControls.classList.add('octave-controls');
+                octaveControls.innerHTML = `
+                    <h3>Octave ${i + 1}</h3>
+                    <div class="control-group">
+                        <label for="detail-${i}" title="Controls the scale of the noise for this octave. Lower values create larger, smoother features, while higher values create finer, more intricate details.">Detail:
+                            <span class="tooltip-text">Controls the scale of the noise for this octave. Lower values create larger, smoother features, while higher values create finer, more intricate details.</span>
+                        </label>
+                        <input type="range" id="detail-${i}" min="1" max="20" value="${8 + i}">
+                    </div>
+                    <div class="control-group">
+                        <label for="roughness-${i}" title="Adjusts the intensity of the noise for this octave. Higher values result in more pronounced height variations, adding ruggedness to the terrain.">Roughness:
+                            <span class="tooltip-text">Adjusts the intensity of the noise for this octave. Higher values result in more pronounced height variations, adding ruggedness to the terrain.</span>
+                        </label>
+                        <input type="range" id="roughness-${i}" min="0.1" max="1.0" step="0.01" value="${0.5 - i * 0.05}">
+                    </div>
+                    <div class="control-group">
+                        <label for="blend-${i}" title="Determines the opacity of this octave's contribution to the final terrain. Lower values make this octave's features more transparent.">Blend Factor:
+                            <span class="tooltip-text">Determines the opacity of this octave's contribution to the final terrain. Lower values make this octave's features more transparent.</span>
+                        </label>
+                        <input type="range" id="blend-${i}" min="0" max="1" step="0.01" value="0.5">
+                    </div>
+                `;
+                octaveSettingsDiv.appendChild(octaveControls);
+            }
+        }
+
+        function addNoiseLayerControl() {
+            const noiseLayerIndex = noiseLayersDiv.children.length;
+            const noiseLayerControls = document.createElement('div');
+            noiseLayerControls.classList.add('noise-layer-controls');
+            noiseLayerControls.innerHTML = `
+                <canvas class="layer-thumbnail"></canvas>
+                <div class="layer-settings">
+                    <h3>Noise Layer ${noiseLayerIndex + 1}</h3>
+                    <div class="control-group">
+                        <label for="nl-${noiseLayerIndex}-detail" title="Sets the scale of the noise for this layer. Lower values produce broad, smooth patterns, while higher values generate fine, intricate details.">Detail:
+                            <span class="tooltip-text">Sets the scale of the noise for this layer. Lower values produce broad, smooth patterns, while higher values generate fine, intricate details.</span>
+                        </label>
+                        <input type="range" id="nl-${noiseLayerIndex}-detail" min="1" max="20" value="8">
+                    </div>
+                    <div class="control-group">
+                        <label for="nl-${noiseLayerIndex}-roughness" title="Controls the intensity of the noise for this layer. Higher values lead to more significant height differences, creating rougher terrain.">Roughness:
+                            <span class="tooltip-text">Controls the intensity of the noise for this layer. Higher values lead to more significant height differences, creating rougher terrain.</span>
+                        </label>
+                        <input type="range" id="nl-${noiseLayerIndex}-roughness" min="0.1" max="1.0" step="0.01" value="0.5">
+                    </div>
+                    <div class="control-group">
+                        <label for="nl-${noiseLayerIndex}-blend" title="Adjusts the transparency of this noise layer when combined with others. Lower values make the layer more see-through.">Blend Factor:
+                            <span class="tooltip-text">Adjusts the transparency of this noise layer when combined with others. Lower values make the layer more see-through.</span>
+                        </label>
+                        <input type="range" id="nl-${noiseLayerIndex}-blend" min="0" max="1" step="0.01" value="0.5">
+                    </div>
+                     <div class="control-group">
+                        <label for="nl-${noiseLayerIndex}-frequencyFactor" title="Determines how quickly the noise frequency increases with each octave within this layer. Higher values result in rapidly increasing detail.">Frequency Factor:
+                            <span class="tooltip-text">Determines how quickly the noise frequency increases with each octave within this layer. Higher values result in rapidly increasing detail.</span>
+                        </label>
+                        <input type="range" id="nl-${noiseLayerIndex}-frequencyFactor" min="1" max="10" step="0.1" value="2">
+                    </div>
+                </div>
+                <div class="layer-actions">
+                    <button type="button" onclick="moveLayerUp(this.parentNode.parentNode)">▲</button>
+                    <button type="button" onclick="moveLayerDown(this.parentNode.parentNode)">▼</button>
+                    <button type="button" onclick="this.parentNode.parentNode.remove(); generateTerrain();">Remove</button>
+                </div>
+            `;
+            noiseLayersDiv.appendChild(noiseLayerControls);
+            generateTerrain(); // Initial thumbnail generation
+
+            const thumbnail = noiseLayerControls.querySelector('.layer-thumbnail');
+            thumbnail.addEventListener('click', () => {
+                largePreviewImage.src = thumbnail.toDataURL();
+                modalOverlay.classList.add('open');
+            });
+        }
+
+        function moveLayerUp(layerDiv) {
+            if (layerDiv.previousElementSibling) {
+                noiseLayersDiv.insertBefore(layerDiv, layerDiv.previousElementSibling);
+                generateTerrain();
+            }
+        }
+
+        function moveLayerDown(layerDiv) {
+            if (layerDiv.nextElementSibling) {
+                noiseLayersDiv.insertBefore(layerDiv.nextElementSibling, layerDiv);
+                generateTerrain();
+            }
+        }
+
+        modalOverlay.addEventListener('click', (event) => {
+            if (event.target === modalOverlay) {
+                modalOverlay.classList.remove('open');
+            }
+        });
+
+        downloadButton.addEventListener('click', function() {
+            const dataURL = canvas.toDataURL('image/png');
+            const a = document.createElement('a');
+            a.href = dataURL;
+            a.download = 'terrain_heightmap.png';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        });
+
+        generateButton.addEventListener('click', generateTerrain);
+        octavesInput.addEventListener('change', updateOctaveSettings);
+        octavesInput.addEventListener('change', generateTerrain);
+        addNoiseLayerButton.addEventListener('click', addNoiseLayerControl);
+
+        // Initial setup
+        updateOctaveSettings();
+        addNoiseLayerControl();
+        generateTerrain();
+
+        // Update terrain on general input changes
+        seedInput.addEventListener('change', generateTerrain);
+        widthInput.addEventListener('change', generateTerrain);
+        heightInput.addEventListener('change', generateTerrain);
+
+        noiseLayersDiv.addEventListener('input', generateTerrain);
+    </script>
+</body>
+</html>

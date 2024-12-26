@@ -1,0 +1,413 @@
+<html><head><base href="." target="_blank">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/nipplejs/0.10.1/nipplejs.min.js"></script>
+<style>
+body { margin: 0; overflow: hidden; }
+canvas { display: block; }
+#instructions {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    color: white;
+    background: rgba(0,0,0,0.7);
+    padding: 10px;
+    border-radius: 5px;
+    font-family: Arial, sans-serif;
+}
+#moveJoystick, #lookJoystick {
+    position: absolute;
+    bottom: 50px;
+    width: 120px;
+    height: 120px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 50%;
+}
+#moveJoystick { left: 50px; }
+#lookJoystick { right: 50px; }
+* {
+    -webkit-touch-callout: none; /* iOS Safari */
+    -webkit-user-select: none; /* Safari */
+    -khtml-user-select: none; /* Konqueror HTML */
+    -moz-user-select: none; /* Firefox */
+    -ms-user-select: none; /* Internet Explorer/Edge */
+    user-select: none; /* Non-prefixed version, currently supported by Chrome and Opera */
+    -webkit-tap-highlight-color: transparent; /* Removes tap highlight color on mobile */
+}
+
+canvas {
+    display: block;
+    touch-action: none; /* Prevents default touch actions */
+}
+</style>
+</head>
+<body>
+<div id="instructions">
+    Desktop: Use W,A,S,D to move, Mouse to look around<br>
+    Mobile: Use left joystick to move, right joystick to look<br>
+    Click/tap to start
+</div>
+<div id="moveJoystick"></div>
+<div id="lookJoystick"></div>
+<script>
+let scene, camera, renderer;
+let moveForward = false;
+let moveBackward = false;
+let moveLeft = false;
+let moveRight = false;
+let velocity = new THREE.Vector3();
+let euler = new THREE.Euler(0, 0, 0, 'YXZ');
+let lights = [];
+let time = 0;
+let moveJoystick, lookJoystick;
+let joystickMoveVector = new THREE.Vector2();
+let joystickLookVector = new THREE.Vector2();
+
+// Store textures globally
+let wallTexture, wallBumpMap, furnitureTexture, furnitureBumpMap;
+
+window.addEventListener('load', () => {
+    init();
+    initJoysticks();
+    animate();
+});
+
+function initJoysticks() {
+    moveJoystick = nipplejs.create({
+        zone: document.getElementById('moveJoystick'),
+        mode: 'static',
+        position: { left: '50px', bottom: '50px' },
+        color: 'white',
+        size: 120
+    });
+
+    lookJoystick = nipplejs.create({
+        zone: document.getElementById('lookJoystick'),
+        mode: 'static',
+        position: { right: '50px', bottom: '50px' },
+        color: 'white',
+        size: 120
+    });
+
+    moveJoystick.on('move', (evt, data) => {
+        const forward = data.vector.y;
+        const side = data.vector.x;
+        joystickMoveVector.set(side, forward);
+    });
+
+    moveJoystick.on('end', () => {
+        joystickMoveVector.set(0, 0);
+    });
+
+    lookJoystick.on('move', (evt, data) => {
+        const lookX = data.vector.x;
+        const lookY = data.vector.y;
+        joystickLookVector.set(lookX, lookY);
+    });
+
+    lookJoystick.on('end', () => {
+        joystickLookVector.set(0, 0);
+    });
+}
+
+function init() {
+    scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x808080);
+    
+    camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    
+    renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    document.body.appendChild(renderer.domElement);
+
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.2);
+    scene.add(ambientLight);
+    
+    const pointLight1 = new THREE.PointLight(0xffaa00, 2, 15);
+    pointLight1.position.set(-8, 3, -8);
+    pointLight1.castShadow = true;
+    scene.add(pointLight1);
+    lights.push(pointLight1);
+
+    const pointLight2 = new THREE.PointLight(0x4466ff, 2, 15);
+    pointLight2.position.set(8, 3, -8);
+    pointLight2.castShadow = true;
+    scene.add(pointLight2);
+    lights.push(pointLight2);
+
+    const textureLoader = new THREE.TextureLoader();
+    const loadTexture = (url) => {
+        return new Promise((resolve, reject) => {
+            textureLoader.load(url, resolve, undefined, reject);
+        });
+    };
+
+    Promise.all([
+        loadTexture('905751919bc627c8ed2bcc5dde01335b.jpg'),
+        loadTexture('905751919bc627c8ed2bcc5dde01335b-modified.jpg'),
+        loadTexture('360_F_297098515_noDOtzUeSdCKRTnZQjgMc3rNmHeMIKrw.jpg'),
+        loadTexture('360_F_297098515_noDOtzUeSdCKRTnZQjgMc3rNmHeMIKrw-modified.jpg'),
+        loadTexture('wooden-flooring-textured-background-design_53876-108357.jpg'),
+        loadTexture('wooden-flooring-textured-background-design_53876-108357-modified.jpg')
+    ]).then(([floorTexture, floorBumpMap, wallTex, wallBump, furnTex, furnBump]) => {
+        // Floor setup
+        floorTexture.wrapS = THREE.RepeatWrapping;
+        floorTexture.wrapT = THREE.RepeatWrapping;
+        floorTexture.repeat.set(4, 4);
+        
+        floorBumpMap.wrapS = THREE.RepeatWrapping;
+        floorBumpMap.wrapT = THREE.RepeatWrapping;
+        floorBumpMap.repeat.set(4, 4);
+
+        const floorGeometry = new THREE.PlaneGeometry(20, 20);
+        const floorMaterial = new THREE.MeshStandardMaterial({ 
+            map: floorTexture,
+            bumpMap: floorBumpMap,
+            bumpScale: 0.02,
+            roughness: 0.8,
+            metalness: 0.2
+        });
+        const floor = new THREE.Mesh(floorGeometry, floorMaterial);
+        floor.rotation.x = -Math.PI / 2;
+        floor.receiveShadow = true;
+        scene.add(floor);
+
+        // Wall setup
+        wallTexture = wallTex;
+        wallBumpMap = wallBump;
+        wallTexture.wrapS = THREE.RepeatWrapping;
+        wallTexture.wrapT = THREE.RepeatWrapping;
+        wallTexture.repeat.set(2, 1);
+        wallBumpMap.wrapS = THREE.RepeatWrapping;
+        wallBumpMap.wrapT = THREE.RepeatWrapping;
+        wallBumpMap.repeat.set(2, 1);
+
+        // Furniture textures
+        furnitureTexture = furnTex;
+        furnitureBumpMap = furnBump;
+        furnitureTexture.wrapS = THREE.RepeatWrapping;
+        furnitureTexture.wrapT = THREE.RepeatWrapping;
+        furnitureTexture.repeat.set(1, 1);
+        furnitureBumpMap.wrapS = THREE.RepeatWrapping;
+        furnitureBumpMap.wrapT = THREE.RepeatWrapping;
+        furnitureBumpMap.repeat.set(1, 1);
+
+        createWall(0, 2, -10, 20, 4, 0.3);
+        createWall(0, 2, 10, 20, 4, 0.3);
+        createWall(-10, 2, 0, 0.3, 4, 20);
+        createWall(10, 2, 0, 0.3, 4, 20);
+        
+        const ceilingGeometry = new THREE.PlaneGeometry(20, 20);
+        const ceilingMaterial = new THREE.MeshStandardMaterial({ 
+            map: wallTexture,
+            bumpMap: wallBumpMap,
+            bumpScale: 0.02,
+            roughness: 0.7,
+            metalness: 0.1,
+            side: THREE.DoubleSide
+        });
+        wallTexture.repeat.set(4, 4); // Adjust ceiling texture repeat
+        wallBumpMap.repeat.set(4, 4);
+        const ceiling = new THREE.Mesh(ceilingGeometry, ceilingMaterial);
+        ceiling.rotation.x = Math.PI / 2;
+        ceiling.position.y = 4;
+        ceiling.receiveShadow = true;
+        scene.add(ceiling);
+
+        createDesk(0, 0, -5);
+        createChair(-1, 0, -4);
+    }).catch(error => {
+        console.error('Error loading textures:', error);
+    });
+
+    camera.position.set(0, 1.7, 5);
+
+    document.addEventListener('keydown', onKeyDown);
+    document.addEventListener('keyup', onKeyUp);
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('click', function() {
+        const canvas = renderer.domElement;
+        
+        canvas.requestPointerLock = canvas.requestPointerLock ||
+                                   canvas.mozRequestPointerLock ||
+                                   canvas.webkitRequestPointerLock;
+        
+        document.exitPointerLock = document.exitPointerLock ||
+                                  document.mozExitPointerLock ||
+                                  document.webkitExitPointerLock;
+        
+        if(canvas.requestPointerLock) {
+            canvas.requestPointerLock();
+        }
+    });
+
+    window.addEventListener('resize', onWindowResize, false);
+}
+
+function createWall(x, y, z, width, height, depth) {
+    const geometry = new THREE.BoxGeometry(width, height, depth);
+    const material = new THREE.MeshStandardMaterial({ 
+        map: wallTexture,
+        bumpMap: wallBumpMap,
+        bumpScale: 0.02,
+        roughness: 0.7,
+        metalness: 0.1
+    });
+    const wall = new THREE.Mesh(geometry, material);
+    wall.position.set(x, y, z);
+    wall.castShadow = true;
+    wall.receiveShadow = true;
+    scene.add(wall);
+}
+
+function createDesk(x, y, z) {
+    const deskTop = new THREE.BoxGeometry(3, 0.1, 1.5);
+    const deskMaterial = new THREE.MeshStandardMaterial({ 
+        map: furnitureTexture,
+        bumpMap: furnitureBumpMap,
+        bumpScale: 0.02,
+        roughness: 0.6,
+        metalness: 0.1
+    });
+    const desk = new THREE.Mesh(deskTop, deskMaterial);
+    desk.position.set(x, y + 0.7, z);
+    desk.castShadow = true;
+    desk.receiveShadow = true;
+    scene.add(desk);
+
+    const legGeometry = new THREE.BoxGeometry(0.1, 1.4, 0.1);
+    for(let i = -1; i <= 1; i+=2) {
+        for(let j = -1; j <= 1; j+=2) {
+            const leg = new THREE.Mesh(legGeometry, deskMaterial);
+            leg.position.set(x + (i * 1.4), y, z + (j * 0.6));
+            leg.castShadow = true;
+            leg.receiveShadow = true;
+            scene.add(leg);
+        }
+    }
+}
+
+function createChair(x, y, z) {
+    const seatGeometry = new THREE.BoxGeometry(0.8, 0.1, 0.8);
+    const chairMaterial = new THREE.MeshStandardMaterial({ 
+        map: furnitureTexture,
+        bumpMap: furnitureBumpMap,
+        bumpScale: 0.02,
+        roughness: 0.9,
+        metalness: 0.1
+    });
+    const seat = new THREE.Mesh(seatGeometry, chairMaterial);
+    seat.position.set(x, y + 0.4, z);
+    seat.castShadow = true;
+    seat.receiveShadow = true;
+    scene.add(seat);
+
+    const backGeometry = new THREE.BoxGeometry(0.8, 1, 0.1);
+    const back = new THREE.Mesh(backGeometry, chairMaterial);
+    back.position.set(x, y + 0.9, z + 0.35);
+    back.castShadow = true;
+    back.receiveShadow = true;
+    scene.add(back);
+}
+
+function onWindowResize() {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+}
+
+function onKeyDown(event) {
+    switch(event.code) {
+        case 'KeyW': moveForward = true; break;
+        case 'KeyS': moveBackward = true; break;
+        case 'KeyA': moveLeft = true; break;
+        case 'KeyD': moveRight = true; break;
+    }
+}
+
+function onKeyUp(event) {
+    switch(event.code) {
+        case 'KeyW': moveForward = false; break;
+        case 'KeyS': moveBackward = false; break;
+        case 'KeyA': moveLeft = false; break;
+        case 'KeyD': moveRight = false; break;
+    }
+}
+
+function onMouseMove(event) {
+    const isPointerLocked = document.pointerLockElement === renderer.domElement ||
+                           document.mozPointerLockElement === renderer.domElement ||
+                           document.webkitPointerLockElement === renderer.domElement;
+                           
+    if (isPointerLocked) {
+        euler.setFromQuaternion(camera.quaternion);
+        euler.y -= event.movementX * 0.002;
+        euler.x -= event.movementY * 0.002;
+        euler.x = Math.max(-Math.PI/2, Math.min(Math.PI/2, euler.x));
+        camera.quaternion.setFromEuler(euler);
+    }
+}
+
+function animate() {
+    requestAnimationFrame(animate);
+    time += 0.01;
+
+    lights.forEach((light, index) => {
+        const intensity = 1.5 + Math.sin(time + index * Math.PI) * 0.5;
+        light.intensity = intensity;
+    });
+
+    const speed = 0.1;
+    velocity.x = 0;
+    velocity.z = 0;
+
+    // Handle keyboard movement
+    if (moveForward) velocity.z = -speed;
+    if (moveBackward) velocity.z = speed;
+    if (moveLeft) velocity.x = -speed;
+    if (moveRight) velocity.x = speed;
+
+    // Handle joystick movement
+    if (joystickMoveVector.length() > 0) {
+        velocity.z = -joystickMoveVector.y * speed;
+        velocity.x = joystickMoveVector.x * speed;
+    }
+
+    // Handle joystick looking
+    if (joystickLookVector.length() > 0) {
+        euler.setFromQuaternion(camera.quaternion);
+        euler.y -= joystickLookVector.x * 0.03;
+        euler.x -= joystickLookVector.y * 0.03;
+        euler.x = Math.max(-Math.PI/2, Math.min(Math.PI/2, euler.x));
+        camera.quaternion.setFromEuler(euler);
+    }
+
+    const direction = new THREE.Vector3();
+    camera.getWorldDirection(direction);
+    
+    const newPosition = camera.position.clone();
+    
+    if (velocity.z !== 0) {
+        newPosition.addScaledVector(direction, velocity.z);
+    }
+    
+    if (velocity.x !== 0) {
+        const rightVector = new THREE.Vector3();
+        rightVector.crossVectors(camera.up, direction).normalize();
+        newPosition.addScaledVector(rightVector, velocity.x);
+    }
+
+    newPosition.y = 1.7;
+    
+    const boundaryLimit = 9;
+    newPosition.x = Math.max(-boundaryLimit, Math.min(boundaryLimit, newPosition.x));
+    newPosition.z = Math.max(-boundaryLimit, Math.min(boundaryLimit, newPosition.z));
+    
+    camera.position.copy(newPosition);
+
+    renderer.render(scene, camera);
+}
+</script>
+</body>
+</html>

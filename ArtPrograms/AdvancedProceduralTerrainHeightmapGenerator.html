@@ -1,0 +1,397 @@
+<html><base href="https://example.com/">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="description" content="Procedural Terrain Heightmap Generator" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Procedural Terrain Generator</title>
+
+  <!-- Inline the Noise library to avoid external loading issues -->
+  <script>
+    (function(){
+      function n(n,t){return new r(n,t)}
+      function t(){
+        var t,r=[],o=[];
+        for(t=0;256>t;t++){
+          o[t]=256*Math.random()|0
+        }
+        for(t=0;256>t;t++){
+          var e=o[t];
+          r[t]=e,r[t+256]=e
+        }
+        return r
+      }
+      function r(n,t,r){
+        null==n&&(n=Math),
+        this.doublePrecision=!!r,
+        this.random=n.random,
+        this.p=new Uint8Array(512),
+        this.perm=new Uint8Array(512),
+        this.permMod12=new Uint8Array(512),
+        t||(t=[]);
+        var o,e;
+        if("[object Array]"===Object.prototype.toString.call(t)){
+          for(o=0;o<t.length;o++){
+            this.perm[o]=t[o]
+          }
+          for(;o<512;o++){
+            this.perm[o]=this.random()*256
+          }
+          for(o=0;o<512;o++){
+            this.permMod12[o]=this.perm[o]%12
+          }
+        } else {
+          for(o=0;o<256;o++){
+            this.perm[o]=256*this.random()|0
+          }
+          for(o=0;o<256;o++){
+            this.perm[o+256]=this.perm[o],
+            this.permMod12[o]=this.perm[o]%12,
+            this.permMod12[o+256]=this.permMod12[o]
+          }
+        }
+        this.grad3=[
+          [1,1,0],[-1,1,0],[1,-1,0],[-1,-1,0],
+          [1,0,1],[-1,0,1],[1,0,-1],[-1,0,-1],
+          [0,1,1],[0,-1,1],[0,1,-1],[0,-1,-1]
+        ],
+        this.grad4=[
+          [0,1,1,1],[0,1,1,-1],[0,1,-1,1],[0,1,-1,-1],
+          [0,-1,1,1],[0,-1,1,-1],[0,-1,-1,1],[0,-1,-1,-1],
+          [1,0,1,1],[1,0,1,-1],[1,0,-1,1],[1,0,-1,-1],
+          [-1,0,1,1],[-1,0,1,-1],[-1,0,-1,1],[-1,0,-1,-1],
+          [1,1,0,1],[1,1,0,-1],[1,-1,0,1],[1,-1,0,-1],
+          [-1,1,0,1],[-1,1,0,-1],[-1,-1,0,1],[-1,-1,0,-1],
+          [1,1,1,0],[1,1,-1,0],[1,-1,1,0],[1,-1,-1,0],
+          [-1,1,1,0],[-1,1,-1,0],[-1,-1,1,0],[-1,-1,-1,0]
+        ],
+        this.simplex=[
+          [0,1,2,3],[0,1,3,2],[0,0,0,0],[0,2,3,1],[0,0,0,0],[0,0,0,0],[0,0,0,0],[1,2,3,0],
+          [0,2,1,3],[0,0,0,0],[0,3,1,2],[0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0],[1,3,2,0],
+          [0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0],
+          [1,2,0,3],[0,0,0,0],[1,3,0,2],[0,0,0,0],[0,0,0,0],[0,0,0,0],[2,3,0,1],[0,0,0,0],
+          [0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0],
+          [1,2,3,0],[0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0],
+          [1,3,2,0],[0,0,0,0],[0,0,0,0],[0,0,0,0],[2,3,1,0],[0,0,0,0],[0,0,0,0],[0,0,0,0],
+          [0,0,0,0],[0,0,0,0],[0,0,0,0],[0,1,2,3]
+        ],
+        0===this.permMod12[0]?this.gradP=new Float32Array(512*4):this.gradP=new Array(512*4);
+        for(o=0;o<512;o++){
+          e=4*o;
+          var i=this.permMod12[o],
+              f=this.grad3[i][0],
+              a=this.grad3[i][1],
+              u=this.grad3[i][2];
+          this.gradP[e+0]=f,
+          this.gradP[e+1]=a,
+          this.gradP[e+2]=u,
+          this.gradP[e+3]=0
+        }
+      }
+      r.prototype={
+        seed:function(n){
+          var val = parseFloat(n);
+          if(isNaN(val)){
+            val = Math.random() * 10000;
+          }
+          function localRng(){
+            var x = Math.sin(val++) * 10000;
+            return x - Math.floor(x);
+          }
+          for(var i=0;i<512;i++){
+            var e = 256 * localRng() | 0;
+            this.perm[i] = e;
+            this.perm[i+256] = e;
+            this.permMod12[i] = e % 12;
+            this.permMod12[i+256] = e % 12;
+          }
+        },
+        perlin2:function(n,t){
+          var r=Math.floor(n),
+              o=Math.floor(t);
+          n-=r,
+          t-=o,
+          r&=255,
+          o&=255;
+          var e=this.perm[r+this.perm[o]],
+              i=this.perm[r+1+this.perm[o]],
+              f=this.perm[r+this.perm[o+1]],
+              a=this.perm[r+1+this.perm[o+1]],
+              u=n*this.fade(n),
+              c=t*this.fade(t);
+          var l=this.gradP[4*e+0]*n+this.gradP[4*e+1]*t,
+              s=this.gradP[4*i+0]*(n-1)+this.gradP[4*i+1]*t,
+              p=this.gradP[4*f+0]*n+this.gradP[4*f+1]*(t-1),
+              h=this.gradP[4*a+0]*(n-1)+this.gradP[4*a+1]*(t-1);
+          return this.lerp(c,this.lerp(u,l,s),this.lerp(u,p,h))
+        },
+        fade:function(n){
+          return n*n*n*(n*(6*n-15)+10)
+        },
+        lerp:function(n,t,r){
+          return t+n*(r-t)
+        }
+      },
+      "object"==typeof module&&"object"==typeof module.exports&&(module.exports={Noise:n}),
+      "function"==typeof define&&define.amd&&define(function(){return{Noise:n}}),
+      this.noise||(this.noise=n()),
+      (typeof window!=="undefined"?window:this).noise = n(Math, t());
+    }).call(this);
+  </script>
+
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background: #1b1b1b;
+      color: #eee;
+      overflow-x: hidden;
+      font-family: Arial, sans-serif;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+    header {
+      text-align: center;
+      padding: 1em;
+      background: linear-gradient(45deg, #181818, #222);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+    h1 {
+      margin: 0;
+      font-size: 1.8em;
+    }
+    #controls {
+      margin: 0.5em auto;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 1em;
+    }
+    .control-box {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin: 0.5em;
+    }
+    .control-box label {
+      margin-bottom: 0.25em;
+    }
+    #terrainCanvas {
+      display: block;
+      margin: 0 auto;
+      background: #222;
+      border: 1px solid #444;
+    }
+    #infoSection {
+      flex: 1;
+      max-width: 960px;
+      margin: 2rem auto;
+      padding: 1em;
+      color: #eee;
+      line-height: 1.4;
+    }
+    footer {
+      background: #111;
+      text-align: center;
+      color: #ccc;
+      padding: 1em 0;
+    }
+    @keyframes pulse {
+      0%   { box-shadow: 0 0 0 0 rgba(255,255,255,0.5);}
+      70%  { box-shadow: 0 0 0 20px rgba(255,255,255,0);}
+      100% { box-shadow: 0 0 0 0 rgba(255,255,255,0);}
+    }
+    .button-pulse:hover {
+      animation: pulse 1.5s infinite;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Advanced Procedural Terrain Heightmap Generator</h1>
+    <p>Realistic topological features akin to high-resolution USGS maps</p>
+    <div id="controls">
+      <div class="control-box">
+        <label for="widthSlider">Map Width (px)</label>
+        <input type="range" id="widthSlider" min="256" max="2048" value="800" step="1" />
+        <span id="widthValue">800</span>
+      </div>
+      <div class="control-box">
+        <label for="heightSlider">Map Height (px)</label>
+        <input type="range" id="heightSlider" min="256" max="2048" value="600" step="1" />
+        <span id="heightValue">600</span>
+      </div>
+      <div class="control-box">
+        <label for="scaleSlider">Scale</label>
+        <input type="range" id="scaleSlider" min="10" max="500" value="100" />
+        <span id="scaleValue">100</span>
+      </div>
+      <div class="control-box">
+        <label for="octavesSlider">Octaves</label>
+        <input type="range" id="octavesSlider" min="1" max="8" value="4" />
+        <span id="octavesValue">4</span>
+      </div>
+      <div class="control-box">
+        <label for="roughnessSlider">Roughness</label>
+        <input type="range" id="roughnessSlider" min="0.2" max="1.0" step="0.01" value="0.5" />
+        <span id="roughnessValue">0.5</span>
+      </div>
+      <div class="control-box">
+        <label for="seedInput">Seed</label>
+        <input type="text" id="seedInput" placeholder="e.g. 12345" />
+      </div>
+      <button id="generateBtn" class="button-pulse">Generate</button>
+    </div>
+  </header>
+  
+  <main>
+    <canvas id="terrainCanvas" width="800" height="600"></canvas>
+    <section id="infoSection">
+      <h2>About this Generator</h2>
+      <p>
+        This procedural terrain generator harnesses the power of multi-octave noise
+        for realistic heightmaps. Customize the width, height, scale, octaves,
+        roughness, and even seed value for infinite possibilities. The result is a
+        top-down grayscale map that simulates realistic geological features similar
+        to USGS &amp; other high-resolution topological maps.
+      </p>
+      <p>
+        Pan or zoom on mobile or desktop for close inspection of details. 
+        Experiment with different seeds to generate entirely new realistic landscapes.
+      </p>
+      <p>
+        Looking for more resources on terrain generation? You can find additional 
+        information on advanced techniques in the following references:
+        <a href="https://example.com/terrain-article" target="_blank">Terrain Generation Article</a>,
+        <a href="https://example.com/heightmap-theory" target="_blank">Heightmap Theory</a>.
+      </p>
+    </section>
+  </main>
+
+  <footer>
+    <p>&copy; 2023 Procedural Terrain Generator. All rights reserved.</p>
+  </footer>
+
+  <svg width="0" height="0">
+    <defs>
+      <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+        <stop offset="0%" style="stop-color:#00f; stop-opacity:1"/>
+        <stop offset="50%" style="stop-color:#0ff; stop-opacity:1"/>
+        <stop offset="100%" style="stop-color:#0f0; stop-opacity:1"/>
+      </linearGradient>
+    </defs>
+  </svg>
+
+  <script>
+    // Utility function to re-seed Perlin noise
+    function setNoiseSeed(seedValue) {
+      noise.seed(seedValue);
+    }
+
+    function generateHeightmap(canvas, width, height, scale, octaves, roughness, seed) {
+      const ctx = canvas.getContext('2d');
+      canvas.width = width;
+      canvas.height = height;
+
+      // Seed the noise function
+      let seedVal = parseFloat(seed);
+      if (isNaN(seedVal)) {
+        seedVal = Math.random() * 10000;
+      }
+      setNoiseSeed(seedVal);
+
+      const imageData = ctx.createImageData(width, height);
+      const data = imageData.data;
+
+      const persistence = roughness;
+
+      for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width; x++) {
+          let noiseValue = 0.0;
+          let freq = 1.0;
+          let amp = 1.0;
+
+          for (let o = 0; o < octaves; o++) {
+            const nx = (x / scale) * freq;
+            const ny = (y / scale) * freq;
+            noiseValue += noise.perlin2(nx, ny) * amp;
+
+            freq *= 2.0;
+            amp *= persistence;
+          }
+
+          const normalized = (noiseValue + 1) / 2;
+          const color = Math.floor(normalized * 255);
+
+          const idx = (y * width + x) * 4;
+          data[idx] = color;     
+          data[idx + 1] = color; 
+          data[idx + 2] = color; 
+          data[idx + 3] = 255;   
+        }
+      }
+      ctx.putImageData(imageData, 0, 0);
+    }
+
+    function init() {
+      const terrainCanvas = document.getElementById('terrainCanvas');
+
+      const widthSlider = document.getElementById('widthSlider');
+      const heightSlider = document.getElementById('heightSlider');
+      const scaleSlider = document.getElementById('scaleSlider');
+      const octavesSlider = document.getElementById('octavesSlider');
+      const roughnessSlider = document.getElementById('roughnessSlider');
+      const seedInput = document.getElementById('seedInput');
+
+      const widthValue = document.getElementById('widthValue');
+      const heightValue = document.getElementById('heightValue');
+      const scaleValue = document.getElementById('scaleValue');
+      const octavesValue = document.getElementById('octavesValue');
+      const roughnessValue = document.getElementById('roughnessValue');
+
+      const generateBtn = document.getElementById('generateBtn');
+
+      function syncValues() {
+        widthValue.textContent = widthSlider.value;
+        heightValue.textContent = heightSlider.value;
+        scaleValue.textContent = scaleSlider.value;
+        octavesValue.textContent = octavesSlider.value;
+        roughnessValue.textContent = roughnessSlider.value;
+      }
+
+      [widthSlider, heightSlider, scaleSlider, octavesSlider, roughnessSlider].forEach((slider) => {
+        slider.addEventListener('input', () => {
+          syncValues();
+        });
+      });
+
+      generateBtn.addEventListener('click', () => {
+        syncValues();
+        const width = parseInt(widthSlider.value);
+        const height = parseInt(heightSlider.value);
+        const scale = parseInt(scaleSlider.value);
+        const octaves = parseInt(octavesSlider.value);
+        const roughness = parseFloat(roughnessSlider.value);
+        const seed = seedInput.value;
+
+        generateHeightmap(terrainCanvas, width, height, scale, octaves, roughness, seed);
+      });
+
+      syncValues();
+      generateHeightmap(
+        terrainCanvas,
+        parseInt(widthSlider.value),
+        parseInt(heightSlider.value),
+        parseInt(scaleSlider.value),
+        parseInt(octavesSlider.value),
+        parseFloat(roughnessSlider.value),
+        seedInput.value
+      );
+    }
+
+    window.addEventListener('DOMContentLoaded', init);
+  </script>
+</body>
+</html>

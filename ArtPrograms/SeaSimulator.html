@@ -1,0 +1,652 @@
+<html><head><base href="https://websim.ai">
+<title>3D Sea Simulator with Lens Effects - WebSim</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/objects/Water.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/objects/Sky.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/dat-gui/0.7.7/dat.gui.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/EffectComposer.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/RenderPass.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/ShaderPass.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/CopyShader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/BokehShader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/VignetteShader.js"></script>
+<style>
+  body { margin: 0; overflow: hidden; font-family: Arial, sans-serif; }
+  canvas { display: block; }
+  #info {
+    position: absolute;
+    top: 10px;
+    width: 100%;
+    text-align: center;
+    color: white;
+    pointer-events: none;
+    z-index: 100;
+    text-shadow: 0 0 4px rgba(0,0,0,0.5);
+  }
+  .dg.main {
+    position: absolute !important;
+    bottom: 10px !important;
+    right: 10px !important;
+    top: auto !important;
+    left: auto !important;
+  }
+  .dg.main .close-button {
+    display: none !important;
+  }
+  .dg.main .close-button.close-bottom {
+    display: none !important;
+  }
+  .dg {
+    color: #eee;
+    font: 11px 'Lucida Grande', sans-serif;
+    text-shadow: 0 -1px 0 #111;
+  }
+  .dg .c .slider {
+    background: #1a1a1a;
+  }
+  .dg .c .slider:hover {
+    background: #2a2a2a;
+  }
+  .dg .c input[type=text] {
+    background: #303030;
+    color: #eee;
+  }
+  .dg .c input[type=text]:hover {
+    background: #3a3a3a;
+  }
+  .dg .cr.function:hover, .dg .cr.boolean:hover {
+    background: #111;
+  }
+  #pauseButton {
+    position: absolute;
+    right: 10px;
+    top: 10px;
+    padding: 8px 15px;
+    border: none;
+    border-radius: 4px;
+    font-size: 16px;
+    cursor: pointer;
+    background: #001e0f;
+    color: white;
+    opacity: 0.7;
+    text-shadow: 0 0 4px rgba(0,0,0,0.5);
+  }
+  #pauseButton:hover {
+    opacity: 1;
+  }
+</style>
+</head>
+<body>
+<div id="info">3D Sea Simulator with Lens Effects - Use mouse to control camera and bottom-right panel for adjustments</div>
+<button id="pauseButton">Pause</button>
+<script>let scene, camera, renderer, water, sun, sky, controls, pmremGenerator, composer;
+let paused = false;
+const properties = {
+  elevation: 2,
+  azimuth: 180,
+  exposure: 0.5,
+  sunIntensity: 1,
+  waterColor: '#001e0f',
+  distortionScale: 3.7,
+  cropFactor: 1,
+  aspectRatio: 1.778,
+  focalLength: 50,
+  aperture: 1.4,
+  blades: 6,
+  bokehStrength: 0.02,
+  maxBlur: 2,
+  apertureShape: 'hexagon',
+  sphericalAberration: 0.02,
+  focusPoints: [{
+    distance: 0,
+    blur: 0.05
+  }, {
+    distance: 100,
+    blur: 0
+  }, {
+    distance: 200,
+    blur: 0.05
+  }],
+  vignetteOffset: 1.5,
+  vignetteMultiplier: 2,
+  rayleigh: 2,
+  turbidity: 10,
+  mieCoefficient: 0.005,
+  mieDirectionalG: 0.8,
+  bloomThreshold: 0.85,
+  bloomStrength: 0.5,
+  bloomRadius: 0.4,
+  haze: false,
+  hazeColor: '#aac9ee',
+  hazeStrength: 1,
+  hazeDensity: 0.1,
+  hazeNear: 1,
+  hazeFar: 1000,
+  shimmer: false,
+  shimmerColor: '#ffffff',
+  shimmerIntensity: 1,
+  shimmerSize: 0.05,
+  shimmerSpeed: 0.02,
+  bokehGlint: true,
+  bokehGlintColor: '#ffffff',
+  bokehGlintIntensity: 1,
+  bokehGlintSize: 0.1,
+  bokehGlintDensity: 1,
+  bokehGlintSpeed: 0.02,
+};
+const folderSky = {
+  add: function (properties, key, min, max, step) {
+    const controller = {
+      value: properties[key],
+      min: min,
+      max: max,
+      step: step,
+      name: key,
+      onChange: function (callback) {
+        return callback;
+      }
+    };
+    return controller;
+  }
+};
+function updateSun(key) {
+  console.log(key);
+}
+function init() {
+  scene = new THREE.Scene();
+  camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 1, 20000);
+  camera.position.set(30, 30, 100);
+  sun = new THREE.Vector3();
+  renderer = new THREE.WebGLRenderer({
+    antialias: true
+  });
+  renderer.setPixelRatio(window.devicePixelRatio);
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  document.body.appendChild(renderer.domElement);
+  controls = new THREE.OrbitControls(camera, renderer.domElement);
+  controls.maxPolarAngle = Math.PI * 0.495;
+  controls.target.set(0, 10, 0);
+  controls.minDistance = 40.0;
+  controls.maxDistance = 200.0;
+  const waterGeometry = new THREE.PlaneGeometry(10000, 10000);
+  water = new THREE.Water(waterGeometry, {
+    textureWidth: 512,
+    textureHeight: 512,
+    waterNormals: new THREE.TextureLoader().load('https://raw.githubusercontent.com/mrdoob/three.js/dev/examples/textures/waternormals.jpg', function (texture) {
+      texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+    }),
+    sunDirection: new THREE.Vector3(),
+    sunColor: 0xffffff,
+    waterColor: 0x001e0f,
+    distortionScale: 3.7,
+    fog: scene.fog !== undefined
+  });
+  water.rotation.x = -Math.PI / 2;
+  scene.add(water);
+  sky = new THREE.Sky();
+  sky.scale.setScalar(10000);
+  scene.add(sky);
+  const skyUniforms = sky.material.uniforms;
+  skyUniforms['turbidity'].value = 10;
+  skyUniforms['rayleigh'].value = 2;
+  skyUniforms['mieCoefficient'].value = 0.005;
+  skyUniforms['mieDirectionalG'].value = 0.8;
+  pmremGenerator = new THREE.PMREMGenerator(renderer);
+  composer = new THREE.EffectComposer(renderer);
+  const renderPass = new THREE.RenderPass(scene, camera);
+  composer.addPass(renderPass);
+  const gui = new dat.GUI({
+    autoPlace: false,
+    width: 300
+  });
+  gui.domElement.style.position = 'absolute';
+  gui.domElement.style.right = '10px';
+  gui.domElement.style.bottom = '10px';
+  document.body.appendChild(gui.domElement);
+  const folderSky = gui.addFolder('Sky & Time');
+  const folderSun = gui.addFolder('Sun');
+  const folderWater = gui.addFolder('Water');
+  const folderShimmer = gui.addFolder('Water Shimmer');
+  const folderGlint = gui.addFolder('Bokeh Glint');
+  const folderCamera = gui.addFolder('Camera');
+  const folderHaze = gui.addFolder('Haze');
+  folderSky.add(properties, 'rayleigh', 0, 5, 0.01).name('Rayleigh Scattering').onChange(updateSun);
+  folderSky.add(properties, 'turbidity', 0, 20, 0.1).name('Turbidity').onChange(updateSun);
+  folderSky.add(properties, 'mieCoefficient', 0.0001, 0.01, 0.0001).name('Mie Coefficient').onChange(updateSun);
+  folderSky.add(properties, 'mieDirectionalG', 0, 1, 0.01).name('Mie Directional G').onChange(updateSun);
+  folderSky.add(properties, 'elevation', 0, 90, 0.1).name('Sun Elevation').onChange(updateSun);
+  folderSky.add(properties, 'azimuth', -180, 180, 0.1).name('Sun Azimuth').onChange(updateSun);
+  folderSky.add(properties, 'exposure', 0, 1, 0.0001).name('Scene Exposure').onChange(updateSun);
+  folderSun.add(properties, 'sunIntensity', 0, 5, 0.01).name('Sun Intensity').onChange(updateSun);
+  folderWater.addColor(properties, 'waterColor').name('Water Color').onChange(updateWater);
+  folderWater.add(properties, 'distortionScale', 0, 8, 0.1).name('Wave Intensity').onChange(updateWater);
+  folderShimmer.add(properties, 'shimmer').name('Enable Shimmer').onChange(updateWater);
+  folderShimmer.addColor(properties, 'shimmerColor').name('Shimmer Color').onChange(updateWater);
+  folderShimmer.add(properties, 'shimmerIntensity', 0, 5, 0.1).name('Shimmer Intensity').onChange(updateWater);
+  folderShimmer.add(properties, 'shimmerSize', 0, 0.2, 0.01).name('Shimmer Size').onChange(updateWater);
+  folderShimmer.add(properties, 'shimmerSpeed', 0, 0.1, 0.001).name('Shimmer Speed').onChange(updateWater);
+  folderGlint.add(properties, 'bokehGlint').name('Enable Glint').onChange(updateWater);
+  folderGlint.addColor(properties, 'bokehGlintColor').name('Glint Color').onChange(updateWater);  
+  folderGlint.add(properties, 'bokehGlintIntensity', 0, 5, 0.1).name('Glint Intensity').onChange(updateWater);
+  folderGlint.add(properties, 'bokehGlintSize', 0, 1, 0.01).name('Glint Size').onChange(updateWater);
+  folderGlint.add(properties, 'bokehGlintDensity', 0, 10, 0.1).name('Glint Density').onChange(updateWater);
+  folderGlint.add(properties, 'bokehGlintSpeed', 0, 0.1, 0.001).name('Glint Speed').onChange(updateWater);
+  folderHaze.add(properties, 'haze').name('Enable Haze').onChange(updateHaze);
+  folderHaze.addColor(properties, 'hazeColor').name('Haze Color').onChange(updateHaze);
+  folderHaze.add(properties, 'hazeStrength', 0, 10, 0.1).name('Haze Strength').onChange(updateHaze);
+  folderHaze.add(properties, 'hazeDensity', 0, 1, 0.01).name('Haze Density').onChange(updateHaze);
+  folderHaze.add(properties, 'hazeNear', 0.1, 1000, 0.1).name('Haze Near').onChange(updateHaze);
+  folderHaze.add(properties, 'hazeFar', 1, 10000, 1).name('Haze Far').onChange(updateHaze);
+  folderCamera.add(properties, 'cropFactor', 1, 2, 0.01).name('Crop Factor').onChange(updateCamera);
+  folderCamera.add(properties, 'aspectRatio', 1.25, 2.5, 0.01).name('Aspect Ratio').onChange(updateCamera);
+  folderCamera.add(properties, 'focalLength', 20, 200, 1).name('Focal Length').onChange(updateCamera);
+  folderCamera.add(properties, 'aperture', 0.95, 22, 0.1).name('Aperture (F-Stop)').onChange(updateCamera);
+  folderCamera.add(properties, 'blades', 2, 64, 1).name('Aperture Blades').onChange(updateCamera);
+  folderCamera.add(properties, 'bokehStrength', 0, 0.2, 0.0001).name('Bokeh Strength').onChange(updateCamera);
+  folderCamera.add(properties, 'maxBlur', 0, 10, 0.01).name('Max Blur').onChange(updateCamera);
+  folderCamera.add(properties, 'apertureShape', ['circle', 'hexagon', 'pentagon', 'octagon', 'cinematic vertical oval']).name('Aperture Shape').onChange(updateCamera);
+  folderCamera.add(properties, 'sphericalAberration', 0, 0.1, 0.001).name('Spherical Aberration').onChange(updateCamera);
+  folderCamera.add(properties, 'vignetteOffset', 0, 10, 0.01).name('Vignette Offset').onChange(updateCamera);
+  folderCamera.add(properties, 'vignetteMultiplier', 0, 50, 0.01).name('Vignette Multiplier').onChange(updateCamera);
+  folderCamera.add(properties, 'bloomThreshold', 0, 1, 0.01).name('Bloom Threshold').onChange(updateCamera);
+  folderCamera.add(properties, 'bloomStrength', 0, 3, 0.01).name('Bloom Strength').onChange(updateCamera);
+  folderCamera.add(properties, 'bloomRadius', 0, 1, 0.01).name('Bloom Radius').onChange(updateCamera);
+  const folderFocus = folderCamera.addFolder('Focus');
+  properties.focusPoints.forEach((point, index) => {
+    const pointFolder = folderFocus.addFolder(`Point ${index + 1}`);
+    pointFolder.add(point, 'distance', 0, 1000, 1).name('Distance').onChange(updateCamera);
+    pointFolder.add(point, 'blur', 0, 0.1, 0.001).name('Blur').onChange(updateCamera);
+  });
+  folderSky.close();
+  folderSun.close();
+  folderWater.close();
+  folderShimmer.close();
+  folderGlint.close();
+  folderHaze.close();
+  folderCamera.open();
+  folderFocus.open();
+  function updateSun() {
+    const phi = THREE.MathUtils.degToRad(90 - properties.elevation);
+    const theta = THREE.MathUtils.degToRad(properties.azimuth);
+    sun.setFromSphericalCoords(1, phi, theta);
+    sky.material.uniforms['sunPosition'].value.copy(sun);
+    water.material.uniforms['sunDirection'].value.copy(sun).normalize();
+    scene.environment = pmremGenerator.fromScene(sky).texture;
+    renderer.toneMappingExposure = properties.exposure;
+    water.material.uniforms['sunColor'].value.setScalar(properties.sunIntensity);
+    skyUniforms['rayleigh'].value = properties.rayleigh;
+    skyUniforms['turbidity'].value = properties.turbidity;
+    skyUniforms['mieCoefficient'].value = properties.mieCoefficient;
+    skyUniforms['mieDirectionalG'].value = properties.mieDirectionalG;
+  }
+  function updateWater() {
+    const waterShimmerMaterial = new THREE.ShaderMaterial({
+      uniforms: {
+        time: {
+          value: 0
+        },
+        color: {
+          value: new THREE.Color(0xffffff)
+        },
+        intensity: {
+          value: 1
+        },
+        size: {
+          value: 0.1
+        },
+        rippleSpeed: {
+          value: 0.05
+        },
+        lightDirection: {
+          value: sun.clone().normalize()
+        }
+      },
+      vertexShader: `
+        uniform float time;
+        uniform float size;
+        uniform float rippleSpeed;
+        varying vec2 vUv;
+        void main() {
+          vUv = uv;
+          vec3 pos = position;
+          pos.y += sin(pos.x * 0.1 + time * rippleSpeed) * sin(pos.z * 0.1 + time * rippleSpeed) * size;
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
+        }
+      `,
+      fragmentShader: `
+        uniform vec3 color;
+        uniform float intensity;
+        uniform vec3 lightDirection;
+        varying vec2 vUv;
+        void main() {
+          vec3 normal = normalize(cross(dFdx(vUv), dFdy(vUv)));
+          float dotProduct = max(dot(normal, lightDirection), 0.0);
+          gl_FragColor = vec4(color * intensity * dotProduct, 1.0); 
+        }
+      `,
+      transparent: true,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false
+    });
+    const waterShimmer = new THREE.Mesh(new THREE.PlaneGeometry(10000, 10000), waterShimmerMaterial);
+    waterShimmer.rotation.x = -Math.PI / 2;
+    waterShimmer.name = 'waterShimmer';
+    scene.add(waterShimmer);
+    waterShimmerMaterial.uniforms.color.value = new THREE.Color(properties.shimmerColor);
+    waterShimmerMaterial.uniforms.intensity.value = properties.shimmerIntensity;
+    waterShimmerMaterial.uniforms.size.value = properties.shimmerSize;
+    waterShimmerMaterial.uniforms.rippleSpeed.value = properties.shimmerSpeed;
+    waterShimmer.visible = properties.shimmer;
+    water.material.uniforms['waterColor'].value.setHex(parseInt(properties.waterColor.replace('#', '0x')));
+    water.material.uniforms['distortionScale'].value = properties.distortionScale;
+    if (properties.bokehGlint) {
+      if (!scene.getObjectByName('waterGlint')) {
+        const bokehGlintMaterial = new THREE.ShaderMaterial({
+          uniforms: {
+            time: { value: 0 },
+            color: { value: new THREE.Color(properties.bokehGlintColor) },
+            intensity: { value: properties.bokehGlintIntensity },
+            size: { value: properties.bokehGlintSize },
+            density: { value: properties.bokehGlintDensity },
+            glintSpeed: { value: properties.bokehGlintSpeed },
+            lightDirection: { value: sun.clone().normalize() },
+          },
+          vertexShader: glintVertexShader,
+          fragmentShader: glintFragmentShader,
+          transparent: true,
+          blending: THREE.AdditiveBlending,
+          depthWrite: false,
+        });
+        const shape = new THREE.Shape();
+        switch (properties.blades) {
+          case 2: {
+            shape.moveTo(-0.5, 0);
+            shape.lineTo(0.5, 0);
+            shape.lineTo(0, 1);
+            break;
+          }
+          case 3: {
+            const h = 0.5 * Math.sqrt(3);
+            shape.moveTo(-0.5, -h / 3);
+            shape.lineTo(0.5, -h / 3);
+            shape.lineTo(0, (2 * h) / 3);
+            break;
+          }
+          case 4:
+            shape.moveTo(-0.5, -0.5);
+            shape.lineTo(0.5, -0.5);
+            shape.lineTo(0.5, 0.5);
+            shape.lineTo(-0.5, 0.5);
+            break;
+          case 5: {
+            const h = 0.5 * Math.sqrt(3);
+            shape.moveTo(-0.5, -(2 * h) / 3); 
+            shape.lineTo(0.5, -(2 * h) / 3);
+            shape.lineTo(0.5, h / 3);
+            shape.lineTo(0, h);
+            shape.lineTo(-0.5, h / 3);
+            break;
+          }
+          case 6:
+            shape.moveTo(-0.5, -0.5);
+            shape.lineTo(0, -0.5);
+            shape.lineTo(0.5, 0); 
+            shape.lineTo(0, 0.5);
+            shape.lineTo(-0.5, 0.5);
+            shape.lineTo(-0.5, 0);
+            break;
+          default:
+            shape.moveTo(0, 0);
+            shape.absarc(0, 0, 0.5, 0, Math.PI * 2);
+            break;
+        }
+        const glintGeometry = new THREE.ShapeGeometry(shape);
+        const waterGlint = new THREE.Mesh(glintGeometry, bokehGlintMaterial);
+        waterGlint.rotation.x = -Math.PI / 2;
+        waterGlint.name = 'waterGlint';
+        scene.add(waterGlint);
+      }
+      scene.getObjectByName('waterGlint').material.uniforms.color.value.setHex(parseInt(properties.bokehGlintColor.replace('#', '0x')));
+      scene.getObjectByName('waterGlint').material.uniforms.intensity.value = properties.bokehGlintIntensity;
+      scene.getObjectByName('waterGlint').material.uniforms.size.value = properties.bokehGlintSize;
+      scene.getObjectByName('waterGlint').material.uniforms.density.value = properties.bokehGlintDensity;
+      scene.getObjectByName('waterGlint').material.uniforms.glintSpeed.value = properties.bokehGlintSpeed;
+      scene.getObjectByName('waterGlint').visible = properties.bokehGlint;
+    } else {
+      const existingGlintMesh = scene.getObjectByName('waterGlint');
+      if (existingGlintMesh) {
+        scene.remove(existingGlintMesh);
+      }
+    }
+  }
+  function updateHaze() {
+    if (properties.haze && scene.fog === null) {
+      scene.fog = new THREE.Fog(parseInt(properties.hazeColor.replace('#', '0x')), properties.hazeNear, properties.hazeFar);
+      scene.fog.density = properties.hazeDensity;
+      water.material.uniforms['fogDensity'].value = properties.hazeStrength;
+      water.material.needsUpdate = true;
+    } else if (!properties.haze && scene.fog !== null) {
+      scene.fog = null;
+      water.material.uniforms['fogDensity'].value = 0;
+      water.material.blending = THREE.NormalBlending;
+      water.material.needsUpdate = true;
+    }
+  }
+  function getBlendMode(blendModeStr) {
+    switch (blendModeStr) {
+      case 'normal':
+        return THREE.NormalBlending;
+      case 'add':
+        return THREE.AdditiveBlending;
+      case 'subtract':
+        return THREE.SubtractiveBlending;
+      case 'multiply':
+        return THREE.MultiplyBlending;
+      default:
+        return THREE.NormalBlending;
+    }
+  }
+  function updateCamera() {
+    const sensorSize = 35 / properties.cropFactor;
+    const aspectRatio = properties.aspectRatio;
+    const fov = 2 * Math.atan(sensorSize / (2 * properties.focalLength)) * 180 / Math.PI;
+    camera.aspect = aspectRatio;
+    camera.fov = fov;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    composer.setSize(window.innerWidth, window.innerHeight);
+    try {
+      const bokehShader = THREE.BokehShader;
+      const focusPoints = properties.focusPoints.map(p => new THREE.Vector2(p.distance, p.blur));
+      focusPoints.sort((a, b) => a.x - b.x);
+      bokehShader.uniforms["focus"].value = focusPoints[1].x;
+      bokehShader.uniforms["aperture"].value = properties.bokehStrength * (properties.focalLength / properties.aperture) * 5;
+      bokehShader.uniforms["maxblur"].value = properties.maxBlur * 2;
+      bokehShader.uniforms["curvePoints"].value = focusPoints;
+      bokehShader.uniforms["sphericalAberration"].value = properties.sphericalAberration;
+      switch (properties.blades) {
+        case 2:
+          bokehShader.defines['TWO_BLADES'] = '';
+          delete bokehShader.defines['THREE_BLADES'];
+          delete bokehShader.defines['FOUR_BLADES'];
+          delete bokehShader.defines['FIVE_BLADES'];
+          delete bokehShader.defines['SIX_BLADES'];
+          delete bokehShader.defines['SEVEN_BLADES'];
+          delete bokehShader.defines['EIGHT_BLADES'];
+          break;
+        case 3:
+          bokehShader.defines['THREE_BLADES'] = '';
+          delete bokehShader.defines['TWO_BLADES'];
+          delete bokehShader.defines['FOUR_BLADES'];
+          delete bokehShader.defines['FIVE_BLADES'];
+          delete bokehShader.defines['SIX_BLADES'];
+          delete bokehShader.defines['SEVEN_BLADES'];
+          delete bokehShader.defines['EIGHT_BLADES'];
+          break;
+        case 4:
+          bokehShader.defines['FOUR_BLADES'] = '';
+          delete bokehShader.defines['TWO_BLADES'];
+          delete bokehShader.defines['THREE_BLADES'];
+          delete bokehShader.defines['FIVE_BLADES'];
+          delete bokehShader.defines['SIX_BLADES'];
+          delete bokehShader.defines['SEVEN_BLADES'];
+          delete bokehShader.defines['EIGHT_BLADES'];
+          break;
+        case 5:
+          bokehShader.defines['FIVE_BLADES'] = '';
+          delete bokehShader.defines['TWO_BLADES'];
+          delete bokehShader.defines['THREE_BLADES'];
+          delete bokehShader.defines['FOUR_BLADES'];
+          delete bokehShader.defines['SIX_BLADES'];
+          delete bokehShader.defines['SEVEN_BLADES'];
+          delete bokehShader.defines['EIGHT_BLADES'];
+          break;
+        case 6:
+          bokehShader.defines['SIX_BLADES'] = '';
+          delete bokehShader.defines['TWO_BLADES'];
+          delete bokehShader.defines['THREE_BLADES'];
+          delete bokehShader.defines['FOUR_BLADES'];
+          delete bokehShader.defines['FIVE_BLADES'];
+          delete bokehShader.defines['SEVEN_BLADES'];
+          delete bokehShader.defines['EIGHT_BLADES'];
+          break;
+        case 7:
+          bokehShader.defines['SEVEN_BLADES'] = '';
+          delete bokehShader.defines['TWO_BLADES'];
+          delete bokehShader.defines['THREE_BLADES'];
+          delete bokehShader.defines['FOUR_BLADES'];
+          delete bokehShader.defines['FIVE_BLADES'];
+          delete bokehShader.defines['SIX_BLADES'];
+          delete bokehShader.defines['EIGHT_BLADES'];
+          break;
+        case 8:
+          bokehShader.defines['EIGHT_BLADES'] = '';
+          delete bokehShader.defines['TWO_BLADES'];
+          delete bokehShader.defines['THREE_BLADES'];
+          delete bokehShader.defines['FOUR_BLADES'];
+          delete bokehShader.defines['FIVE_BLADES'];
+          delete bokehShader.defines['SIX_BLADES'];
+          delete bokehShader.defines['SEVEN_BLADES'];
+          break;
+        default:
+          delete bokehShader.defines['TWO_BLADES'];
+          delete bokehShader.defines['THREE_BLADES'];
+          delete bokehShader.defines['FOUR_BLADES'];
+          delete bokehShader.defines['FIVE_BLADES'];
+          delete bokehShader.defines['SIX_BLADES'];
+          delete bokehShader.defines['SEVEN_BLADES'];
+          delete bokehShader.defines['EIGHT_BLADES'];
+          break;
+      }
+      if (properties.apertureShape === 'circle') {
+        delete bokehShader.defines['PENTAGON'];
+        delete bokehShader.defines['HEXAGON'];
+        delete bokehShader.defines['OCTAGON'];
+      } else if (properties.apertureShape === 'pentagon') {
+        bokehShader.defines['PENTAGON'] = '';
+        delete bokehShader.defines['HEXAGON'];
+        delete bokehShader.defines['OCTAGON'];
+      } else if (properties.apertureShape === 'hexagon') {
+        bokehShader.defines['HEXAGON'] = '';
+        delete bokehShader.defines['PENTAGON'];
+        delete bokehShader.defines['OCTAGON'];
+      } else if (properties.apertureShape === 'octagon') {
+        bokehShader.defines['OCTAGON'] = '';
+        delete bokehShader.defines['PENTAGON'];
+        delete bokehShader.defines['HEXAGON'];
+      } else if (properties.apertureShape === 'cinematic vertical oval') {
+        bokehShader.defines['CINEMATIC_VERTICAL_OVAL'] = '';
+        delete bokehShader.defines['PENTAGON'];
+        delete bokehShader.defines['HEXAGON'];
+        delete bokehShader.defines['OCTAGON'];
+      }
+      const bokehPass = new THREE.ShaderPass(bokehShader);
+      composer.addPass(bokehPass);
+      const vignetteShader = THREE.VignetteShader;
+      vignetteShader.uniforms["offset"].value = properties.vignetteOffset * 2; 
+      vignetteShader.uniforms["darkness"].value = properties.vignetteMultiplier * 2;
+      vignetteShader.uniforms["viewportCoords"].value = new THREE.Vector4(
+        -camera.aspect, -1, 
+        camera.aspect, 1
+      );
+      vignetteShader.defines["VIEWPORT_COORDS"] = "";
+      const vignettePass = new THREE.ShaderPass(vignetteShader);
+      composer.addPass(vignettePass);
+      const bloomPass = new THREE.UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 1.5, 0.4, 0.85);
+      bloomPass.threshold = properties.bloomThreshold;
+      bloomPass.strength = properties.bloomStrength;
+      bloomPass.radius = properties.bloomRadius;
+      composer.addPass(bloomPass);
+      const copyPass = new THREE.ShaderPass(THREE.CopyShader);
+      composer.addPass(copyPass);
+    } catch (e) {
+      console.error(e);
+    }
+  }
+  updateSun();
+  updateWater();
+  updateHaze();
+  updateCamera();
+}
+function onWindowResize() {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  composer.setSize(window.innerWidth, window.innerHeight);
+}
+function animate() {
+  if (!paused) {
+    requestAnimationFrame(animate);
+    render();
+  }
+}
+function render() {
+  const time = performance.now() * 0.001;
+  water.material.uniforms['time'].value += 1.0 / 60.0;
+  scene.getObjectByName('waterShimmer').material.uniforms.time.value = time;
+  composer.render();
+}
+document.getElementById("pauseButton").addEventListener("click", function () {
+  paused = !paused;
+  document.getElementById("pauseButton").innerHTML = paused ? "Resume" : "Pause";
+  if (!paused) {
+    animate();
+  }
+});
+const glintVertexShader = `
+  uniform float time;
+  uniform float size;
+  uniform float density;
+  uniform float glintSpeed;
+  varying vec2 vUv;
+
+  void main() {
+    vUv = uv;
+    vec3 pos = position;
+    float speed = glintSpeed * 3.0;
+    pos.x += cos((time * speed) + pos.y * 0.1) * (size / density);
+    pos.y += sin((time * speed) + pos.x * 0.1) * (size / density); 
+    pos.z = 0.0;
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
+  }
+`;
+
+const glintFragmentShader = `
+  uniform vec3 color;
+  uniform float intensity;
+  varying vec2 vUv;
+
+  void main() {
+    float dist = distance(vUv, vec2(0.5));
+    float glint = smoothstep(0.4, 0.45, dist) - smoothstep(0.45, 0.5, dist);
+    gl_FragColor = vec4(color.rgb * intensity * glint, glint);
+  }
+`;
+init();
+animate();
+window.addEventListener('resize', onWindowResize);
+</script>
+</body>
+</html>

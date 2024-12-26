@@ -1,0 +1,270 @@
+<html><head><base href="/" />
+<title>Epic Snowflake Generator</title>
+<style>
+  body {
+    margin: 0;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(to bottom, #1a1a2e, #16213e);
+    color: white;
+    font-family: system-ui, sans-serif;
+  }
+
+  .controls {
+    margin: 20px;
+    padding: 20px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 10px;
+    text-align: center;
+  }
+
+  button {
+    background: #4a90e2;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 5px;
+    cursor: pointer;
+    margin: 5px;
+    transition: all 0.3s ease;
+  }
+
+  button:hover {
+    background: #357abd;
+    transform: scale(1.05);
+  }
+
+  #snowflake {
+    transition: all 0.5s ease;
+  }
+
+  .glow {
+    filter: drop-shadow(0 0 10px rgba(255,255,255,0.7));
+  }
+
+  .code-container {
+    margin: 20px;
+    display: none;
+  }
+
+  .code-container.visible {
+    display: block;
+  }
+
+  textarea {
+    width: 500px;
+    height: 200px;
+    background: rgba(255,255,255,0.1);
+    color: white;
+    border: 1px solid rgba(255,255,255,0.3);
+    border-radius: 5px;
+    padding: 10px;
+    font-family: monospace;
+    margin-top: 10px;
+  }
+
+  .attribution {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: rgba(0,0,0,0.8);
+    padding: 10px;
+    text-align: center;
+    font-size: 0.9em;
+    line-height: 1.5;
+  }
+
+  .attribution a {
+    color: #4a90e2;
+    text-decoration: none;
+  }
+
+  .attribution a:hover {
+    text-decoration: underline;
+  }
+</style>
+</head>
+<body>
+  <div class="controls">
+    <h2>❄️ Epic Snowflake Generator ❄️</h2>
+    <button onclick="generateSnowflake()">Generate New Snowflake</button>
+    <button onclick="toggleAnimation()">Toggle Rotation</button>
+    <button onclick="toggleCode('postscript')">Toggle PostScript Code</button>
+    <button onclick="toggleCode('svg')">Toggle SVG Code</button>
+  </div>
+  <svg id="snowflake" width="500" height="500" viewBox="-250 -250 500 500">
+    <g id="snowflakeGroup"></g>
+  </svg>
+
+  <div id="postscriptContainer" class="code-container">
+    <h3>PostScript Code</h3>
+    <textarea id="postscriptCode" readonly></textarea>
+  </div>
+
+  <div id="svgContainer" class="code-container">
+    <h3>SVG Code</h3>
+    <textarea id="svgCode" readonly></textarea>
+  </div>
+
+  <div class="attribution">
+    <p> 2024 Epic Snowflake Generator</p>
+    <p>This project is licensed under the MIT License</p>
+    <p>Built using: 
+      <a href="https://www.w3.org/Graphics/SVG/" target="_blank">SVG</a> | 
+      <a href="https://www.adobe.com/products/postscript.html" target="_blank">PostScript</a>
+    </p>
+    <p>
+      MIT License<br>
+      Permission is hereby granted, free of charge, to any person obtaining a copy
+      of this software and associated documentation files (the "Software"), to deal
+      in the Software without restriction, including without limitation the rights
+      to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+      copies of the Software, and to permit persons to whom the Software is
+      furnished to do so, subject to the following conditions:<br>
+      The above copyright notice and this permission notice shall be included in all
+      copies or substantial portions of the Software.
+    </p>
+  </div>
+
+<script>
+let isAnimating = false;
+let rotationAngle = 0;
+let currentArmPoints = [];
+
+function generateArm() {
+  const points = [];
+  let x = 0;
+  let y = 0;
+  
+  for (let i = 0; i < 6; i++) {
+    x = Math.random() * 30 + (i * 30);
+    y = (Math.random() - 0.5) * 20;
+    points.push([x, y]);
+    
+    if (i > 0 && Math.random() > 0.3) {
+      const branchLength = Math.random() * 30 + 10;
+      const branchY = y + branchLength;
+      points.push([x, branchY]);
+      points.push([x, y]);
+    }
+  }
+  
+  currentArmPoints = points;
+  return points;
+}
+
+function generateSnowflake() {
+  const group = document.getElementById('snowflakeGroup');
+  group.innerHTML = '';
+  
+  const armPoints = generateArm();
+  
+  let pathString = `M 0,0 `;
+  armPoints.forEach(point => {
+    pathString += `L ${point[0]},${point[1]} `;
+  });
+  
+  for (let i = 0; i < 6; i++) {
+    const angle = i * 60;
+    const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    path.setAttribute("d", pathString);
+    path.setAttribute("transform", `rotate(${angle})`);
+    path.setAttribute("stroke", "#fff");
+    path.setAttribute("fill", "none");
+    path.setAttribute("stroke-width", "2");
+    
+    const animate = document.createElementNS("http://www.w3.org/2000/svg", "animate");
+    animate.setAttribute("attributeName", "stroke-dasharray");
+    animate.setAttribute("from", "0,1000");
+    animate.setAttribute("to", "1000,0");
+    animate.setAttribute("dur", "2s");
+    animate.setAttribute("begin", "0s");
+    path.appendChild(animate);
+    
+    group.appendChild(path);
+    
+    const mirrorPath = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    mirrorPath.setAttribute("d", pathString);
+    mirrorPath.setAttribute("transform", `rotate(${angle}) scale(1,-1)`);
+    mirrorPath.setAttribute("stroke", "#fff");
+    mirrorPath.setAttribute("fill", "none");
+    mirrorPath.setAttribute("stroke-width", "2");
+    
+    const animate2 = animate.cloneNode(true);
+    mirrorPath.appendChild(animate2);
+    
+    group.appendChild(mirrorPath);
+  }
+
+  updateCodeDisplays();
+}
+
+function toggleAnimation() {
+  isAnimating = !isAnimating;
+  if (isAnimating) {
+    animate();
+  }
+}
+
+function animate() {
+  if (!isAnimating) return;
+  
+  rotationAngle = (rotationAngle + 0.5) % 360;
+  document.getElementById('snowflakeGroup').setAttribute(
+    'transform', 
+    `rotate(${rotationAngle})`
+  );
+  
+  requestAnimationFrame(animate);
+}
+
+function toggleCode(type) {
+  const container = document.getElementById(`${type}Container`);
+  container.classList.toggle('visible');
+}
+
+function generatePostScript() {
+  let ps = `%!PS-Adobe-3.0\n`;
+  ps += `% Snowflake Pattern\n`;
+  ps += `300 400 translate\n`;
+  ps += `0.5 setlinewidth\n`;
+  
+  let armPath = `newpath\n0 0 moveto\n`;
+  currentArmPoints.forEach(point => {
+    armPath += `${point[0]} ${point[1]} lineto\n`;
+  });
+  
+  for (let i = 0; i < 6; i++) {
+    ps += `gsave\n`;
+    ps += `${i * 60} rotate\n`;
+    ps += armPath;
+    ps += `stroke\n`;
+    ps += `grestore\n`;
+    
+    ps += `gsave\n`;
+    ps += `${i * 60} rotate\n`;
+    ps += `1 -1 scale\n`;
+    ps += armPath;
+    ps += `stroke\n`;
+    ps += `grestore\n`;
+  }
+  
+  return ps;
+}
+
+function generateSVGCode() {
+  return document.getElementById('snowflake').outerHTML;
+}
+
+function updateCodeDisplays() {
+  document.getElementById('postscriptCode').value = generatePostScript();
+  document.getElementById('svgCode').value = generateSVGCode();
+}
+
+generateSnowflake();
+</script>
+</body></html>
