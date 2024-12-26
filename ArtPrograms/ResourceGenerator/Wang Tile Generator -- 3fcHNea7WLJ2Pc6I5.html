@@ -1,0 +1,291 @@
+<html><head><base href="." /><base target="_top" /><meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Interactive Tiling Pattern Generator</title>
+<style>
+:root {
+  --primary: #2a3f54;
+  --secondary: #e74c3c;
+  --background: #f5f6fa;
+}
+
+body {
+  margin: 0;
+  padding: 20px;
+  background: var(--background);
+  font-family: system-ui, -apple-system, sans-serif;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.controls {
+  margin: 20px;
+  padding: 20px;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.canvas-container {
+  position: relative;
+  margin: 20px;
+}
+
+canvas {
+  border: 2px solid var(--primary);
+  border-radius: 4px;
+  background: white;
+}
+
+button {
+  background: var(--primary);
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin: 0 10px;
+}
+
+button:hover {
+  background: var(--secondary);
+  transform: translateY(-2px);
+}
+
+.pattern-type {
+  margin: 10px 0;
+}
+
+select {
+  padding: 8px;
+  border-radius: 4px;
+  border: 1px solid var(--primary);
+}
+</style>
+</head>
+<body>
+<h1>Interactive Tiling Pattern Generator</h1>
+
+<div class="controls">
+  <div class="pattern-type">
+    <label for="pattern">Pattern Type:</label>
+    <select id="pattern">
+      <option value="wang">Wang Tiles</option>
+      <option value="penrose">Penrose Tiling</option>
+    </select>
+  </div>
+  <button onclick="generatePattern()">Generate New Pattern</button>
+  <button onclick="downloadPattern()">Download Pattern</button>
+</div>
+
+<div class="canvas-container">
+  <canvas id="tileCanvas" width="800" height="600"></canvas>
+</div>
+
+<script>
+const canvas = document.getElementById('tileCanvas');
+const ctx = canvas.getContext('2d');
+const tileSize = 40;
+
+// Wang Tile definitions
+const wangTiles = {
+  colors: ['#e74c3c', '#3498db', '#2ecc71', '#f1c40f'],
+  tiles: []
+};
+
+// Generate Wang Tiles
+function generateWangTiles() {
+  wangTiles.tiles = [];
+  for(let top = 0; top < 4; top++) {
+    for(let right = 0; right < 4; right++) {
+      for(let bottom = 0; bottom < 4; bottom++) {
+        for(let left = 0; left < 4; left++) {
+          wangTiles.tiles.push({top, right, bottom, left});
+        }
+      }
+    }
+  }
+}
+
+// Draw a Wang Tile
+function drawWangTile(x, y, tile) {
+  ctx.fillStyle = wangTiles.colors[tile.top];
+  ctx.beginPath();
+  ctx.moveTo(x, y);
+  ctx.lineTo(x + tileSize, y);
+  ctx.lineTo(x + tileSize/2, y + tileSize/2);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.fillStyle = wangTiles.colors[tile.right];
+  ctx.beginPath();
+  ctx.moveTo(x + tileSize, y);
+  ctx.lineTo(x + tileSize, y + tileSize);
+  ctx.lineTo(x + tileSize/2, y + tileSize/2);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.fillStyle = wangTiles.colors[tile.bottom];
+  ctx.beginPath();
+  ctx.moveTo(x, y + tileSize);
+  ctx.lineTo(x + tileSize, y + tileSize);
+  ctx.lineTo(x + tileSize/2, y + tileSize/2);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.fillStyle = wangTiles.colors[tile.left];
+  ctx.beginPath();
+  ctx.moveTo(x, y);
+  ctx.lineTo(x, y + tileSize);
+  ctx.lineTo(x + tileSize/2, y + tileSize/2);
+  ctx.closePath();
+  ctx.fill();
+}
+
+class PenroseTile {
+  constructor(points, type) {
+    this.points = points;
+    this.type = type;
+    this.color = this.randomizeColor();
+  }
+
+  randomizeColor() {
+    const colors = [
+      ['#3498db', '#2980b9'], // Blue shades
+      ['#e74c3c', '#c0392b'], // Red shades
+      ['#2ecc71', '#27ae60'], // Green shades
+      ['#f1c40f', '#f39c12'], // Yellow shades
+      ['#9b59b6', '#8e44ad']  // Purple shades
+    ];
+    const randomSet = colors[Math.floor(Math.random() * colors.length)];
+    return this.type === 0 ? randomSet[0] : randomSet[1];
+  }
+
+  draw() {
+    ctx.beginPath();
+    ctx.moveTo(this.points[0].x, this.points[0].y);
+    for (let i = 1; i < this.points.length; i++) {
+      ctx.lineTo(this.points[i].x, this.points[i].y);
+    }
+    ctx.closePath();
+    ctx.fillStyle = this.color;
+    ctx.fill();
+    ctx.strokeStyle = '#2c3e50';
+    ctx.stroke();
+  }
+
+  subdivide() {
+    const tiles = [];
+    const phi = (1 + Math.sqrt(5)) / 2;
+    const randomOffset = (Math.random() - 0.5) * 0.1; // Small random offset
+    
+    if (this.type === 0) {
+      const p0 = this.points[0];
+      const p1 = this.points[1];
+      const p2 = this.points[2];
+      const p3 = this.points[3];
+      
+      const q0 = interpolate(p0, p1, 1/phi + randomOffset);
+      const q1 = interpolate(p3, p2, 1/phi + randomOffset);
+      
+      tiles.push(new PenroseTile([p0, q0, q1, p3], 1));
+      tiles.push(new PenroseTile([q0, p1, p2, q1], 0));
+      
+    } else {
+      const p0 = this.points[0];
+      const p1 = this.points[1];
+      const p2 = this.points[2];
+      const p3 = this.points[3];
+      
+      const q0 = interpolate(p0, p1, 1/phi + randomOffset);
+      const q1 = interpolate(p0, p3, 1/phi + randomOffset);
+      const q2 = interpolate(p2, p1, 1/phi + randomOffset);
+      const q3 = interpolate(p2, p3, 1/phi + randomOffset);
+      
+      tiles.push(new PenroseTile([q0, p1, q2, q1], 0));
+      tiles.push(new PenroseTile([q1, q2, p2, q3], 0));
+      tiles.push(new PenroseTile([p0, q0, q1, p3], 1));
+      tiles.push(new PenroseTile([q1, q3, p3, p3], 1));
+    }
+    
+    return tiles;
+  }
+}
+
+function interpolate(p1, p2, t) {
+  return {
+    x: p1.x * (1 - t) + p2.x * t,
+    y: p1.y * (1 - t) + p2.y * t
+  };
+}
+
+function generatePenroseTiling(iterations) {
+  let tiles = [];
+  const size = Math.max(canvas.width, canvas.height) * 0.8;
+  const centerX = canvas.width / 2;
+  const centerY = canvas.height / 2;
+  
+  // Create initial decagon with slight randomization
+  for (let i = 0; i < 10; i++) {
+    const randomOffset = (Math.random() - 0.5) * 0.1;
+    const angle1 = (2 * Math.PI * i) / 10 + randomOffset;
+    const angle2 = (2 * Math.PI * (i + 1)) / 10 + randomOffset;
+    const p0 = {
+      x: centerX + size * Math.cos(angle1),
+      y: centerY + size * Math.sin(angle1)
+    };
+    const p1 = {
+      x: centerX + size * Math.cos(angle2),
+      y: centerY + size * Math.sin(angle2)
+    };
+    const p2 = { 
+      x: centerX + (Math.random() - 0.5) * 20,
+      y: centerY + (Math.random() - 0.5) * 20
+    };
+    
+    tiles.push(new PenroseTile([p0, p1, p2, p0], Math.random() < 0.5 ? 0 : 1));
+  }
+  
+  // Subdivide tiles
+  for (let i = 0; i < iterations; i++) {
+    const newTiles = [];
+    tiles.forEach(tile => {
+      newTiles.push(...tile.subdivide());
+    });
+    tiles = newTiles;
+  }
+  
+  return tiles;
+}
+
+function generatePattern() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  
+  const patternType = document.getElementById('pattern').value;
+  
+  if (patternType === 'wang') {
+    generateWangTiles();
+    
+    for(let y = 0; y < canvas.height; y += tileSize) {
+      for(let x = 0; x < canvas.width; x += tileSize) {
+        const randomTile = wangTiles.tiles[Math.floor(Math.random() * wangTiles.tiles.length)];
+        drawWangTile(x, y, randomTile);
+      }
+    }
+  } else {
+    const tiles = generatePenroseTiling(6);
+    tiles.forEach(tile => tile.draw());
+  }
+}
+
+function downloadPattern() {
+  const link = document.createElement('a');
+  link.download = 'tiling-pattern.png';
+  link.href = canvas.toDataURL();
+  link.click();
+}
+
+// Initial pattern generation
+generatePattern();
+</script>
+</body></html>
