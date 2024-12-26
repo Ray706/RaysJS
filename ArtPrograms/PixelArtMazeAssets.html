@@ -1,0 +1,295 @@
+<html><head><base href="https://pixel-maze-assets.com/"><title>Pixel Art Maze Assets - Free CC0 Resources</title>
+<style>
+:root {
+  --primary: #2a2a4a;
+  --secondary: #4a4a6a;
+  --accent: #8a6fb5;
+  --text: #e0e0e0;
+}
+
+body {
+  background: var(--primary);
+  color: var(--text);
+  font-family: 'Pixelated MS Sans Serif', Arial, sans-serif;
+  line-height: 1.6;
+  margin: 0;
+  padding: 20px;
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+h1, h2 {
+  color: var(--accent);
+  text-align: center;
+}
+
+.tile-gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 20px;
+  margin: 40px 0;
+}
+
+.tile-card {
+  background: var(--secondary);
+  border-radius: 8px;
+  padding: 15px;
+  transition: transform 0.3s;
+}
+
+.tile-card:hover {
+  transform: scale(1.05);
+}
+
+.pixel-art {
+  width: 100%;
+  aspect-ratio: 1;
+  image-rendering: pixelated;
+}
+
+.usage-guide {
+  background: var(--secondary);
+  border-radius: 8px;
+  padding: 20px;
+  margin: 20px 0;
+}
+
+code {
+  background: #1a1a2a;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: 'Courier New', monospace;
+}
+
+/* SVG Pixel Art */
+.pixel-svg {
+  width: 100%;
+  height: 100%;
+}
+
+.demo-section {
+  background: var(--secondary);
+  border-radius: 8px;
+  padding: 20px;
+  margin: 20px 0;
+}
+
+#demoCanvas {
+  background: #1a1a2a;
+  border-radius: 4px;
+  margin: 20px auto;
+  display: block;
+}
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>🎮 Pixel Art Maze Assets (CC0)</h1>
+  <p>Welcome to our collection of free-to-use pixel art assets for your maze games! All assets are released under the CC0 license - no attribution required!</p>
+
+  <div class="tile-gallery">
+    <!-- Original tiles -->
+    <div class="tile-card">
+      <svg class="pixel-art" viewBox="0 0 16 16">
+        <rect width="16" height="16" fill="#2d2d2d"/>
+        <rect x="1" y="1" width="14" height="14" fill="#3d3d3d"/>
+        <rect x="2" y="2" width="2" height="2" fill="#4d4d4d"/>
+        <rect x="12" y="12" width="2" height="2" fill="#4d4d4d"/>
+      </svg>
+      <h3>Stone Wall</h3>
+      <p>Classic dungeon wall tile with subtle texture</p>
+    </div>
+
+    <div class="tile-card">
+      <svg class="pixel-art" viewBox="0 0 16 16">
+        <rect width="16" height="16" fill="#65615d"/>
+        <rect x="0" y="0" width="8" height="8" fill="#726e69"/>
+        <rect x="8" y="8" width="8" height="8" fill="#726e69"/>
+      </svg>
+      <h3>Stone Floor</h3>
+      <p>Checkered floor pattern for maze paths</p>
+    </div>
+
+    <div class="tile-card">
+      <svg class="pixel-art" viewBox="0 0 16 16">
+        <rect width="16" height="16" fill="#4a3728"/>
+        <rect x="2" y="2" width="12" height="12" fill="#6b4f3a"/>
+        <circle cx="12" cy="8" r="1" fill="#917256"/>
+      </svg>
+      <h3>Wooden Door</h3>
+      <p>Interactive door tile for maze transitions</p>
+    </div>
+
+    <!-- New tiles -->
+    <div class="tile-card">
+      <svg class="pixel-art" viewBox="0 0 16 16">
+        <rect width="16" height="16" fill="#1a472a"/>
+        <path d="M4,4 L12,4 L8,12 Z" fill="#2d5a3d"/>
+        <circle cx="8" cy="8" r="2" fill="#428c5c"/>
+      </svg>
+      <h3>Portal</h3>
+      <p>Teleporter for maze shortcuts</p>
+    </div>
+
+    <div class="tile-card">
+      <svg class="pixel-art" viewBox="0 0 16 16">
+        <rect width="16" height="16" fill="#4a4a4a"/>
+        <rect x="6" y="6" width="4" height="4" fill="#ffd700"/>
+        <rect x="7" y="7" width="2" height="2" fill="#ffed4a"/>
+      </svg>
+      <h3>Coin</h3>
+      <p>Collectible treasure item</p>
+    </div>
+
+    <div class="tile-card">
+      <svg class="pixel-art" viewBox="0 0 16 16">
+        <rect width="16" height="16" fill="#8b0000"/>
+        <path d="M4,4 L12,4 L8,12 Z" fill="#ff0000"/>
+        <rect x="7" y="6" width="2" height="4" fill="#ffcccc"/>
+      </svg>
+      <h3>Trap</h3>
+      <p>Dangerous obstacle tile</p>
+    </div>
+  </div>
+
+  <div class="demo-section">
+    <h2>Live Demo</h2>
+    <canvas id="demoCanvas" width="320" height="320"></canvas>
+    <p>Click the canvas to generate a new random maze!</p>
+  </div>
+
+  <!-- Previous content remains the same -->
+  <div class="usage-guide">
+    <h2>How to Use These Assets</h2>
+    <h3>1. Setting Up Your Game Grid</h3>
+    <code>
+    const TILE_SIZE = 32; // Size of each tile in pixels
+    const GRID_WIDTH = 20; // Number of tiles horizontally
+    const GRID_HEIGHT = 20; // Number of tiles vertically
+    </code>
+
+    <h3>2. Loading Assets</h3>
+    <pre><code>
+// Example using JavaScript and Canvas
+const tileMap = {
+  WALL: 0,
+  FLOOR: 1,
+  DOOR: 2
+};
+
+function drawTile(ctx, type, x, y) {
+  const tileSize = 32;
+  switch(type) {
+    case tileMap.WALL:
+      ctx.fillStyle = '#2d2d2d';
+      ctx.fillRect(x * tileSize, y * tileSize, tileSize, tileSize);
+      break;
+    // ... other tile types
+  }
+}
+    </code></pre>
+
+    <h3>3. Creating Your Maze</h3>
+    <pre><code>
+const maze = [
+  [0, 0, 0, 0, 0],
+  [0, 1, 1, 1, 0],
+  [0, 1, 0, 1, 0],
+  [0, 1, 1, 1, 0],
+  [0, 0, 0, 0, 0]
+];
+    </code></pre>
+  </div>
+
+  <div class="usage-guide">
+    <h2>License Information</h2>
+    <p>All assets on this page are released under the Creative Commons Zero (CC0) license. This means you can:</p>
+    <ul>
+      <li>Use them in commercial projects</li>
+      <li>Modify and adapt them</li>
+      <li>Use them without attribution (though appreciated!)</li>
+      <li>Redistribute them freely</li>
+    </ul>
+  </div>
+</div>
+
+<script>
+const canvas = document.getElementById('demoCanvas');
+const ctx = canvas.getContext('2d');
+const TILE_SIZE = 32;
+const GRID_SIZE = 10;
+
+function generateMaze(size) {
+  const maze = Array(size).fill().map(() => Array(size).fill(1));
+  
+  // Generate borders
+  for(let i = 0; i < size; i++) {
+    maze[0][i] = 0;
+    maze[size-1][i] = 0;
+    maze[i][0] = 0;
+    maze[i][size-1] = 0;
+  }
+
+  // Random obstacles
+  for(let i = 2; i < size-2; i++) {
+    for(let j = 2; j < size-2; j++) {
+      if(Math.random() < 0.3) {
+        maze[i][j] = 0;
+      }
+    }
+  }
+
+  // Ensure path exists
+  maze[1][1] = 1;
+  maze[size-2][size-2] = 1;
+
+  return maze;
+}
+
+function drawMaze(maze) {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  
+  maze.forEach((row, y) => {
+    row.forEach((cell, x) => {
+      if(cell === 0) {
+        // Wall
+        ctx.fillStyle = '#2d2d2d';
+        ctx.fillRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+        ctx.fillStyle = '#3d3d3d';
+        ctx.fillRect(x * TILE_SIZE + 2, y * TILE_SIZE + 2, TILE_SIZE - 4, TILE_SIZE - 4);
+      } else {
+        // Floor
+        ctx.fillStyle = '#65615d';
+        ctx.fillRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+        if((x + y) % 2 === 0) {
+          ctx.fillStyle = '#726e69';
+          ctx.fillRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+        }
+      }
+    });
+  });
+}
+
+let maze = generateMaze(GRID_SIZE);
+drawMaze(maze);
+
+canvas.addEventListener('click', () => {
+  maze = generateMaze(GRID_SIZE);
+  drawMaze(maze);
+});
+
+// Tile card interaction
+document.querySelectorAll('.tile-card').forEach(card => {
+  card.addEventListener('click', () => {
+    card.style.transform = 'scale(1.1)';
+    setTimeout(() => {
+      card.style.transform = 'scale(1)';
+    }, 200);
+  });
+});
+</script>
+</body></html>
