@@ -1,0 +1,650 @@
+<html><head><base href=".">
+<style>
+body {
+    margin: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    background: #1a1a1a;
+    font-family: Arial, sans-serif;
+    color: #fff;
+}
+
+.container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+}
+
+#shape-container {
+    width: 600px;
+    height: 600px;
+}
+
+textarea {
+    width: 400px;
+    height: 200px;
+    background: #333;
+    color: #fff;
+    padding: 10px;
+    border: none;
+    border-radius: 5px;
+}
+
+.button-container {
+    display: flex;
+    gap: 10px;
+}
+
+button {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    color: white;
+    cursor: pointer;
+}
+
+.generate-btn {
+    background-color: #ff6b6b;
+}
+
+.log-btn {
+    background-color: #6b9fff;
+}
+
+.pause-btn {
+    background-color: #6bff9f;
+}
+
+@keyframes lineColorPulse {
+  0% { opacity: 0.3; }
+  50% { opacity: 0.8; }
+  100% { opacity: 0.3; }
+}
+
+.connecting-line {
+  animation: lineColorPulse 2s infinite;
+}
+
+#abc-player {
+    width: 400px;
+    margin: 20px 0;
+    background: #2a2a2a;
+    padding: 15px;
+    border-radius: 8px;
+}
+
+.abcjs-inline-audio {
+    height: 40px;
+    padding: 8px;
+    margin: 10px 0;
+    background: #333;
+    border-radius: 5px;
+    display: flex;
+    align-items: center;
+}
+
+.abcjs-btn {
+    color: #fff;
+    background-color: #6b9fff;
+    margin-right: 4px;
+    padding: 4px 8px;
+    border-radius: 4px;
+    border: none;
+    font-size: 14px;
+}
+
+.abcjs-btn:hover {
+    background-color: #5a8ae0;
+}
+
+.abcjs-progress-background {
+    background-color: #444;
+}
+
+.abcjs-progress-bar {
+    background-color: #6b9fff;
+}
+
+.abcjs-midi-download {
+    color: white;
+    text-decoration: none;
+    margin: 10px 0;
+    display: inline-block;
+}
+
+.attribution-section a {
+    text-decoration: none;
+    transition: color 0.3s ease;
+}
+
+.attribution-section a:hover {
+    color: #ff6b6b !important;
+}
+
+.attribution-section ul {
+    margin: 10px 0;
+}
+
+.attribution-section li {
+    margin: 5px 0;
+}
+</style>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/abcjs/6.2.2/abcjs-audio.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/abcjs/6.2.2/abcjs-basic-min.js"></script>
+</head>
+<body>
+<div class="container">
+    <div class="attribution-section" style="text-align: center; margin-bottom: 20px; color: #888; font-size: 0.9em;">
+        <p>Created using:</p>
+        <ul style="list-style: none; padding: 0;">
+            <li>ABC.js (v6.2.2) - BSD-3-Clause License 
+                <a href="https://www.abcjs.net/" style="color: #6b9fff;">www.abcjs.net</a>
+            </li>
+            <li>ABC.js Sound Fonts by Benjamin Gleitzman (MIT License)
+                <a href="https://github.com/gleitz/midi-js-soundfonts" style="color: #6b9fff;">midi-js-soundfonts</a>
+            </li>
+            <li>SVG Graphics & Animations - Original Work</li>
+            <li>Musical Modes Implementation - Traditional Public Domain Knowledge</li>
+        </ul>
+        <p style="margin-top: 10px; font-size: 0.8em;">
+            This work is licensed under the 
+            <a href="https://opensource.org/licenses/MIT" style="color: #6b9fff;">MIT License</a>. 
+            Feel free to use, modify, and share while maintaining attributions.
+        </p>
+    </div>
+    <svg id="shape-container" viewBox="0 0 600 600"/>
+    <textarea id="abc-notation" readonly></textarea>
+    <div id="abc-player"></div>
+    <div id="mode-selection" style="margin: 10px 0;">
+        <label for="mode-select" style="color: white; margin-right: 10px;">Musical Mode:</label>
+        <select id="mode-select" style="padding: 5px; background: #333; color: white; border: 1px solid #666; border-radius: 4px;">
+            <option value="Ionian (Major)">Ionian (Major)</option>
+            <option value="Dorian">Dorian</option>
+            <option value="Phrygian">Phrygian</option>
+            <option value="Lydian">Lydian</option>
+            <option value="Mixolydian">Mixolydian</option>
+            <option value="Aeolian (Minor)">Aeolian (Minor)</option>
+            <option value="Locrian">Locrian</option>
+        </select>
+    </div>
+    <div class="button-container"></div>
+</div>
+
+<script>const MUSICAL_MODES = {
+  'Ionian (Major)': ['C', 'D', 'E', 'F', 'G', 'A', 'B'],
+  'Dorian': ['D', 'E', 'F', 'G', 'A', 'B', 'C'],
+  'Phrygian': ['E', 'F', 'G', 'A', 'B', 'C', 'D'],
+  'Lydian': ['F', 'G', 'A', 'B', 'C', 'D', 'E'],
+  'Mixolydian': ['G', 'A', 'B', 'C', 'D', 'E', 'F'],
+  'Aeolian (Minor)': ['A', 'B', 'C', 'D', 'E', 'F', 'G'],
+  'Locrian': ['B', 'C', 'D', 'E', 'F', 'G', 'A']
+};
+class AudioController {
+  constructor(mode = 'Ionian (Major)') {
+    this.setMode(mode);
+    this.currentNoteIndex = 0;
+    this.lastPosition = null;
+    this.lastTrajectory = undefined;
+    this.isPlaying = false;
+  }
+  setMode(mode) {
+    const baseNotes = MUSICAL_MODES[mode];
+    this.notes = baseNotes.map(note => note + '4').concat(baseNotes[0] + '5');
+  }
+  stop() {
+    this.isPlaying = false;
+    this.currentNoteIndex = 0;
+    this.lastPosition = null;
+    this.lastTrajectory = undefined;
+    if (this.animationFrame) {
+      cancelAnimationFrame(this.animationFrame);
+      this.animationFrame = null;
+    }
+  }
+  playNote(x, y, volume = 0.1) {
+    let noteIndex;
+    if (this.lastPosition) {
+      const dx = x - this.lastPosition.x;
+      const dy = y - this.lastPosition.y;
+      const currentTrajectory = Math.atan2(dy, dx);
+      if (this.lastTrajectory !== undefined) {
+        const trajectoryChange = Math.abs(currentTrajectory - this.lastTrajectory);
+        if (trajectoryChange > 0.5) {
+          this.currentNoteIndex = (this.currentNoteIndex + 2) % this.notes.length;
+        } else {
+          this.currentNoteIndex = (this.currentNoteIndex + 1) % this.notes.length;
+        }
+      }
+      this.lastTrajectory = currentTrajectory;
+    }
+    noteIndex = this.currentNoteIndex;
+    const note = this.notes[noteIndex];
+    this.lastPosition = {
+      x,
+      y
+    };
+    return note;
+  }
+}
+class ShapeGenerator {
+  constructor() {
+    this.svg = document.getElementById('shape-container');
+    this.points = [];
+    this.innerPoints = [];
+    this.path = '';
+    this.innerPath = '';
+    this.audioController = new AudioController('Ionian (Major)');
+    this.abcNotation = '';
+    this.connectingLine = null;
+    this.innerCircle = null;
+    this.outerCircle = null;
+    this.isLogging = false;
+    this.isPaused = false;
+    this.lastInnerPos = {
+      x: 0,
+      y: 0
+    };
+    this.lastOuterPos = null;
+    this.currentMode = 'Ionian (Major)';
+    this.animationFrame = null;
+    this.lineAnimationFrame = null;
+    this.animateMotionElements = [];
+  }
+  generateRandomShape() {
+    const sides = Math.floor(Math.random() * 6) + 5;
+    const centerX = 300;
+    const centerY = 300;
+    const radius = Math.random() * 100 + 150;
+    this.points = [];
+    for (let i = 0; i < sides * 3; i++) {
+      const angle = i * 2 * Math.PI / (sides * 3);
+      const randomRadius = radius + (Math.random() - 0.5) * 100;
+      const x = centerX + randomRadius * Math.cos(angle) + (Math.random() - 0.5) * 40;
+      const y = centerY + randomRadius * Math.sin(angle) + (Math.random() - 0.5) * 40;
+      this.points.push({
+        x,
+        y
+      });
+    }
+    const innerSides = Math.floor(Math.random() * 4) + 3;
+    const innerRadius = radius * 0.4;
+    this.innerPoints = [];
+    for (let i = 0; i < innerSides * 2; i++) {
+      const angle = i * 2 * Math.PI / (innerSides * 2);
+      const randomRadius = innerRadius + (Math.random() - 0.5) * 50;
+      const x = centerX + randomRadius * Math.cos(angle) + (Math.random() - 0.5) * 20;
+      const y = centerY + randomRadius * Math.sin(angle) + (Math.random() - 0.5) * 20;
+      this.innerPoints.push({
+        x,
+        y
+      });
+    }
+    this.path = 'M ' + this.points[0].x + ' ' + this.points[0].y;
+    for (let i = 1; i < this.points.length; i++) {
+      if (Math.random() > 0.3) {
+        this.path += ` L ${this.points[i].x} ${this.points[i].y}`;
+      } else {
+        const controlX = this.points[i].x + (Math.random() - 0.5) * 300;
+        const controlY = this.points[i].y + (Math.random() - 0.5) * 300;
+        this.path += ` Q ${controlX} ${controlY} ${this.points[i].x} ${this.points[i].y}`;
+      }
+    }
+    this.path += ' Z';
+    this.innerPath = 'M ' + this.innerPoints[0].x + ' ' + this.innerPoints[0].y;
+    for (let i = 1; i < this.innerPoints.length; i++) {
+      if (Math.random() > 0.3) {
+        this.innerPath += ` L ${this.innerPoints[i].x} ${this.innerPoints[i].y}`;
+      } else {
+        const controlX = this.innerPoints[i].x + (Math.random() - 0.5) * 100;
+        const controlY = this.innerPoints[i].y + (Math.random() - 0.5) * 100;
+        this.innerPath += ` Q ${controlX} ${controlY} ${this.innerPoints[i].x} ${this.innerPoints[i].y}`;
+      }
+    }
+    this.innerPath += ' Z';
+  }
+  draw() {
+    this.svg.innerHTML = '';
+    const outerShape = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    outerShape.setAttribute('d', this.path);
+    outerShape.setAttribute('fill', 'none');
+    outerShape.setAttribute('stroke', '#444');
+    outerShape.setAttribute('stroke-width', '2');
+    this.svg.appendChild(outerShape);
+    const innerShape = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    innerShape.setAttribute('d', this.innerPath);
+    innerShape.setAttribute('fill', 'none');
+    innerShape.setAttribute('stroke', '#666');
+    innerShape.setAttribute('stroke-width', '2');
+    this.svg.appendChild(innerShape);
+    const centerCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    centerCircle.setAttribute('cx', '300');
+    centerCircle.setAttribute('cy', '300');
+    centerCircle.setAttribute('r', '10');
+    centerCircle.setAttribute('fill', '#666');
+    this.svg.appendChild(centerCircle);
+    this.connectingLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    this.connectingLine.setAttribute('stroke', '#ffffff');
+    this.connectingLine.setAttribute('stroke-width', '2');
+    this.connectingLine.setAttribute('class', 'connecting-line');
+    this.svg.appendChild(this.connectingLine);
+    this.innerCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    this.innerCircle.setAttribute('r', '8');
+    this.innerCircle.setAttribute('fill', '#ff6b6b');
+    const animateMotion = document.createElementNS('http://www.w3.org/2000/svg', 'animateMotion');
+    animateMotion.setAttribute('dur', '4s');
+    animateMotion.setAttribute('repeatCount', 'indefinite');
+    animateMotion.setAttribute('path', this.innerPath);
+    this.innerCircle.appendChild(animateMotion);
+    this.animateMotionElements.push(animateMotion);
+    this.svg.appendChild(this.innerCircle);
+    this.outerCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    this.outerCircle.setAttribute('r', '8');
+    this.outerCircle.setAttribute('fill', '#6b9fff');
+    const outerAnimateMotion = document.createElementNS('http://www.w3.org/2000/svg', 'animateMotion');
+    outerAnimateMotion.setAttribute('dur', '6s');
+    outerAnimateMotion.setAttribute('repeatCount', 'indefinite');
+    outerAnimateMotion.setAttribute('path', this.path);
+    this.outerCircle.appendChild(outerAnimateMotion);
+    this.animateMotionElements.push(outerAnimateMotion);
+    this.svg.appendChild(this.outerCircle);
+    if (!this.isPaused) {
+      this.startAudioAndNotation();
+      this.updateConnectingLine();
+    }
+  }
+  updateConnectingLine() {
+    const updateLine = () => {
+      if (this.isPaused) {
+        cancelAnimationFrame(this.lineAnimationFrame);
+        return;
+      }
+      const innerBox = this.innerCircle.getBBox();
+      const outerBox = this.outerCircle.getBBox();
+      const innerX = innerBox.x + innerBox.width / 2;
+      const innerY = innerBox.y + innerBox.height / 2;
+      const outerX = outerBox.x + outerBox.width / 2;
+      const outerY = outerBox.y + outerBox.height / 2;
+      const dx = outerX - innerX;
+      const dy = outerY - innerY;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+      this.connectingLine.setAttribute('x1', innerX);
+      this.connectingLine.setAttribute('y1', innerY);
+      this.connectingLine.setAttribute('x2', outerX);
+      this.connectingLine.setAttribute('y2', outerY);
+      const hue = Math.min(360, distance / 3);
+      const color = `hsl(${hue}, 70%, 50%)`;
+      this.connectingLine.setAttribute('stroke', color);
+      const width = distance < 300 ? 1 : distance > 400 ? 4 : 2;
+      this.connectingLine.setAttribute('stroke-width', width);
+      const deltaX = innerX - this.lastInnerPos.x;
+      const deltaY = innerY - this.lastInnerPos.y;
+      const innerMovement = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+      this.lastInnerPos = {
+        x: innerX,
+        y: innerY
+      };
+      if (!this.isPaused) {
+        this.lineAnimationFrame = requestAnimationFrame(updateLine);
+      }
+    };
+    this.lineAnimationFrame = requestAnimationFrame(updateLine);
+  }
+  startAudioAndNotation() {
+    let startTime = performance.now();
+    const duration = 4000;
+    this.abcNotation = 'X:1\n' + 'T:Random Shape Music\n' + 'C:ShapeGenerator\n' + 'M:5/8\n' + 'L:1/8\n' + 'Q:1/8=120\n' + `K:${this.currentMode.split(' ')[0]}\n`;
+    let measureCount = 0;
+    let barCount = 0;
+    const animate = () => {
+      if (this.isPaused) {
+        cancelAnimationFrame(this.animationFrame);
+        return;
+      }
+      const currentTime = performance.now();
+      const elapsed = currentTime - startTime;
+      const progress = elapsed % duration / duration;
+      const outerBox = this.outerCircle.getBBox();
+      const outerX = outerBox.x + outerBox.width / 2;
+      const outerY = outerBox.y + outerBox.height / 2;
+      const innerBox = this.innerCircle.getBBox();
+      const dx = outerX - (innerBox.x + innerBox.width / 2);
+      const dy = outerY - (innerBox.y + innerBox.height / 2);
+      const distance = Math.sqrt(dx * dx + dy * dy);
+      const maxDistance = 600;
+      const minDistance = 0;
+      const medianDistance = maxDistance / 2;
+      let noteLength;
+      if (distance < medianDistance - maxDistance / 6) {
+        noteLength = 1 / 2;
+      } else if (distance > medianDistance + maxDistance / 6) {
+        noteLength = 2;
+      } else {
+        noteLength = 1;
+      }
+      const deltaX = outerX - this.lastOuterPos?.x || 0;
+      const deltaY = outerY - this.lastOuterPos?.y || 0;
+      const movement = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+      const isSharpMovement = movement > 10;
+      if (this.isLogging && elapsed % (500 * noteLength) < 16) {
+        if (!isSharpMovement) {
+          const note = this.audioController.playNote(outerX, outerY, 0.1);
+          if (measureCount >= 5) {
+            this.abcNotation += '|] ';
+            measureCount = 0;
+            barCount++;
+            if (barCount % 2 === 0) {
+              this.abcNotation += '\n';
+            }
+          }
+          if (noteLength === 1) {
+            this.abcNotation += note[0];
+          } else if (noteLength === 0.5) {
+            this.abcNotation += note[0] + '/2';
+          } else if (noteLength === 2) {
+            this.abcNotation += note[0] + '2';
+          }
+          this.abcNotation += ' ';
+          measureCount += noteLength;
+          if (measureCount === 0) {
+            this.abcNotation += '\n';
+          }
+        } else {
+          if (measureCount >= 5) {
+            this.abcNotation += '|] ';
+            measureCount = 0;
+            barCount++;
+            if (barCount % 2 === 0) {
+              this.abcNotation += '\n';
+            }
+          }
+          if (noteLength === 1) {
+            this.abcNotation += 'z';
+          } else if (noteLength === 0.5) {
+            this.abcNotation += 'z/2';
+          } else if (noteLength === 2) {
+            this.abcNotation += 'z2';
+          }
+          this.abcNotation += ' ';
+          measureCount += noteLength;
+          if (measureCount === 0) {
+            this.abcNotation += '\n';
+          }
+        }
+        document.getElementById('abc-notation').value = this.abcNotation;
+        this.updateABCPlayer();
+      } else if (!isSharpMovement) {
+        this.audioController.playNote(outerX, outerY, 0.1);
+      }
+      this.lastOuterPos = {
+        x: outerX,
+        y: outerY
+      };
+      this.animationFrame = requestAnimationFrame(animate);
+    };
+    this.animationFrame = requestAnimationFrame(animate);
+  }
+  updateABCPlayer() {
+    const abcPlayer = document.getElementById('abc-player');
+    abcPlayer.innerHTML = '';
+    if (!this.abcNotation) return;
+    try {
+      const sheetMusicDiv = document.createElement('div');
+      sheetMusicDiv.id = 'sheet-music';
+      abcPlayer.appendChild(sheetMusicDiv);
+      const audioControlsDiv = document.createElement('div');
+      audioControlsDiv.id = 'audio-controls';
+      abcPlayer.appendChild(audioControlsDiv);
+      const visualObj = ABCJS.renderAbc("sheet-music", this.abcNotation, {
+        responsive: "resize",
+        add_classes: true,
+        format: {
+          gchordfont: "16px Arial"
+        }
+      })[0];
+      if (visualObj) {
+        const synthControl = new ABCJS.synth.SynthController();
+        synthControl.load("#audio-controls", null, {
+          displayLoop: true,
+          displayRestart: true,
+          displayPlay: true,
+          displayProgress: true,
+          displayWarp: true
+        });
+        const midiBuffer = new ABCJS.synth.CreateSynth();
+        midiBuffer.init({
+          visualObj: visualObj,
+          audioContext: new AudioContext(),
+          millisecondsPerMeasure: 2000,
+          options: {
+            soundFontUrl: "https://paulrosen.github.io/midi-js-soundfonts/abcjs/"
+          }
+        }).then(() => {
+          synthControl.setTune(visualObj, false, {
+            program: 0,
+            generateDownload: true
+          }).catch(error => {
+            console.warn("Audio problem:", error);
+          });
+        }).catch(error => {
+          console.warn("Audio problem:", error);
+        });
+      }
+    } catch (err) {
+      console.error("ABC.js error:", err);
+    }
+  }
+  toggleLogging() {
+    this.isLogging = !this.isLogging;
+    // Always reset the ABC notation when starting logging
+    if (this.isLogging) {
+        this.abcNotation = 'X:1\n' + 
+            'T:Random Shape Music\n' + 
+            'C:ShapeGenerator\n' + 
+            'M:5/8\n' + 
+            'L:1/8\n' + 
+            'Q:1/8=120\n' + 
+            `K:${this.currentMode.split(' ')[0]}\n`;
+    } else {
+        this.abcNotation = '';
+    }
+    
+    // Clear the textarea
+    document.getElementById('abc-notation').value = this.abcNotation;
+    
+    // Update the ABC player
+    this.updateABCPlayer();
+    
+    // Update button text
+    const logButton = document.querySelector('.log-btn');
+    if (logButton) {
+        logButton.textContent = this.isLogging ? 'Stop Logging' : 'Start Logging';
+    }
+  }
+  togglePause() {
+    this.isPaused = !this.isPaused;
+    
+    // Pause/resume SVG animations
+    this.animateMotionElements.forEach(animation => {
+        if (this.isPaused) {
+            animation.setAttribute('dur', 'indefinite');
+            const matrix = this.getCTM(animation.parentElement);
+            animation.parentElement.setAttribute('transform', `matrix(${matrix.a} ${matrix.b} ${matrix.c} ${matrix.d} ${matrix.e} ${matrix.f})`);
+        } else {
+            // When resuming, reset the animation duration and clear any transform
+            animation.setAttribute('dur', animation === this.animateMotionElements[0] ? '4s' : '6s');
+            animation.parentElement.removeAttribute('transform');
+            
+            // Restart the animation
+            animation.beginElement();
+        }
+    });
+
+    if (!this.isPaused) {
+        this.startAudioAndNotation();
+        this.updateConnectingLine();
+    } else {
+        if (this.animationFrame) {
+            cancelAnimationFrame(this.animationFrame);
+            this.animationFrame = null;
+        }
+        if (this.lineAnimationFrame) {
+            cancelAnimationFrame(this.lineAnimationFrame);
+            this.lineAnimationFrame = null;
+        }
+    }
+  }
+  getCTM(element) {
+    try {
+        return element.getCTM();
+    } catch (e) {
+        // Fallback if getCTM() fails
+        return {
+            a: 1, b: 0, c: 0, d: 1,
+            e: parseFloat(element.getAttribute('cx') || 0),
+            f: parseFloat(element.getAttribute('cy') || 0)
+        };
+    }
+  }
+}
+const generator = new ShapeGenerator();
+generator.generateRandomShape();
+generator.draw();
+const buttonContainer = document.querySelector('.button-container');
+const generateButton = document.createElement('button');
+generateButton.textContent = 'Generate New Shape';
+generateButton.className = 'generate-btn';
+generateButton.onclick = () => {
+  generator.audioController.stop();
+  generator.generateRandomShape();
+  generator.draw();
+};
+const logButton = document.createElement('button');
+logButton.textContent = 'Start Logging';
+logButton.className = 'log-btn';
+logButton.onclick = () => {
+  generator.toggleLogging();
+};
+const pauseButton = document.createElement('button');
+pauseButton.textContent = 'Pause Animation';
+pauseButton.className = 'pause-btn';
+pauseButton.onclick = () => {
+  generator.togglePause();
+  pauseButton.textContent = generator.isPaused ? 'Resume Animation' : 'Pause Animation';
+};
+buttonContainer.appendChild(generateButton);
+buttonContainer.appendChild(logButton);
+buttonContainer.appendChild(pauseButton);
+const modeSelect = document.getElementById('mode-select');
+modeSelect.addEventListener('change', e => {
+  generator.currentMode = e.target.value;
+  generator.audioController.setMode(e.target.value);
+  generator.abcNotation = '';
+  if (generator.isLogging) {
+    generator.toggleLogging();
+    generator.toggleLogging();
+  }
+});</script>
+</body></html>
